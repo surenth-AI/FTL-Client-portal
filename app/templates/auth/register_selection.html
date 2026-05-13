@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Register Selection{% endblock %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-lg-8 col-md-10">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-white mb-2">Join the Fast Transit Line Network</h2>
+            <p class="text-muted text-uppercase fw-bold tracking-widest">Select your registration type to continue</p>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+            <!-- New Company Option -->
+            <div class="col-md-5">
+                <div class="card glass-card h-100 p-4 rounded-4 border-white-10 shadow-lg hover-scale transition-all cursor-pointer" 
+                     onclick="window.location.href='{{ url_for('auth.register_company') }}'">
+                    <div class="text-center py-4">
+                        <div class="icon-box-lg bg-primary-gradient mb-4 mx-auto">
+                            <i class="bi bi-building fs-1 text-white"></i>
+                        </div>
+                        <h4 class="fw-bold text-white">New Company</h4>
+                        <p class="text-muted small px-3">Register your business as a new customer. Requires Finance and Operations approval.</p>
+                        <div class="mt-4">
+                            <span class="btn btn-primary rounded-pill px-4">Register Business</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Join Company Option -->
+            <div class="col-md-5">
+                <div class="card glass-card h-100 p-4 rounded-4 border-white-10 shadow-lg hover-scale transition-all cursor-pointer"
+                     onclick="window.location.href='{{ url_for('auth.register_user') }}'">
+                    <div class="text-center py-4">
+                        <div class="icon-box-lg bg-accent-gradient mb-4 mx-auto">
+                            <i class="bi bi-people fs-1 text-white"></i>
+                        </div>
+                        <h4 class="fw-bold text-white">Join Company</h4>
+                        <p class="text-muted small px-3">Join an existing company using an FTL Code. Subject to domain verification and Operations approval.</p>
+                        <div class="mt-4">
+                            <span class="btn btn-outline-light rounded-pill px-4">Join Team</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <span class="text-muted small">Already have an account?</span>
+            <a href="{{ url_for('auth.login') }}" class="text-accent-glow fw-bold text-decoration-none ms-1">Login Here</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-scale:hover {
+    transform: translateY(-10px);
+    border-color: rgba(0, 170, 255, 0.4) !important;
+}
+.icon-box-lg {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+.bg-primary-gradient {
+    background: linear-gradient(135deg, #007bff 0%, #00d4ff 100%);
+}
+.bg-accent-gradient {
+    background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);
+}
+.transition-all {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

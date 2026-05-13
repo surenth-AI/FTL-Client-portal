@@ -1,0 +1,504 @@
+{% extends 'base.html' %}
+{% block title %}New Quote Request{% endblock %}
+
+{% block content %}
+<!-- Leaflet Engine Integration for Dynamic Visual Inputs -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    body { background-color: #F8FAFC; }
+    .main-booking-card {
+        background: #ffffff;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        min-height: 80vh;
+    }
+    .section-header {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1E293B;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+    .section-header .num {
+        background-color: var(--primary-color);
+        color: white;
+        width: 24px; height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        font-size: 0.8rem;
+        margin-right: 8px;
+    }
+    
+    /* Mini Map Containers */
+    .mini-map {
+        height: 130px;
+        border-radius: 6px;
+        background-color: #f1f5f9;
+        border: 1px solid #E2E8F0;
+        margin-top: 0.5rem;
+        margin-bottom: 1rem;
+        z-index: 1;
+    }
+    
+    /* Freightos Style Load Matrix */
+    .load-unit-container {
+        border: 1px solid #E2E8F0;
+        border-radius: 6px;
+        overflow: hidden;
+        background-color: #FFFFFF;
+        margin-bottom: 1rem;
+    }
+    .load-unit-header {
+        background-color: var(--primary-color);
+        color: #ffffff;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .load-unit-body { padding: 1rem; background-color: #F8FAFC; }
+    
+    /* Subtitle Labels */
+    .input-group-text-clean {
+        background-color: transparent;
+        border-right: none;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748B;
+    }
+    .form-control-clean {
+        border-left: none;
+    }
+    
+    /* Left side sticky execution console */
+    .execution-console {
+        position: sticky;
+        top: 100px;
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+    
+    .btn-execute {
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        padding: 0.75rem;
+    }
+    
+    .required-dot { color: #EF4444; margin-left: 2px; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+    <h4 class="fw-bold text-dark mb-0" style="letter-spacing: -0.01em;">New quote request <span class="text-muted fw-normal small" style="font-size: 0.85rem;">on behalf of organization</span></h4>
+</div>
+
+<form action="{{ url_for('customer.booking_request') }}" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="service_type" id="hidden_service_type" value="LCL">
+    
+    <div class="main-booking-card p-0 overflow-hidden">
+        <div class="row g-0">
+            <!-- COLUMN 1: LOCATION VECTOR -->
+            <div class="col-lg-4 border-end p-4">
+                <div class="section-header"><div class="num">1</div> Origin<span class="required-dot">*</span></div>
+                
+                <div class="position-relative mb-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="bi bi-geo-alt text-muted"></i></span>
+                        <input type="text" name="origin" id="origin_input" class="form-control fw-bold" placeholder="Type origin city..." required>
+                    </div>
+                </div>
+                <!-- Dynamic mini map viewport for origin -->
+                <div id="mapOrigin" class="mini-map"></div>
+                
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 0.65rem;">Pickup Address Detail</label>
+                    <textarea name="pickup_address" class="form-control form-control-sm" rows="2" placeholder="Optional specific pickup location..." style="font-size: 0.8rem;"></textarea>
+                </div>
+
+                <div class="section-header mt-5 pt-3 border-top"><div class="num">2</div> Destination<span class="required-dot">*</span></div>
+                
+                <div class="position-relative mb-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="bi bi-geo text-muted"></i></span>
+                        <input type="text" name="destination" id="dest_input" class="form-control fw-bold" placeholder="Type destination city..." required>
+                    </div>
+                </div>
+                <!-- Dynamic mini map viewport for destination -->
+                <div id="mapDestination" class="mini-map"></div>
+                
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 0.65rem;">Final Place of Delivery</label>
+                    <input type="text" name="place_of_delivery" class="form-control form-control-sm" placeholder="Point of consumption..." style="font-size: 0.8rem;">
+                </div>
+            </div>
+
+            <!-- COLUMN 2: CARGO / LOAD MATRIX -->
+            <div class="col-lg-5 border-end p-4" style="background-color: #FFFFFF;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="section-header mb-0"><div class="num">3</div> Load Metric</div>
+                    
+                    <!-- Mode Selector Switcher -->
+                    <div class="bg-light rounded border d-flex p-1" style="height: 30px;">
+                        <input type="radio" class="btn-check" name="manual_service_toggle" id="btn_lcl" value="LCL" checked>
+                        <label class="btn btn-xs btn-light-mode d-flex align-items-center px-3 fw-bold" for="btn_lcl" style="font-size: 0.7rem;">LCL</label>
+                        
+                        <input type="radio" class="btn-check" name="manual_service_toggle" id="btn_fcl" value="FCL">
+                        <label class="btn btn-xs btn-light-mode d-flex align-items-center px-3 fw-bold" for="btn_fcl" style="font-size: 0.7rem;">FCL</label>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC CARGO INJECTION ZONES -->
+                <div id="load_matrix_container">
+                    
+                    <!-- LCL WIZARD WRAPPER -->
+                    <div id="lcl_section">
+                        <div id="lcl_items_container">
+                            <!-- Single Load Unit (Replicated for multiple) -->
+                            <div class="load-unit-container cargo-item-row">
+                                <div class="load-unit-header">
+                                    <span>Unit #1: Package Block</span>
+                                    <span class="text-white-50 cursor-pointer remove-row-btn" style="display:none;" onclick="removeRow(this)"><i class="bi bi-x-lg"></i></span>
+                                </div>
+                                <div class="load-unit-body">
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-4">
+                                            <label class="small fw-bold text-muted">Quantity</label>
+                                            <input type="number" name="item_qty[]" class="form-control form-control-sm text-center fw-bold" value="1" required>
+                                        </div>
+                                        <div class="col-8">
+                                            <label class="small fw-bold text-muted">Load Type</label>
+                                            <select name="item_type[]" class="form-select form-select-sm">
+                                                <option value="Pallet">Pallet</option><option value="Box">Box</option><option value="Carton">Carton</option><option value="Crate">Crate</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-8">
+                                            <label class="small fw-bold text-muted">Dimensions<span class="required-dot">*</span></label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" name="item_l[]" class="form-control text-center" placeholder="L">
+                                                <input type="text" name="item_w[]" class="form-control text-center" placeholder="W">
+                                                <input type="text" name="item_h[]" class="form-control text-center" placeholder="H">
+                                                <select name="item_uom[]" class="form-select" style="max-width:60px;"><option value="cm">cm</option><option value="inch">in</option></select>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="small fw-bold text-muted">Unit Weight<span class="required-dot">*</span></label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="item_weight[]" class="form-control text-end" placeholder="0" step="0.01">
+                                                <span class="input-group-text bg-light">kg</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input imo-toggle" type="checkbox" name="item_is_imo_check[]" onchange="toggleImo(this)">
+                                                <label class="form-check-label small fw-bold">Contains Hazardous Goods</label>
+                                                <input type="hidden" name="item_is_imo[]" value="no">
+                                            </div>
+                                        </div>
+                                        <div class="col-12 imo-details-row mt-2 border-top pt-2" style="display:none;">
+                                            <div class="row g-2">
+                                                <div class="col-4"><input type="text" name="item_un[]" class="form-control form-control-sm" placeholder="UN Num"></div>
+                                                <div class="col-4"><input type="text" name="item_class[]" class="form-control form-control-sm" placeholder="Class"></div>
+                                                <div class="col-4"><input type="text" name="item_pg[]" class="form-control form-control-sm" placeholder="Pkg Gp"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-link fw-bold text-decoration-none text-primary p-0 mb-4" onclick="addRow('LCL')">
+                            <i class="bi bi-plus-circle-fill me-1"></i> Add Load Unit
+                        </button>
+                    </div>
+
+                    <!-- FCL WIZARD WRAPPER (Initially hidden) -->
+                    <div id="fcl_section" style="display:none;">
+                        <div id="fcl_items_container">
+                            <div class="load-unit-container cargo-item-row">
+                                <div class="load-unit-header">
+                                    <span>Container #1</span>
+                                    <span class="text-white-50 cursor-pointer remove-row-btn" style="display:none;" onclick="removeRow(this)"><i class="bi bi-x-lg"></i></span>
+                                </div>
+                                <div class="load-unit-body">
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-4">
+                                            <label class="small fw-bold text-muted">Quantity</label>
+                                            <input type="number" name="cont_qty[]" class="form-control form-control-sm text-center fw-bold" value="1" required>
+                                        </div>
+                                        <div class="col-8">
+                                            <label class="small fw-bold text-muted">Container Type</label>
+                                            <select name="cont_type[]" class="form-select form-select-sm">
+                                                <option value="20' ST">20' Standard</option>
+                                                <option value="40' ST">40' Standard</option>
+                                                <option value="40' HC">40' High Cube</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="small fw-bold text-muted">Total Gross Weight</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="cont_weight[]" class="form-control text-end" placeholder="0" step="0.01">
+                                                <span class="input-group-text">kg</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="small fw-bold text-muted">Volume Estimate</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="cont_volume[]" class="form-control text-end" placeholder="0" step="0.01">
+                                                <span class="input-group-text">cbm</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-link fw-bold text-decoration-none text-primary p-0 mb-4" onclick="addRow('FCL')">
+                            <i class="bi bi-plus-circle-fill me-1"></i> Add Container Unit
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Ancillary Options Block -->
+                <div class="border-top mt-3 pt-3">
+                    <h6 class="fw-bold text-muted small mb-3 text-uppercase" style="font-size:0.7rem;">Auxiliary Settings</h6>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold mb-1">Incoterms</label>
+                            <select name="freight_terms" class="form-select form-select-sm bg-light" style="font-size:0.8rem;">
+                                <option value="EXW">EXW</option><option value="FCA" selected>FCA</option>
+                                <option value="FOB">FOB</option><option value="CIF">CIF</option>
+                                <option value="DDP">DDP</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold mb-1">Documentation Required</label>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="insuranceCheck" checked>
+                                <label class="form-check-label small fw-bold" for="insuranceCheck">Insurance Addition</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced File Attachments Container -->
+                <div class="border rounded mt-4 p-3" style="background-color: #F8FAFC; border-style: dashed !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small fw-bold text-dark"><i class="bi bi-paperclip"></i> Supporting Docs</span>
+                        <button type="button" class="btn btn-xs btn-white border text-dark fw-bold" onclick="document.getElementById('file-input').click()" style="font-size: 0.65rem;">Browse Files</button>
+                    </div>
+                    <input type="file" id="file-input" name="attachments[]" class="d-none" multiple>
+                    <div id="file-list" class="small text-muted mt-1">No files currently attached</div>
+                </div>
+
+            </div>
+
+            <!-- COLUMN 3: EXECUTION WRAPPER -->
+            <div class="col-lg-3 p-4" style="background-color: #F8FAFC;">
+                <div class="execution-console shadow-sm">
+                    <h6 class="fw-bold text-dark mb-3 text-center border-bottom pb-2">Console Activation</h6>
+                    
+                    <p class="text-muted text-center small mb-4" style="font-size: 0.75rem;">Generate verified freight directives and all-inclusive rate matrices right here.</p>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-execute mb-2 d-flex align-items-center justify-content-center">
+                        <i class="bi bi-search me-2"></i> Search for quotes
+                    </button>
+                    
+                    <div class="text-center text-muted small fw-bold my-2">OR</div>
+                    
+                    <button type="submit" class="btn btn-outline-dark w-100 btn-execute bg-white d-flex align-items-center justify-content-center">
+                        <i class="bi bi-pencil-square me-2"></i> Manual quote request
+                    </button>
+                    
+                    <div class="alert alert-info p-2 mt-4 mb-0 rounded border-0 d-flex align-items-start" style="font-size: 0.65rem; background-color: #E0F2FE; color: #0369A1;">
+                        <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+                        <span>Routing analytics optimize your search query instantly upon execution triggers.</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+<!-- TEMPLATE INJECTION FOR DYNAMIC ROWS (HIDDEN) -->
+<template id="lcl_row_template">
+    <div class="load-unit-container cargo-item-row mt-3">
+        <div class="load-unit-header">
+            <span>Package Block</span>
+            <span class="text-white-50 cursor-pointer remove-row-btn" onclick="removeRow(this)"><i class="bi bi-x-lg"></i></span>
+        </div>
+        <div class="load-unit-body">
+            <div class="row g-2 mb-3">
+                <div class="col-4"><label class="small fw-bold text-muted">Qty</label><input type="number" name="item_qty[]" class="form-control form-control-sm text-center" value="1" required></div>
+                <div class="col-8">
+                    <label class="small fw-bold text-muted">Load Type</label>
+                    <select name="item_type[]" class="form-select form-select-sm"><option value="Pallet">Pallet</option><option value="Box">Box</option><option value="Carton">Carton</option></select>
+                </div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-8">
+                    <label class="small fw-bold text-muted">Dimensions</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="item_l[]" class="form-control text-center" placeholder="L">
+                        <input type="text" name="item_w[]" class="form-control text-center" placeholder="W">
+                        <input type="text" name="item_h[]" class="form-control text-center" placeholder="H">
+                        <select name="item_uom[]" class="form-select" style="max-width:60px;"><option value="cm">cm</option></select>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <label class="small fw-bold text-muted">Weight</label>
+                    <div class="input-group input-group-sm"><input type="number" name="item_weight[]" class="form-control text-end" step="0.01"><span class="input-group-text">kg</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="fcl_row_template">
+    <div class="load-unit-container cargo-item-row mt-3">
+        <div class="load-unit-header">
+            <span>Container Block</span>
+            <span class="text-white-50 cursor-pointer remove-row-btn" onclick="removeRow(this)"><i class="bi bi-x-lg"></i></span>
+        </div>
+        <div class="load-unit-body">
+            <div class="row g-2 mb-3">
+                <div class="col-4"><label class="small fw-bold text-muted">Qty</label><input type="number" name="cont_qty[]" class="form-control form-control-sm text-center" value="1" required></div>
+                <div class="col-8">
+                    <label class="small fw-bold text-muted">Type</label>
+                    <select name="cont_type[]" class="form-select form-select-sm"><option value="20' ST">20' Standard</option><option value="40' ST">40' Standard</option></select>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-6"><label class="small fw-bold text-muted">Gross Wt</label><div class="input-group input-group-sm"><input type="number" name="cont_weight[]" class="form-control text-end"><span class="input-group-text">kg</span></div></div>
+                <div class="col-6"><label class="small fw-bold text-muted">Vol</label><div class="input-group input-group-sm"><input type="number" name="cont_volume[]" class="form-control text-end"><span class="input-group-text">cbm</span></div></div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- SCRIPTS FOR DYNAMIC MAPPING & FORM INTERACTION -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Setup Micro Leaflet Maps for visual context mirroring reference
+    const mapOptions = {
+        center: [20.0, 0.0], zoom: 1, attributionControl: false, zoomControl: false,
+        dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false
+    };
+    
+    const mapOrigin = L.map('mapOrigin', mapOptions);
+    const mapDest = L.map('mapDestination', mapOptions);
+    
+    const tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    
+    L.tileLayer(tileUrl).addTo(mapOrigin);
+    L.tileLayer(tileUrl).addTo(mapDest);
+
+    // 2. Wire Input events to dummy-update the maps to give a high-end interactive feel
+    const originInput = document.getElementById('origin_input');
+    const destInput = document.getElementById('dest_input');
+
+    originInput.addEventListener('blur', function() {
+        if(this.value.length > 2) {
+            // Simulate map refocus on location change
+            mapOrigin.setView([Math.random()*60, Math.random()*100], 4, {animate:true});
+            L.circleMarker(mapOrigin.getCenter(), {radius:5, color:getComputedStyle(document.documentElement).getPropertyValue('--primary-color')}).addTo(mapOrigin);
+        }
+    });
+
+    destInput.addEventListener('blur', function() {
+        if(this.value.length > 2) {
+            mapDest.setView([Math.random()*60, Math.random()*100], 4, {animate:true});
+            L.circleMarker(mapDest.getCenter(), {radius:5, color:'#E11D48'}).addTo(mapDest); // Target accent
+        }
+    });
+
+    // 3. Setup the dynamic Add/Remove Row functionality preserving legacy support
+    window.addRow = function(type) {
+        const templateId = type === 'LCL' ? 'lcl_row_template' : 'fcl_row_template';
+        const containerId = type === 'LCL' ? 'lcl_items_container' : 'fcl_items_container';
+        const template = document.getElementById(templateId);
+        const container = document.getElementById(containerId);
+        
+        const clone = template.content.cloneNode(true);
+        container.appendChild(clone);
+    };
+
+    window.removeRow = function(btn) {
+        btn.closest('.cargo-item-row').remove();
+    };
+
+    window.toggleImo = function(checkbox) {
+        const row = checkbox.closest('.cargo-item-row');
+        const details = row.querySelector('.imo-details-row');
+        const hidden = checkbox.nextElementSibling;
+        if(checkbox.checked) {
+            details.style.display = 'block';
+            hidden.value = 'yes';
+        } else {
+            details.style.display = 'none';
+            hidden.value = 'no';
+        }
+    };
+
+    // 4. Mode Toggle Implementation (LCL vs FCL)
+    document.querySelectorAll('input[name="manual_service_toggle"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const type = e.target.value;
+            document.getElementById('hidden_service_type').value = type;
+            if(type === 'LCL') {
+                document.getElementById('lcl_section').style.display = 'block';
+                document.getElementById('fcl_section').style.display = 'none';
+            } else {
+                document.getElementById('lcl_section').style.display = 'none';
+                document.getElementById('fcl_section').style.display = 'block';
+            }
+        });
+    });
+
+    // 5. File Upload Visuals
+    const fileInput = document.getElementById('file-input');
+    const fileList = document.getElementById('file-list');
+    fileInput.addEventListener('change', (e) => {
+        if(e.target.files.length > 0) {
+            fileList.innerHTML = `<strong>${e.target.files.length}</strong> file(s) queued for secure transfer.`;
+            fileList.classList.add('text-success');
+        }
+    });
+});
+</script>
+
+<style>
+    .btn-light-mode {
+        background: transparent;
+        border: none;
+        color: #64748B;
+        transition: 0.15s ease;
+    }
+    .btn-check:checked + .btn-light-mode {
+        background: #FFFFFF;
+        color: var(--primary-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-radius: 4px;
+    }
+    .btn-xs { padding: 0.2rem 0.5rem; font-size: 0.7rem; }
+    .btn-white { background: #FFFFFF; color: #1E293B; }
+</style>
+
+{% endblock %}

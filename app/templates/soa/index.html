@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}SOA Audit{% endblock %}
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="text-white fw-bold mb-0">Statement Audit Pipeline</h2>
+        <p class="text-muted mb-0">Execute deep financial reconciliation between vendor statements and internal ledgers.</p>
+    </div>
+</div>
+
+<div class="card glass-card p-5 text-center" style="max-width: 800px; margin: 0 auto;">
+    <div class="mb-4">
+        <div class="d-inline-flex align-items-center justify-content-center bg-accent-light p-4 rounded-circle mb-3">
+            <i class="bi bi-file-earmark-spreadsheet fs-1 text-accent"></i>
+        </div>
+        <h4 class="text-white fw-bold">Ingest SOA Ledger</h4>
+        <p class="text-muted">Select your industry-standard .xls or .xlsx statement file to begin the cross-reference sequence.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('soa.upload') }}" enctype="multipart/form-data">
+        <div class="mb-4">
+            <input class="form-control form-control-lg bg-dark text-white border-white-10" type="file" name="file" accept=".xls,.xlsx" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow-lg">
+            <i class="bi bi-lightning-charge me-2"></i> Initialize Reconciliation
+        </button>
+    </form>
+</div>
+{% endblock %}

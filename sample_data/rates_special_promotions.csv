@@ -1,0 +1,6 @@
+origin,destination,nvocc_name,base_rate,surcharges,transit_days,validity_start,validity_end
+Ho Chi Minh,Hamburg,Maersk Line,950,300,30,2026-05-01,2026-06-30
+Busan,Rotterdam,HMM,1000,350,32,2026-05-01,2026-06-30
+Tokyo,Antwerp,ONE,1100,400,35,2026-05-01,2026-06-30
+Colombo,Felixstowe,MSC,750,250,22,2026-05-01,2026-06-30
+Kaohsiung,Genoa,Evergreen,850,280,28,2026-05-01,2026-06-30

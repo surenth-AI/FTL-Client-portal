@@ -1,0 +1,687 @@
+{% extends 'base.html' %} 
+{% block title %}Finalize Booking{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card glass-card overflow-hidden">
+            <div class="p-4 text-white" style="background: linear-gradient(135deg, var(--primary-color) 0%, #0055aa 100%);">
+                <h4 class="mb-1"><i class="bi bi-check2-circle me-2"></i> Finalize Your Shipment</h4>
+                <p class="mb-0 opacity-75">Review details and provide pickup information.</p>
+            </div>
+            
+            <div class="p-4">
+                <!-- Summary Card -->
+                <div class="bg-white-5 rounded-4 p-4 mb-4 border border-white-10">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 border-end">
+                            <h6 class="text-uppercase text-muted small mb-2">Service Details</h6>
+                            <div class="fw-bold fs-5 mb-1">{{ rate.nvocc_name }}</div>
+                            <div class="text-primary fw-bold"><i class="bi bi-box-seam"></i> {{ service_type }} Service</div>
+                            <div class="mt-2 fs-5">
+                                <span class="route-highlight">{{ origin }}</span> 
+                                <i class="bi bi-arrow-right mx-2 text-muted"></i> 
+                                <span class="route-highlight">{{ destination }}</span>
+                            </div>
+                            <div class="text-white opacity-75 small mt-1">
+                                Volume: <span class="fw-bold">{{ volume }} CBM</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 ps-4">
+                            <h6 class="text-uppercase text-muted small mb-2">Total Agreed Cost</h6>
+                            <div class="display-6 fw-bold text-success">${{ "%.2f"|format(total_cost) }}</div>
+                            <div class="text-muted small mt-1">Inclusive of base rate and fuel surcharges.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('customer.confirm_booking') }}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="rate_id" value="{{ rate.id }}">
+                    <input type="hidden" name="volume" value="{{ volume }}">
+                    <input type="hidden" name="total_cost" value="{{ total_cost }}">
+                    <input type="hidden" name="service_type" value="{{ service_type }}">
+
+                    <h5 class="mb-3">Shipment Details</h5>
+                    
+                    <!-- Cargo Details Section (Dynamic) -->
+                    {% if service_type == 'LCL' %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">2. Cargo Breakdown (LCL)</label>
+                        <div id="lcl_items_container">
+                            {% if query.cargo_items %}
+                                {% for item in query.cargo_items %}
+                                <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 position-relative shadow-sm border-white-10">
+                                    <!-- Tier 1: Core Identity -->
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Package Type</label>
+                                            <select name="item_type[]" class="form-select border-white-10">
+                                                {% set pkg_types = ['Colis', 'Pallet', 'Box', 'Carton', 'Crate', 'Bag', 'Drum', 'Roll', 'Tube', 'Bundle', 'Skid'] %}
+                                                {% for pt in pkg_types %}
+                                                <option value="{{ pt }}" {% if item.type == pt %}selected{% endif %}>{{ pt }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Qty</label>
+                                            <input type="number" name="item_qty[]" class="form-control border-white-10" value="{{ item.qty or '1' }}" required>
+                                        </div>
+                                        <div class="col-md-2 d-flex flex-column align-items-center justify-content-center border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-2">IMO</label>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input imo-toggle" type="checkbox" name="item_is_imo_check[]" onchange="toggleImo(this)">
+                                                <input type="hidden" name="item_is_imo[]" value="no">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5 border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">HS Code (Optional)</label>
+                                            <input type="text" name="item_hs[]" class="form-control border-white-10" placeholder="e.g. 8413.70">
+                                        </div>
+                                    </div>
+
+                                    <!-- Tier 2: Physical Specifications -->
+                                    <div class="bg-white-5 rounded-4 p-3 mb-3 border border-white-10">
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow"><i class="bi bi-scales me-1"></i> Weight (kg)</label>
+                                                <input type="number" name="item_weight[]" class="form-control" value="{{ item.weight or '' }}" step="0.01">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow"><i class="bi bi-box me-1"></i> Volume (cbm)</label>
+                                                <input type="number" name="item_volume[]" class="form-control" value="{{ item.volume or '' }}" placeholder="4" step="0.01">
+                                            </div>
+                                            <div class="col-md-6 border-start border-white-10 ps-3">
+                                                <label class="form-label small fw-bold text-muted">Dimensions (L x W x H)</label>
+                                                <div class="input-group">
+                                                    <input type="text" name="item_l[]" class="form-control" placeholder="L">
+                                                    <input type="text" name="item_w[]" class="form-control" placeholder="W">
+                                                    <input type="text" name="item_h[]" class="form-control" placeholder="H">
+                                                    <select name="item_uom[]" class="form-select" style="max-width: 80px;">
+                                                        <option value="cm">cm</option>
+                                                        <option value="m">m</option>
+                                                        <option value="inch">in</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tier 3: Handling Description -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <label class="form-label small text-muted text-uppercase fw-bold mb-1">Marks & Numbers / Description</label>
+                                            <textarea name="item_desc[]" class="form-control bg-white-5 border-white-10 text-white" rows="2" placeholder="Add specific cargo description or marks & numbers..."></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 imo-details-row mt-3 p-3 bg-white-5 rounded-4 border border-white-10" style="display:none;">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">UN Number*</label>
+                                                <input type="text" name="item_un[]" class="form-control" placeholder="e.g. 1993">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Packing Group</label>
+                                                <input type="text" name="item_pg[]" class="form-control" placeholder="e.g. II">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Class</label>
+                                                <input type="text" name="item_class[]" class="form-control" placeholder="e.g. 3">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="button" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 m-2 remove-row-btn" {% if loop.first and query.cargo_items|length == 1 %}style="display:none;"{% endif %} onclick="removeRow(this)">
+                                        <i class="bi bi-x-circle-fill h5"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 position-relative shadow-sm border-white-10">
+                                    <!-- Fallback initial row same as search logic -->
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Package Type</label>
+                                            <select name="item_type[]" class="form-select border-white-10">
+                                                {% set pkg_types = ['Colis', 'Pallet', 'Box', 'Carton', 'Crate', 'Bag', 'Drum', 'Roll', 'Tube', 'Bundle', 'Skid'] %}
+                                                {% for pt in pkg_types %}
+                                                <option value="{{ pt }}">{{ pt }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Qty</label>
+                                            <input type="number" name="item_qty[]" class="form-control border-white-10" value="1" required>
+                                        </div>
+                                        <div class="col-md-2 d-flex flex-column align-items-center justify-content-center border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-2">IMO</label>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input imo-toggle" type="checkbox" name="item_is_imo_check[]" onchange="toggleImo(this)">
+                                                <input type="hidden" name="item_is_imo[]" value="no">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5 border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">HS Code (Optional)</label>
+                                            <input type="text" name="item_hs[]" class="form-control border-white-10" placeholder="e.g. 8413.70">
+                                        </div>
+                                    </div>
+
+                                    <!-- Tier 2 -->
+                                    <div class="bg-white-5 rounded-4 p-3 mb-3 border border-white-10">
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow"><i class="bi bi-scales me-1"></i> Weight (kg)</label>
+                                                <input type="number" name="item_weight[]" class="form-control" step="0.01">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow"><i class="bi bi-box me-1"></i> Volume (cbm)</label>
+                                                <input type="number" name="item_volume[]" class="form-control" placeholder="4" step="0.01">
+                                            </div>
+                                            <div class="col-md-6 border-start border-white-10 ps-3">
+                                                <label class="form-label small fw-bold text-muted">Dimensions</label>
+                                                <div class="input-group">
+                                                    <input type="text" name="item_l[]" class="form-control" placeholder="L">
+                                                    <input type="text" name="item_w[]" class="form-control" placeholder="W">
+                                                    <input type="text" name="item_h[]" class="form-control" placeholder="H">
+                                                    <select name="item_uom[]" class="form-select" style="max-width: 80px;">
+                                                        <option value="cm">cm</option>
+                                                        <option value="m">m</option>
+                                                        <option value="inch">in</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Descriptions -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <label class="form-label small text-muted text-uppercase fw-bold mb-1">Marks & Numbers / Description</label>
+                                            <textarea name="item_desc[]" class="form-control bg-white-5 border-white-10 text-white" rows="2" placeholder="Add specific cargo description or marks & numbers..."></textarea>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 m-2 remove-row-btn" style="display:none;" onclick="removeRow(this)">
+                                        <i class="bi bi-x-circle-fill h5"></i>
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-add-row w-100 py-3 mb-3" onclick="addRow('LCL')">
+                            <i class="bi bi-plus-lg me-2"></i> Add Another Package
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">2. Container Breakdown (FCL)</label>
+                        <div id="fcl_items_container">
+                            {% if query.service_type == 'FCL' and query.cargo_items %}
+                                {% for item in query.cargo_items %}
+                                <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 position-relative shadow-sm border-white-10">
+                                    <!-- Tier 1: Body & Type -->
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Container Type</label>
+                                            <select name="cont_type[]" class="form-select border-white-10">
+                                                <option value="20' ST" {% if item.cont_type == "20' ST" %}selected{% endif %}>20' Standard</option>
+                                                <option value="40' ST" {% if item.cont_type == "40' ST" %}selected{% endif %}>40' Standard</option>
+                                                <option value="40' HC" {% if item.cont_type == "40' HC" %}selected{% endif %}>40' High Cube</option>
+                                                <option value="20' RF" {% if item.cont_type == "20' RF" %}selected{% endif %}>20' Reefer</option>
+                                                <option value="40' RF" {% if item.cont_type == "40' RF" %}selected{% endif %}>40' Reefer</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Qty</label>
+                                            <input type="number" name="cont_qty[]" class="form-control border-white-10" value="{{ item.cont_qty or '1' }}" required>
+                                        </div>
+                                        <div class="col-md-2 d-flex flex-column align-items-center justify-content-center border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-2">IMO</label>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input imo-toggle" type="checkbox" name="cont_is_imo_check[]" onchange="toggleImo(this)">
+                                                <input type="hidden" name="cont_is_imo[]" value="no">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5 border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">HS Code (Optional)</label>
+                                            <input type="text" name="cont_hs[]" class="form-control border-white-10" placeholder="e.g. 8413.70">
+                                        </div>
+                                    </div>
+
+                                    <!-- Tier 2: Internal Cargo & Weight -->
+                                    <div class="bg-white-5 rounded-4 p-3 mb-3 border border-white-10">
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow">Internal Pkgs Qty</label>
+                                                <input type="number" name="cont_p_qty[]" class="form-control" value="{{ item.p_qty or '' }}" placeholder="20">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow">Internal Pkg Type</label>
+                                                <select name="cont_p_type[]" class="form-select">
+                                                    {% set fcl_pkg_types = ['Colis', 'Pallet', 'Carton', 'Box', 'Crate', 'Drum', 'Roll', 'Tube', 'Bundle'] %}
+                                                    {% for fpt in fcl_pkg_types %}
+                                                    <option value="{{ fpt }}" {% if item.p_type == fpt %}selected{% endif %}>{{ fpt }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 border-start border-white-10 ps-3">
+                                                <label class="form-label small fw-bold text-info"><i class="bi bi-box me-1"></i> Volume (cbm)</label>
+                                                <input type="number" name="cont_volume[]" class="form-control" value="{{ item.volume or '' }}" placeholder="33.2" step="0.01">
+                                            </div>
+                                            <div class="col-md-3 border-start border-white-10 ps-3">
+                                                <label class="form-label small fw-bold text-accent-glow"><i class="bi bi-scales me-1"></i> Gross Weight (kg)</label>
+                                                <input type="number" name="cont_weight[]" class="form-control border-success-subtle shadow-sm" value="{{ item.weight or '' }}" placeholder="18000" step="0.01">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tier 3: Descriptions -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <label class="form-label small text-muted text-uppercase fw-bold mb-1">Package Marks / Instructions</label>
+                                            <textarea name="cont_desc[]" class="form-control bg-white-5 border-white-10 text-white" rows="2" placeholder="Container description, seal numbers, or specific marks..."></textarea>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 m-2 remove-row-btn" {% if loop.first and (query.cargo_items|length == 1) %}style="display:none;"{% endif %} onclick="removeRow(this)">
+                                        <i class="bi bi-x-circle-fill h5"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 position-relative shadow-sm border-white-10">
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Container Type</label>
+                                            <select name="cont_type[]" class="form-select border-white-10">
+                                                <option value="20' ST" {% if query.cont_type == "20' ST" %}selected{% endif %}>20' Standard</option>
+                                                <option value="40' ST" {% if query.cont_type == "40' ST" %}selected{% endif %}>40' Standard</option>
+                                                <option value="40' HC" {% if query.cont_type == "40' HC" %}selected{% endif %}>40' High Cube</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Qty</label>
+                                            <input type="number" name="cont_qty[]" class="form-control border-white-10" value="{{ query.cont_qty or '1' }}" required>
+                                        </div>
+                                        <div class="col-md-2 d-flex flex-column align-items-center justify-content-center border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-2">IMO</label>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input imo-toggle" type="checkbox" name="cont_is_imo_check[]" onchange="toggleImo(this)">
+                                                <input type="hidden" name="cont_is_imo[]" value="no">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5 border-start border-white-10">
+                                            <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">HS Code (Optional)</label>
+                                            <input type="text" name="cont_hs[]" class="form-control border-white-10" placeholder="e.g. 8413.70">
+                                        </div>
+                                    </div>
+                                    <div class="bg-white-5 rounded-4 p-3 mb-3 border border-white-10">
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow">Internal Pkgs Qty</label>
+                                                <input type="number" name="cont_p_qty[]" class="form-control" value="{{ query.cont_p_qty or '' }}" placeholder="20">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-accent-glow">Internal Pkg Type</label>
+                                                <select name="cont_p_type[]" class="form-select">
+                                                    {% set fcl_pkg_types = ['Colis', 'Pallet', 'Carton', 'Box', 'Crate', 'Drum', 'Roll', 'Tube', 'Bundle'] %}
+                                                    {% for fpt in fcl_pkg_types %}
+                                                    <option value="{{ fpt }}" {% if query.cont_p_type == fpt %}selected{% endif %}>{{ fpt }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 ps-3">
+                                                <label class="form-label small fw-bold text-info">Volume (cbm)</label>
+                                                <input type="number" name="cont_volume[]" class="form-control" value="{{ query.cont_volume or '' }}" placeholder="33.2" step="0.01">
+                                            </div>
+                                            <div class="col-md-3 ps-3">
+                                                <label class="form-label small fw-bold text-accent-glow">Weight (kg)</label>
+                                                <input type="number" name="cont_weight[]" class="form-control" value="{{ query.cont_weight or '' }}" placeholder="18000" step="0.01">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 m-2 remove-row-btn" style="display:none;" onclick="removeRow(this)">
+                                        <i class="bi bi-x-circle-fill h5"></i>
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="button" class="btn btn-add-row w-100 py-3 mb-3" onclick="addRow('FCL')">
+                            <i class="bi bi-plus-lg me-2"></i> Add Another Container
+                        </button>
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Pickup Address<span class="required-star">*</span></label>
+                                    <textarea name="pickup_address" class="form-control" rows="3" placeholder="Full address for collection" required></textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Freight Terms<span class="required-star">*</span></label>
+                                    <select name="freight_terms" class="form-select">
+                                        <option value="EXW">EXW - Ex Works</option>
+                                        <option value="FCA" selected>FCA - Free Carrier</option>
+                                        <option value="FAS">FAS - Free Alongside Ship</option>
+                                        <option value="FOB">FOB - Free on Board</option>
+                                        <option value="CFR">CFR - Cost and Freight</option>
+                                        <option value="CIF">CIF - Cost, Insurance & Freight</option>
+                                        <option value="CPT">CPT - Carriage Paid To</option>
+                                        <option value="CIP">CIP - Carriage and Insurance Paid To</option>
+                                        <option value="DAP">DAP - Delivered at Place</option>
+                                        <option value="DPU">DPU - Delivered at Place Unloaded</option>
+                                        <option value="DDP">DDP - Delivered Duty Paid</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label fw-bold">Special Instructions / Description</label>
+                                    <textarea name="terms" class="form-control" rows="3" placeholder="Additional shipment details, special instructions, or terms..."></textarea>
+                                </div>
+                                
+                                <div class="col-md-12 mb-4">
+                                    <label class="form-label fw-bold">Attachments (Images/Docs)</label>
+                                    <div class="upload-area border-white-10 rounded-4 p-5 text-center bg-white-5" id="drop-zone" style="border: 2px dashed rgba(255,255,255,0.1)">
+                                        <i class="bi bi-cloud-arrow-up display-5 text-accent-glow mb-3 pulse-icon"></i>
+                                        <h5 class="text-white fw-bold">Secure File Center</h5>
+                                        <p class="mb-0 text-muted small">Drag & drop shipping documents here or click to browse</p>
+                                        <input type="file" id="file-input" name="attachments[]" class="form-control mt-2 d-none" multiple>
+                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 mt-4 shadow-accent" onclick="document.getElementById('file-input').click()">Browse Local Storage</button>
+                                        
+                                        <!-- File Preview List -->
+                                        <div id="file-list" class="mt-4 text-start"></div>
+                                    </div>
+                                </div>
+                    </div>
+
+                    <div class="d-grid mt-2">
+                        <button type="submit" class="btn btn-primary py-3 fw-bold rounded-3 shadow-sm">Confirm Booking & Generate ID</button>
+                        <a href="{{ url_for('customer.rate_results') }}" class="btn btn-link text-muted mt-2">Back to Rates</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row Templates -->
+<template id="lcl_row_template">
+    <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 position-relative shadow-sm border-white-10">
+        <!-- Tier 1: Core Identity -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Package Type</label>
+                <select name="item_type[]" class="form-select border-white-10">
+                    <option value="Pallet">Pallet</option>
+                    <option value="Carton">Carton</option>
+                    <option value="Crate">Crate</option>
+                    <option value="Bundle">Bundle</option>
+                    <option value="Drum">Drum</option>
+                    <option value="Bag">Bag</option>
+                    <option value="Box">Box</option>
+                    <option value="Case">Case</option>
+                    <option value="Roll">Roll</option>
+                    <option value="Skid">Skid</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Qty</label>
+                <input type="number" name="item_qty[]" class="form-control border-white-10" placeholder="2" required>
+            </div>
+            <div class="col-md-2 d-flex flex-column align-items-center justify-content-center border-start border-white-10">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-2">IMO</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input imo-toggle" type="checkbox" name="item_is_imo_check[]" onchange="toggleImo(this)">
+                    <input type="hidden" name="item_is_imo[]" value="no">
+                </div>
+            </div>
+            <div class="col-md-5 border-start border-white-10">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">HS Code (Optional)</label>
+                <input type="text" name="item_hs[]" class="form-control border-white-10" placeholder="e.g. 8413.70">
+            </div>
+        </div>
+
+        <!-- Tier 2: Physical Specifications -->
+        <div class="bg-white-5 rounded-4 p-3 mb-3 border border-white-10">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-accent-glow"><i class="bi bi-scales me-1"></i> Weight (kg)</label>
+                    <input type="number" name="item_weight[]" class="form-control" placeholder="3300" step="0.01">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-accent-glow"><i class="bi bi-box me-1"></i> Volume (cbm)</label>
+                    <input type="number" name="item_volume[]" class="form-control" placeholder="4" step="0.01">
+                </div>
+                <div class="col-md-6 border-start border-white-10 ps-3">
+                    <label class="form-label small fw-bold text-muted">Dimensions (L x W x H)</label>
+                    <div class="input-group">
+                        <input type="text" name="item_l[]" class="form-control" placeholder="L">
+                        <input type="text" name="item_w[]" class="form-control" placeholder="W">
+                        <input type="text" name="item_h[]" class="form-control" placeholder="H">
+                        <select name="item_uom[]" class="form-select" style="max-width: 80px;">
+                            <option value="cm">cm</option>
+                            <option value="m">m</option>
+                            <option value="inch">in</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tier 3: Handling Description -->
+        <div class="row">
+            <div class="col-12">
+                <label class="form-label small text-muted text-uppercase fw-bold mb-1">Marks & Numbers / Description</label>
+                <textarea name="item_desc[]" class="form-control bg-white-5 border-white-10 text-white" rows="2" placeholder="Add specific cargo description or marks & numbers..."></textarea>
+            </div>
+        </div>
+
+        <!-- IMO Expanded (Absolute Bottom) -->
+        <div class="col-12 imo-details-row mt-3 p-3 bg-white-5 rounded-4 border border-white-10" style="display:none;">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">UN Number*</label>
+                    <input type="text" name="item_un[]" class="form-control" placeholder="e.g. 1993">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Packing Group</label>
+                    <input type="text" name="item_pg[]" class="form-control" placeholder="e.g. II">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Class</label>
+                    <input type="text" name="item_class[]" class="form-control" placeholder="e.g. 3">
+                </div>
+            </div>
+        </div>
+        
+        <button type="button" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 m-2 remove-row-btn" style="display:none;" onclick="removeRow(this)">
+            <i class="bi bi-x-circle-fill h5"></i>
+        </button>
+    </div>
+</template>
+
+<template id="fcl_row_template">
+    <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 position-relative shadow-sm border-white-10">
+        <!-- Tier 1: Body & Type -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Container Type</label>
+                <select name="cont_type[]" class="form-select border-white-10">
+                    <option value="20' ST">20' Standard</option>
+                    <option value="40' ST">40' Standard</option>
+                    <option value="40' HC">40' High Cube</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Qty</label>
+                <input type="number" name="cont_qty[]" class="form-control border-white-10" placeholder="1" required>
+            </div>
+            <div class="col-md-2 d-flex flex-column align-items-center justify-content-center border-start border-white-10">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-2">IMO</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input imo-toggle" type="checkbox" name="cont_is_imo_check[]" onchange="toggleImo(this)">
+                    <input type="hidden" name="cont_is_imo[]" value="no">
+                </div>
+            </div>
+            <div class="col-md-5 border-start border-white-10">
+                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">HS Code (Optional)</label>
+                <input type="text" name="cont_hs[]" class="form-control border-white-10" placeholder="e.g. 8413.70">
+            </div>
+        </div>
+
+        <!-- Tier 2: Internal Cargo & Weight -->
+        <div class="bg-white-5 rounded-4 p-3 mb-3 border border-white-10">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-accent-glow">Internal Pkgs Qty</label>
+                    <input type="number" name="cont_p_qty[]" class="form-control" placeholder="20">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-accent-glow">Internal Pkg Type</label>
+                    <select name="cont_p_type[]" class="form-select">
+                        <option value="Colis">Colis</option>
+                        <option value="Pallets">Pallets</option>
+                        <option value="Cartons">Cartons</option>
+                        <option value="Crates">Crates</option>
+                        <option value="Drums">Drums</option>
+                        <option value="Boxes">Boxes</option>
+                    </select>
+                </div>
+                <div class="col-md-3 border-start border-white-10 ps-3">
+                    <label class="form-label small fw-bold text-info"><i class="bi bi-box me-1"></i> Volume (cbm)</label>
+                    <input type="number" name="cont_volume[]" class="form-control" placeholder="33.2" step="0.01">
+                </div>
+                <div class="col-md-3 border-start border-white-10 ps-3">
+                    <label class="form-label small fw-bold text-success"><i class="bi bi-scales me-1"></i> Gross Weight (kg)</label>
+                    <input type="number" name="cont_weight[]" class="form-control border-success-subtle shadow-sm" placeholder="18000" step="0.01">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tier 3: Descriptions -->
+        <div class="row">
+            <div class="col-12">
+                <label class="form-label small text-muted text-uppercase fw-bold mb-1">Package Marks / Instructions</label>
+                <textarea name="cont_desc[]" class="form-control bg-white-5 border-white-10 text-white" rows="2" placeholder="Container description, seal numbers, or specific marks..."></textarea>
+            </div>
+        </div>
+
+        <!-- IMO Expanded -->
+        <div class="col-12 imo-details-row mt-3 p-3 bg-white-5 rounded-4 border border-white-10" style="display:none;">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">UN Number*</label>
+                    <input type="text" name="cont_un[]" class="form-control" placeholder="e.g. 1993">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Packing Group</label>
+                    <input type="text" name="cont_pg[]" class="form-control" placeholder="e.g. II">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Class</label>
+                    <input type="text" name="cont_class[]" class="form-control" placeholder="e.g. 3">
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 m-2 remove-row-btn" style="display:none;" onclick="removeRow(this)">
+            <i class="bi bi-x-circle-fill h5"></i>
+        </button>
+    </div>
+</template>
+
+<script>
+function addRow(type) {
+    const template = document.getElementById(type === 'LCL' ? 'lcl_row_template' : 'fcl_row_template');
+    const container = document.getElementById(type === 'LCL' ? 'lcl_items_container' : 'fcl_items_container');
+    const clone = template.content.cloneNode(true);
+    clone.querySelector('.remove-row-btn').style.display = 'block';
+    container.appendChild(clone);
+}
+function removeRow(btn) {
+    btn.closest('.cargo-item-row').remove();
+}
+function toggleImo(checkbox) {
+    const cargoRow = checkbox.closest('.cargo-item-row');
+    const imoDetails = cargoRow.querySelector('.imo-details-row');
+    const imoBadge = cargoRow.querySelector('.imo-badge');
+    const hiddenInput = checkbox.nextElementSibling;
+    
+    if (checkbox.checked) {
+        imoDetails.style.display = 'block';
+        imoBadge.style.display = 'inline-block';
+        cargoRow.classList.add('imo-active-row');
+        hiddenInput.value = 'yes';
+        imoDetails.querySelectorAll('input').forEach(input => input.setAttribute('required', 'required'));
+    } else {
+        imoDetails.style.display = 'none';
+        imoBadge.style.display = 'none';
+        cargoRow.classList.remove('imo-active-row');
+        hiddenInput.value = 'no';
+        imoDetails.querySelectorAll('input').forEach(input => input.removeAttribute('required'));
+    }
+}
+
+// File Upload logic
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileList = document.getElementById('file-list');
+let selectedFiles = [];
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'svg', 'webp'].includes(ext)) return 'bi-file-earmark-image';
+    if (ext === 'pdf') return 'bi-file-earmark-pdf';
+    if (['doc', 'docx'].includes(ext)) return 'bi-file-earmark-word';
+    if (['xls', 'xlsx'].includes(ext)) return 'bi-file-earmark-excel';
+    return 'bi-file-earmark-text';
+}
+
+function updateFileList() {
+    fileList.innerHTML = '';
+    selectedFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'file-card';
+        const iconClass = getFileIcon(file.name);
+        item.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="bi ${iconClass} h4 mb-0 me-3 text-accent-glow"></i>
+                <div>
+                    <div class="text-white fw-bold small">${file.name}</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">${(file.size/1024).toFixed(1)} KB</div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm text-danger opacity-75 hover-opacity-100" onclick="removeFile(${index})">
+                <i class="bi bi-x-circle-fill"></i>
+            </button>
+        `;
+        fileList.appendChild(item);
+    });
+    
+    // Sync with a new DataTransfer object to update the actual file input
+    const dataTransfer = new DataTransfer();
+    selectedFiles.forEach(file => dataTransfer.items.add(file));
+    fileInput.files = dataTransfer.files;
+}
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    updateFileList();
+}
+fileInput.addEventListener('change', (e) => {
+    selectedFiles = [...selectedFiles, ...Array.from(e.target.files)];
+    updateFileList();
+});
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'));
+});
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    selectedFiles = [...selectedFiles, ...Array.from(e.dataTransfer.files)];
+    updateFileList();
+});
+</script>
+{% endblock %}
+

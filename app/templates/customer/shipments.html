@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}Operational Feed{% endblock %}
+
+{% block content %}
+<style>
+    /* HIGH CONTRAST STATUS BADGES CONSISTENT WITH DASHBOARD */
+    .table-badge {
+        font-weight: 800 !important;
+        letter-spacing: 0.04em !important;
+        padding: 0.45em 0.85em !important;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        border-radius: 20px;
+    }
+    .table-badge-primary { background-color: #DBEAFE !important; color: #1D4ED8 !important; border: 1px solid #93C5FD !important; }
+    .table-badge-success { background-color: #DCFCE7 !important; color: #15803D !important; border: 1px solid #86EFAC !important; }
+    .table-badge-warning { background-color: #FEF3C7 !important; color: #B45309 !important; border: 1px solid #FCD34D !important; }
+    .table-badge-secondary { background-color: #F3F4F6 !important; color: #374151 !important; border: 1px solid #D1D5DB !important; }
+
+    .vector-node {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #1e293b;
+        background-color: #f8fafc;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .action-trigger {
+        width: 32px; height: 32px;
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .action-trigger:hover {
+        background: #f1f5f9;
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-end mb-4 intel-fade-in">
+    <div>
+        <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">Shipment Ecosystem</h3>
+        <p class="text-muted small mb-0">Real-time execution timeline of your active and historic logistics vectors.</p>
+    </div>
+    <div class="d-flex gap-3">
+        <div class="text-end border-end pe-3">
+            <div class="small text-muted fw-bold text-uppercase" style="font-size: 0.6rem;">Total Registry</div>
+            <div class="fw-bold h5 mb-0 text-dark">{{ shipments|length }}</div>
+        </div>
+        <a href="{{ url_for('customer.new_booking') }}" class="btn btn-primary border-0 px-3 py-2 fw-bold shadow-sm d-flex align-items-center" style="border-radius: 6px; font-size: 0.8rem;">
+            <i class="bi bi-plus-lg me-2"></i> Initiate Vector
+        </a>
+    </div>
+</div>
+
+<div class="bg-white border intel-fade-in" style="border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); animation-delay: 0.1s; overflow: hidden;">
+    <div class="table-responsive" style="min-height: 400px;">
+        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
+            <thead style="background-color: #F8FAFC;">
+                <tr>
+                    <th class="ps-4 text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Ref & Date</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Route Vector</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Metric / Term</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-3 text-center" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Current State</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-3 text-center" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">SI Trigger</th>
+                    <th class="pe-4 text-end border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Management</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shipment in shipments %}
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td class="ps-4 py-3">
+                        <div class="font-monospace fw-bold text-dark" style="font-size: 0.85rem;">#{{ shipment.id }}</div>
+                        <div class="text-muted" style="font-size: 0.7rem;">{{ shipment.created_at.strftime('%d %b, %Y') }}</div>
+                    </td>
+                    <td class="py-3">
+                        <div class="d-flex align-items-center">
+                            <span class="vector-node">{{ shipment.origin }}</span>
+                            <i class="bi bi-arrow-right mx-2 text-muted" style="font-size: 0.75rem;"></i>
+                            <span class="vector-node" style="border-color: #bfdbfe; color: #1d4ed8;">{{ shipment.destination }}</span>
+                        </div>
+                        <div class="mt-1 d-flex align-items-center gap-2">
+                            <span class="badge rounded-pill bg-light text-secondary border fw-bold" style="font-size: 0.6rem; letter-spacing: 0.02em;">{{ shipment.service_type }}</span>
+                            <span class="text-muted" style="font-size: 0.7rem;">{{ shipment.general_description[:25] if shipment.general_description else 'Cargo Profile Standard' }}...</span>
+                        </div>
+                    </td>
+                    <td class="py-3">
+                        <div class="fw-bold text-dark">{{ shipment.volume or '0' }} CBM</div>
+                        <div class="badge bg-light text-dark border rounded px-2 py-0" style="font-size:0.65rem;">{{ shipment.freight_terms or 'FOB' }}</div>
+                    </td>
+                    <td class="py-3 text-center">
+                        {% if 'Transit' in shipment.status or 'Dispatched' in shipment.status %}
+                            <span class="badge table-badge table-badge-primary">IN_TRANSIT</span>
+                        {% elif shipment.status == 'Booked' or 'Confirmed' in shipment.status %}
+                            <span class="badge table-badge table-badge-success">BOOKED</span>
+                        {% elif 'Pending' in shipment.status %}
+                            <span class="badge table-badge table-badge-warning">REVIEW</span>
+                        {% else %}
+                            <span class="badge table-badge table-badge-secondary">{{ shipment.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 text-center">
+                        {% if shipment.status == 'Booked' and not shipment.is_si_submitted %}
+                            <a href="{{ url_for('customer.submit_si', booking_id=shipment.id) }}" class="btn btn-xs btn-primary fw-bold shadow-sm px-2 py-1" style="font-size: 0.65rem; border-radius:4px;">
+                                SUBMIT SI
+                            </a>
+                        {% elif shipment.is_si_submitted %}
+                            <span class="text-success fw-bold d-flex align-items-center justify-content-center" style="font-size: 0.65rem;">
+                                <i class="bi bi-check-circle-fill me-1"></i> LODGED
+                            </span>
+                        {% else %}
+                            <span class="text-muted" style="font-size: 0.65rem;">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="pe-4 py-3 text-end">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="btn btn-sm btn-light border fw-bold" style="font-size: 0.75rem; padding: 0.25rem 0.75rem;">
+                                View
+                            </a>
+                            <div class="dropdown">
+                                <div class="action-trigger" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </div>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2" style="font-size: 0.8rem; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;">
+                                    <li><a class="dropdown-item py-2 fw-medium" href="{{ url_for('tracking.track_shipment', booking_id=shipment.id) }}"><i class="bi bi-geo-alt me-2 text-primary"></i>Live Tracking</a></li>
+                                    {% if shipment.status in ['Booked', 'Pending Review'] %}
+                                    <li><a class="dropdown-item py-2 fw-medium text-warning" href="{{ url_for('customer.edit_booking', booking_id=shipment.id) }}"><i class="bi bi-pencil-square me-2"></i>Edit Structure</a></li>
+                                    {% endif %}
+                                    <li><hr class="dropdown-divider my-1 opacity-50"></li>
+                                    <li><a class="dropdown-item py-2 fw-medium text-muted" href="#"><i class="bi bi-download me-2"></i>Pull Document Matrix</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div class="text-muted">
+                            <i class="bi bi-inboxes-fill display-5 opacity-25"></i>
+                            <p class="mt-2 fw-bold mb-1">Operational matrix empty.</p>
+                            <p class="small opacity-75 mb-3">You have not registered any active vectors in the database yet.</p>
+                            <a href="{{ url_for('customer.new_booking') }}" class="btn btn-sm btn-primary fw-bold shadow-sm">Initiate Discovery</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

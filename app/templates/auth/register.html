@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-lg-4 col-md-6 col-sm-10">
+        <div class="card glass-card p-4 p-md-5 rounded-4 border-white-10 shadow-lg">
+            <!-- Branding Header -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="90">
+                </div>
+                <h3 class="fw-bold text-white mb-1">Create Account</h3>
+                <p class="text-muted small text-uppercase fw-bold tracking-widest">Join AxeGlobal Logistics Portal</p>
+            </div>
+
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-4">
+                    <label class="form-label">Full Name</label>
+                    {{ form.name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter your name") }}
+                    {% for error in form.name.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Email Address</label>
+                    {{ form.email(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter your email") }}
+                    {% for error in form.email.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Password</label>
+                    {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                    {% for error in form.password.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Confirm Password</label>
+                    {{ form.confirm_password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                    {% for error in form.confirm_password.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="d-grid mt-5">
+                    {{ form.submit(class="btn btn-primary py-3 rounded-pill fw-bold text-uppercase tracking-wide shadow-accent") }}
+                </div>
+            </form>
+
+            <div class="text-center mt-4">
+                <span class="text-muted small">Already have an account?</span>
+                <a href="{{ url_for('auth.login') }}" class="text-accent-glow fw-bold text-decoration-none ms-1">Login Here</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

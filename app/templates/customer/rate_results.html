@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Compare Rates{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('customer.new_booking') }}" class="text-decoration-none">
+        <i class="bi bi-arrow-left"></i> Change search
+    </a>
+    <h3 class="mt-2">Available Rates</h3>
+    <div class="glass-card p-3 mb-4">
+        <p class="mb-0">
+            Route: <span class="route-highlight fs-5">{{ query.origin }}</span> 
+            <i class="bi bi-arrow-right mx-2 text-muted"></i> 
+            <span class="route-highlight fs-5">{{ query.destination }}</span>
+            <span class="mx-3 text-muted">|</span>
+            Volume: <span class="fw-bold text-white">{{ query.volume }} CBM</span>
+            <span class="mx-3 text-muted">|</span>
+            Service: <span class="badge bg-primary rounded-pill">{{ query.service_type }}</span>
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    {% for res in results %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 glass-card {% if res.ui_tag == 'Recommended' %}highlight-recommended{% elif res.ui_tag == 'Cheapest' %}highlight-cheapest{% elif res.ui_tag == 'Fastest' %}highlight-fastest{% endif %}">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title fw-bold">{{ res.rate.nvocc_name }}</h5>
+                    {% if res.ui_tag %}
+                        <span class="badge badge-{{ res.ui_tag|lower }} rounded-pill">{{ res.ui_tag }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="display-6 mb-1">${{ "%.2f"|format(res.total_cost) }}</div>
+                <div class="text-muted small mb-3">
+                    (${{ "%.2f"|format(res.base_rate) }} Base + ${{ "%.2f"|format(res.surcharges) }} Surcharges)
+                </div>
+                
+                <hr>
+
+                <div class="mb-3">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <small class="text-uppercase text-muted d-block" style="font-size: 0.7rem;">Transit Time</small>
+                            <span class="fw-bold"><i class="bi bi-clock"></i> {{ res.transit_days }} Days</span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-uppercase text-muted d-block" style="font-size: 0.7rem;">Frequency</small>
+                            <span class="fw-bold"><i class="bi bi-calendar-event"></i> {{ res.frequency or 'Weekly' }}</span>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <small class="text-uppercase text-muted d-block" style="font-size: 0.7rem;">Carrier/Routing</small>
+                            <span class="text-truncate d-block"><i class="bi bi-ship-wheel"></i> {{ res.carrier or 'Standard' }}</span>
+                        </div>
+                    </div>
+                    {% if res.remarks %}
+                    <div class="mt-2 p-2 bg-white-5 rounded small border border-white-10">
+                         <i class="bi bi-info-circle"></i> {{ res.remarks }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if current_user.role == 'customer' %}
+                <form action="{{ url_for('customer.finalize_booking') }}" method="POST">
+                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                    <input type="hidden" name="volume" value="{{ query.volume }}">
+                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                    <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm py-2">Book This Shipment</button>
+                </form>
+                {% else %}
+                <div class="alert alert-info small py-2 mb-0 text-center">
+                    <i class="bi bi-info-circle"></i> View only mode
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center my-5">
+        <div class="alert alert-warning">No rates found for this route. Please try another combination.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+origin,destination,nvocc_name,base_rate,surcharges,transit_days,validity_start,validity_end
+Jebel Ali,Hamburg,Hapag-Lloyd,750,200,22,2026-01-01,2026-12-31
+Nhava Sheva,Rotterdam,Maersk,820,240,25,2026-01-01,2026-12-31
+Mundra,Antwerp,MSC,800,230,24,2026-01-01,2026-12-31
+Karachi,Genoa,COSCO,650,180,18,2026-01-01,2026-12-31
+Chennai,Barcelona,CMA CGM,880,250,21,2026-01-01,2026-12-31

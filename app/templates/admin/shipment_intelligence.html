@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% block title %}Shipment Intelligence{% endblock %}
+{% block content %}
+<style>
+    /* High-End Sophisticated Interactions */
+    @keyframes slideUpIn {
+        0% { opacity: 0; transform: translateY(12px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .intel-fade-in {
+        animation: slideUpIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+    }
+    .hover-glow-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        border: 1px solid #E2E8F0 !important;
+    }
+    .hover-glow-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.06), 0 4px 6px -2px var(--primary-color)20;
+    }
+    .visualizer-canvas-wrap {
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    .visualizer-canvas-wrap:hover {
+        background-color: #F8FAFC;
+    }
+</style>
+<div class="d-flex justify-content-between align-items-center mb-4 intel-fade-in" style="animation-delay: 0s;">
+    <div>
+        <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.025em;">Logistics Intelligence</h3>
+        <p class="text-muted mb-0" style="font-size: 0.8rem;">Deep algorithmic auditing of active global shipping flow.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-glass rounded-1 border px-3 py-2">
+            <i class="bi bi-grid me-1"></i> Operational Main
+        </a>
+        <button class="btn btn-primary border-0 rounded-1 px-3 py-2"><i class="bi bi-arrow-clockwise me-1"></i> Refetch BI Pipeline</button>
+    </div>
+</div>
+
+<!-- Critical Threat and Milestone Ledger -->
+<div class="row g-3 mb-5 intel-fade-in" style="animation-delay: 0.1s;">
+    <div class="col-md-3">
+        <div class="bg-white border p-4 h-100 hover-glow-card" style="border-radius: 4px; border-top: 3px solid #EF4444 !important;">
+            <div class="text-muted smaller fw-bold text-uppercase mb-1" style="font-size: 0.65rem; letter-spacing: 0.06em;">Invoice Exceptions</div>
+            <h2 class="fw-bold text-dark mb-0" style="font-size: 2rem;">{{ bi.metrics.invoice_issues if bi else 0 }}</h2>
+            <div class="text-danger smaller fw-bold mt-2" style="font-size: 0.65rem;"><i class="bi bi-shield-exclamation me-1"></i> CRITICAL ACTION</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-white border p-4 h-100 hover-glow-card" style="border-radius: 4px; border-top: 3px solid #F59E0B !important;">
+            <div class="text-muted smaller fw-bold text-uppercase mb-1" style="font-size: 0.65rem; letter-spacing: 0.06em;">Documentation Gaps</div>
+            <h2 class="fw-bold text-dark mb-0" style="font-size: 2rem;">{{ bi.metrics.bl_issues if bi else 0 }}</h2>
+            <div class="text-warning smaller fw-bold mt-2" style="font-size: 0.65rem; filter: brightness(0.8);"><i class="bi bi-file-earmark-text me-1"></i> PENDING B/L</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-white border p-4 h-100 hover-glow-card" style="border-radius: 4px;">
+            <div class="text-muted smaller fw-bold text-uppercase mb-1" style="font-size: 0.65rem; letter-spacing: 0.06em;">Active Workloads</div>
+            <h2 class="fw-bold text-dark mb-0" style="font-size: 2rem;">{{ pending_shipments }}</h2>
+            <div class="text-muted smaller mt-2" style="font-size: 0.65rem;">SHIPMENTS PENDING</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-white border p-4 h-100 hover-glow-card" style="border-radius: 4px;">
+            <div class="text-muted smaller fw-bold text-uppercase mb-1" style="font-size: 0.65rem; letter-spacing: 0.06em;">Success Threshold</div>
+            <h2 class="fw-bold text-dark mb-0" style="font-size: 2rem;">{{ total_bookings }}</h2>
+            <div class="text-success smaller fw-bold mt-2" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill me-1"></i> FULLY EXECUTED</div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Metric Analysis Grid -->
+{% if bi %}
+<div class="row g-3 mb-5 intel-fade-in" style="animation-delay: 0.2s;">
+    <div class="col-md-3">
+        <div class="bg-white border p-3 hover-glow-card" style="border-radius: 4px;">
+            <div class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">Aggregate Vol</div>
+            <h4 class="fw-bold text-dark mb-0 my-1">{{ bi.metrics.total_cbm }} <span class="text-muted smaller fw-normal" style="font-size: 0.65rem;">CBM</span></h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-white border p-3 hover-glow-card" style="border-radius: 4px;">
+            <div class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">Gross Mass</div>
+            <h4 class="fw-bold text-dark mb-0 my-1">{{ bi.metrics.total_wgt }} <span class="text-muted smaller fw-normal" style="font-size: 0.65rem;">KG</span></h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-white border p-3 hover-glow-card" style="border-radius: 4px;">
+            <div class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">Mean Volume</div>
+            <h4 class="fw-bold text-dark mb-0 my-1">{{ bi.metrics.avg_cbm }} <span class="text-muted smaller fw-normal" style="font-size: 0.65rem;">CBM / BKG</span></h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-white border p-3 hover-glow-card" style="border-radius: 4px;">
+            <div class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">HAZMAT Index</div>
+            <h4 class="fw-bold text-danger mb-0 my-1">{{ bi.metrics.hazmat_ratio }}%</h4>
+        </div>
+    </div>
+</div>
+
+<!-- Geometric Graphical Plane -->
+<div class="row g-4 mb-5">
+    <!-- Full Span: Live Orchestration (Milestones) -->
+    <div class="col-12">
+        <div class="bg-white border p-4" style="border-radius: 4px;">
+            <h6 class="text-dark fw-bold text-uppercase mb-4" style="font-size: 0.7rem; letter-spacing: 0.08em;">Milestone Saturation Ledger</h6>
+            <div style="height: 180px;">
+                <canvas id="milestoneChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2/3 Span: Leading Accounts -->
+    <div class="col-lg-8">
+        <div class="bg-white border p-4 h-100" style="border-radius: 4px;">
+            <h6 class="text-dark fw-bold text-uppercase mb-4" style="font-size: 0.7rem; letter-spacing: 0.08em;">Dominant Client Volumetric Stack</h6>
+            <div style="height: 350px;">
+                <canvas id="customerChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1/3 Span: Traffic Orientation -->
+    <div class="col-lg-4">
+        <div class="bg-white border p-4 h-100" style="border-radius: 4px;">
+            <h6 class="text-dark fw-bold text-uppercase mb-4" style="font-size: 0.7rem; letter-spacing: 0.08em;">Logistics Mode Frequency</h6>
+            <div style="height: 350px;" class="d-flex align-items-center justify-content-center">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Half Span: Top Origins -->
+    <div class="col-md-6">
+        <div class="bg-white border p-4" style="border-radius: 4px;">
+            <h6 class="text-dark fw-bold text-uppercase mb-3" style="font-size: 0.7rem; letter-spacing: 0.08em;">Vector Initiation (POL)</h6>
+            <div style="height: 240px;">
+                <canvas id="originChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Half Span: Top Terminals -->
+    <div class="col-md-6">
+        <div class="bg-white border p-4" style="border-radius: 4px;">
+            <h6 class="text-dark fw-bold text-uppercase mb-3" style="font-size: 0.7rem; letter-spacing: 0.08em;">Vector Termination (POD)</h6>
+            <div style="height: 240px;">
+                <canvas id="destChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert bg-white border border-warning p-4 text-center" style="border-radius: 4px;">
+    <i class="bi bi-server text-warning fs-3 mb-2 d-block"></i>
+    <div class="fw-bold text-dark">BI Data Offline</div>
+    <p class="text-muted small mb-0 mt-1">Unable to stream Excel backend analytics into UI pipeline.</p>
+</div>
+{% endif %}
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+{% if bi %}
+// Advanced Global UI Protocol Defaults
+Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+Chart.defaults.color = '#64748B';
+Chart.defaults.plugins.tooltip.backgroundColor = '#1E293B';
+Chart.defaults.plugins.tooltip.titleFont = { weight: '600', size: 13 };
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 4;
+
+const rootStyles = getComputedStyle(document.documentElement);
+const rawPrimary = rootStyles.getPropertyValue('--primary-color').trim() || '#2563EB';
+const rawSecondary = '#38BDF8'; 
+
+// Gradient Construction Utility Engine
+const createHorizontalGradient = (ctx, chartArea, color1, color2) => {
+    const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+    gradient.addColorStop(0, color1);
+    gradient.addColorStop(1, color2);
+    return gradient;
+};
+
+const createVerticalGradient = (ctx, chartArea, color1, color2) => {
+    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    gradient.addColorStop(0, color1);
+    gradient.addColorStop(1, color2);
+    return gradient;
+};
+
+const chartData = {{ bi.charts | tojson }};
+const milestoneData = {{ milestones | tojson }};
+const revenueData = {{ revenue | tojson }};
+const ediStats = {{ edi_stats | tojson }};
+
+// 1. Milestone Chart (Interactive Linear Stack)
+new Chart(document.getElementById('milestoneChart'), {
+    type: 'bar',
+    data: {
+        labels: milestoneData.labels,
+        datasets: [{
+            data: milestoneData.data,
+            backgroundColor: function(context) {
+                const {chartArea, ctx} = context.chart;
+                if (!chartArea) return rawPrimary;
+                return createHorizontalGradient(ctx, chartArea, rawPrimary, '#60A5FA');
+            },
+            borderRadius: 4,
+            hoverBackgroundColor: '#1D4ED8',
+            barThickness: 16
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1200, easing: 'easeInOutQuart' },
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: '#F1F5F9' }, ticks: { font: { size: 10 }, color: '#64748B' } },
+            y: { grid: { display: false }, ticks: { color: '#475569', font: { weight: '600', size: 11 } } }
+        }
+    }
+});
+
+// 2. Customer Chart (Advanced Fluid Columns)
+new Chart(document.getElementById('customerChart'), {
+    type: 'bar',
+    data: {
+        labels: chartData.customers.labels,
+        datasets: [{
+            label: 'Volumetric Flow',
+            data: chartData.customers.data,
+            backgroundColor: function(context) {
+                const {chartArea, ctx} = context.chart;
+                if (!chartArea) return rawPrimary;
+                return createHorizontalGradient(ctx, chartArea, rawPrimary, rawSecondary);
+            },
+            borderRadius: 6,
+            hoverBackgroundColor: '#1E293B',
+            barThickness: 22
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1400, easing: 'easeInOutElastic' },
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: '#F1F5F9' }, ticks: { color: '#64748B', font: { size: 10 } } },
+            y: { grid: { display: false }, ticks: { color: '#475569', font: { size: 11, weight: '500' } } }
+        }
+    }
+});
+
+// 3. Traffic Split (Soft Inertia Ring)
+new Chart(document.getElementById('trafficChart'), {
+    type: 'doughnut',
+    data: {
+        labels: chartData.traffic.labels,
+        datasets: [{
+            data: chartData.traffic.data,
+            backgroundColor: [rawPrimary, '#06B6D4', '#94A3B8'],
+            hoverBackgroundColor: [rawPrimary, '#0891B2', '#64748B'],
+            borderWidth: 3,
+            borderColor: '#ffffff',
+            hoverOffset: 10
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { animateRotate: true, duration: 1600, easing: 'easeOutBack' },
+        plugins: {
+            legend: { position: 'bottom', labels: { color: '#64748B', font: { weight: '600', size: 11 }, padding: 20, usePointStyle: true } }
+        },
+        cutout: '70%'
+    }
+});
+
+// 4. Origin Chart (Tactile Vertical Bar)
+new Chart(document.getElementById('originChart'), {
+    type: 'bar',
+    data: {
+        labels: chartData.origins.labels,
+        datasets: [{
+            data: chartData.origins.data,
+            backgroundColor: function(context) {
+                const {chartArea, ctx} = context.chart;
+                if (!chartArea) return rawPrimary;
+                return createVerticalGradient(ctx, chartArea, rawPrimary, '#818CF8');
+            },
+            borderRadius: 6,
+            barThickness: 24,
+            hoverBackgroundColor: '#4338CA'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1000, easing: 'easeInOutQuad' },
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 11 } } },
+            y: { grid: { color: '#F1F5F9' }, ticks: { color: '#64748B' } }
+        }
+    }
+});
+
+// 5. Destination Chart (Tactile Vertical Bar - Support Hue)
+new Chart(document.getElementById('destChart'), {
+    type: 'bar',
+    data: {
+        labels: chartData.dests.labels,
+        datasets: [{
+            data: chartData.dests.data,
+            backgroundColor: function(context) {
+                const {chartArea, ctx} = context.chart;
+                if (!chartArea) return rawSecondary;
+                return createVerticalGradient(ctx, chartArea, rawSecondary, '#67E8F9');
+            },
+            borderRadius: 6,
+            barThickness: 24,
+            hoverBackgroundColor: '#0284C7'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1000, easing: 'easeInOutQuad', delay: 200 },
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 11 } } },
+            y: { grid: { color: '#F1F5F9' }, ticks: { color: '#64748B' } }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

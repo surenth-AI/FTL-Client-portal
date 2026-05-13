@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #333; }
+        .header { text-align: center; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 20px; }
+        .title { font-size: 18pt; font-weight: bold; color: #0056b3; margin-bottom: 5px; }
+        .subtitle { font-size: 12pt; color: #666; }
+        .section { margin-bottom: 20px; }
+        .section-title { font-weight: bold; border-bottom: 1px solid #ddd; margin-bottom: 10px; padding-bottom: 3px; }
+        .grid { display: block; width: 100%; }
+        .col { width: 48%; float: left; margin-bottom: 10px; }
+        .clear { clear: both; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #ddd; padding: 8px; }
+        td { padding: 8px; border-bottom: 1px solid #eee; }
+        .footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 8pt; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+        .important { color: #d9534f; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">ARRIVAL NOTICE</div>
+        <div class="subtitle">AxeGlobal Logistics (AXEGLOBAL) — Logistics Solutions</div>
+    </div>
+
+    <div class="section">
+        <div class="grid">
+            <div class="col">
+                <div class="section-title">Consignee</div>
+                <div>{{ notice.recipient_name }}</div>
+                <div>{{ notice.recipient_email }}</div>
+            </div>
+            <div class="col" style="margin-left: 4%;">
+                <div class="section-title">Shipment Details</div>
+                <div><strong>HBL:</strong> {{ booking.shipping_instruction.shipper_reference or 'Pending' }}</div>
+                <div><strong>Booking Ref:</strong> AXEGLOBAL-{{ booking.id }}</div>
+                <div><strong>Date:</strong> {{ now.strftime('%Y-%m-%d') }}</div>
+            </div>
+            <div class="clear"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Vessel Information</div>
+        <div class="grid">
+            <div class="col">
+                <div><strong>Vessel:</strong> {{ booking.shipping_instruction.vessel_name or 'TBA' }}</div>
+                <div><strong>Voyage:</strong> {{ booking.shipping_instruction.voyage or 'TBA' }}</div>
+            </div>
+            <div class="col" style="margin-left: 4%;">
+                <div><strong>Port of Loading:</strong> {{ booking.origin }}</div>
+                <div><strong>Port of Discharge:</strong> {{ booking.destination }}</div>
+                <div><strong>ETA:</strong> {{ booking.etd.strftime('%Y-%m-%d') if booking.etd else 'TBA' }}</div>
+            </div>
+            <div class="clear"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Cargo Description</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Quantity</th>
+                    <th>Description</th>
+                    <th>Weight (kg)</th>
+                    <th>Volume (cbm)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in booking.cargo_items %}
+                <tr>
+                    <td>{{ item.quantity or item.container_count or 1 }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.weight_kg }}</td>
+                    <td>{{ item.volume_cbm }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Important Instructions</div>
+        <p class="important">PLEASE NOTE: THIS IS AN ARRIVAL NOTICE ONLY. CARGO WILL NOT BE RELEASED UNTIL ALL CHARGES ARE PAID AND ORIGINAL BILL OF LADING IS SURRENDERED (OR TELEX RELEASE RECEIVED).</p>
+        <p>Please contact our destination office at <strong>import-hamburg@axeglobal.com</strong> for clearance instructions.</p>
+    </div>
+
+    <div class="footer">
+        AxeGlobal Logistics — Unified Freight Management Platform | Confidential
+    </div>
+</body>
+</html>

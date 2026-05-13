@@ -1,0 +1,43 @@
+origin,destination,nvocc_name,base_rate,surcharges,transit_days,validity_start,validity_end
+New York,Hamburg,CMA CGM,1084,400,20,2026-01-01,2026-12-31
+New York,Rotterdam,ACL,1181,338,40,2026-01-01,2026-12-31
+New York,Felixstowe,MSC,1494,416,16,2026-01-01,2026-12-31
+New York,Antwerp,Hapag-Lloyd,823,423,34,2026-01-01,2026-12-31
+New York,Bremerhaven,CMA CGM,1052,428,12,2026-01-01,2026-12-31
+New York,Le Havre,ACL,1279,404,29,2026-01-01,2026-12-31
+Savannah,Hamburg,ACL,969,150,27,2026-01-01,2026-12-31
+Savannah,Rotterdam,Hapag-Lloyd,1437,309,32,2026-01-01,2026-12-31
+Savannah,Felixstowe,ACL,762,315,19,2026-01-01,2026-12-31
+Savannah,Antwerp,CMA CGM,1302,285,37,2026-01-01,2026-12-31
+Savannah,Bremerhaven,ACL,883,264,18,2026-01-01,2026-12-31
+Savannah,Le Havre,ACL,1302,240,19,2026-01-01,2026-12-31
+Miami,Hamburg,CMA CGM,1058,203,31,2026-01-01,2026-12-31
+Miami,Rotterdam,ACL,1170,427,25,2026-01-01,2026-12-31
+Miami,Felixstowe,MSC,1254,370,25,2026-01-01,2026-12-31
+Miami,Antwerp,CMA CGM,1116,298,13,2026-01-01,2026-12-31
+Miami,Bremerhaven,CMA CGM,1419,297,21,2026-01-01,2026-12-31
+Miami,Le Havre,ACL,958,367,33,2026-01-01,2026-12-31
+Norfolk,Hamburg,ACL,1376,447,14,2026-01-01,2026-12-31
+Norfolk,Rotterdam,Maersk,1368,221,16,2026-01-01,2026-12-31
+Norfolk,Felixstowe,CMA CGM,767,382,38,2026-01-01,2026-12-31
+Norfolk,Antwerp,MSC,604,183,14,2026-01-01,2026-12-31
+Norfolk,Bremerhaven,ACL,684,167,19,2026-01-01,2026-12-31
+Norfolk,Le Havre,CMA CGM,1495,385,21,2026-01-01,2026-12-31
+Charleston,Hamburg,Maersk,1094,422,28,2026-01-01,2026-12-31
+Charleston,Rotterdam,Hapag-Lloyd,716,191,31,2026-01-01,2026-12-31
+Charleston,Felixstowe,Hapag-Lloyd,1089,372,29,2026-01-01,2026-12-31
+Charleston,Antwerp,Maersk,1340,442,29,2026-01-01,2026-12-31
+Charleston,Bremerhaven,CMA CGM,1176,408,23,2026-01-01,2026-12-31
+Charleston,Le Havre,CMA CGM,725,292,26,2026-01-01,2026-12-31
+Houston,Hamburg,ACL,923,400,14,2026-01-01,2026-12-31
+Houston,Rotterdam,Maersk,657,212,33,2026-01-01,2026-12-31
+Houston,Felixstowe,MSC,773,277,40,2026-01-01,2026-12-31
+Houston,Antwerp,MSC,873,395,40,2026-01-01,2026-12-31
+Houston,Bremerhaven,ACL,964,177,32,2026-01-01,2026-12-31
+Houston,Le Havre,CMA CGM,1411,369,39,2026-01-01,2026-12-31
+Baltimore,Hamburg,Maersk,1325,296,27,2026-01-01,2026-12-31
+Baltimore,Rotterdam,Hapag-Lloyd,1115,420,13,2026-01-01,2026-12-31
+Baltimore,Felixstowe,Maersk,1286,319,25,2026-01-01,2026-12-31
+Baltimore,Antwerp,MSC,805,265,12,2026-01-01,2026-12-31
+Baltimore,Bremerhaven,Maersk,879,393,30,2026-01-01,2026-12-31
+Baltimore,Le Havre,MSC,975,258,34,2026-01-01,2026-12-31

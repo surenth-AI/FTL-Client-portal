@@ -1,0 +1,469 @@
+{% extends 'base.html' %}
+{% block title %}Operational Grid{% endblock %}
+
+{% block content %}
+<!-- Leaflet Engine Integration for Dynamic Map Overlay -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    /* Resetting the hero banner to host the live interactive container */
+    .map-hero-container {
+        height: 380px;
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px -5px rgba(0,0,0,0.1);
+    }
+    #globalLogisticsMap {
+        height: 100%;
+        width: 100%;
+        z-index: 1;
+    }
+    .map-float-overlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.8) 100%);
+        pointer-events: none;
+        z-index: 2;
+    }
+    .floating-quoting-engine {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        width: 92%;
+        max-width: 960px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        box-shadow: 0 10px 30px -5px rgba(0,0,0,0.15);
+        pointer-events: auto;
+    }
+    
+    /* Clean minimal label styling */
+    .map-label-heading {
+        position: absolute;
+        top: 30px;
+        left: 40px;
+        z-index: 5;
+        pointer-events: none;
+    }
+    
+    /* Map Visual Tuning to blend gracefully into UI */
+    .leaflet-control-attribution { display: none !important; }
+    .leaflet-bar { border: 0 !important; box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important; }
+</style>
+
+<!-- Hero View with Interactive Map Matrix -->
+<div class="row mb-4 intel-fade-in">
+    <div class="col-12">
+        <div class="map-hero-container border">
+            <!-- Actual Interactive Map Canvas -->
+            <div id="globalLogisticsMap"></div>
+            
+            <!-- Gradient Fog overlay -->
+            <div class="map-float-overlay"></div>
+
+            <!-- Heading floating gracefully over map -->
+            <div class="map-label-heading">
+                <div class="bg-white bg-opacity-75 backdrop-blur border rounded px-3 py-2 d-inline-block shadow-sm" style="border-radius: 6px !important;">
+                    <h4 class="fw-bold text-dark mb-0" style="letter-spacing: -0.02em;">
+                        <i class="bi bi-globe2 text-primary me-2"></i>Live Logistics Grid
+                    </h4>
+                    <p class="text-muted smaller mb-0 fw-medium">Real-time availability across global trade lanes.</p>
+                </div>
+            </div>
+
+            <!-- Floating Quoting Engine Dock -->
+            <div class="floating-quoting-engine p-3 p-lg-4">
+                <form action="{{ url_for('customer.new_booking') }}" method="POST" class="row g-2 align-items-end">
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label mb-1 fw-bold text-muted ls-1 text-uppercase" style="font-size: 0.65rem;">Origin Vector</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0" style="border-radius: 4px 0 0 4px;"><i class="bi bi-geo-alt text-primary"></i></span>
+                            <select name="origin" class="form-select form-select-sm border-start-0 fw-bold" required style="font-size: 0.8rem; border-radius: 0 4px 4px 0;">
+                                <option value="">Origin City</option>
+                                {% for city in origins %}
+                                    <option value="{{ city }}">{{ city }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label mb-1 fw-bold text-muted ls-1 text-uppercase" style="font-size: 0.65rem;">Destination</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0" style="border-radius: 4px 0 0 4px;"><i class="bi bi-geo text-primary"></i></span>
+                            <select name="destination" class="form-select form-select-sm border-start-0 fw-bold" required style="font-size: 0.8rem; border-radius: 0 4px 4px 0;">
+                                <option value="">Target Destination</option>
+                                {% for city in destinations %}
+                                    <option value="{{ city }}">{{ city }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label mb-1 fw-bold text-muted ls-1 text-uppercase" style="font-size: 0.65rem;">Load Protocol</label>
+                        <div class="bg-light rounded p-1 d-flex border" style="height: 31px;">
+                            <input type="radio" class="btn-check" name="service_type" id="dash_lcl" value="LCL" checked>
+                            <label class="btn btn-xs btn-light-toggle flex-fill border-0 d-flex align-items-center justify-content-center text-uppercase fw-bold" for="dash_lcl" style="font-size: 0.65rem;">LCL</label>
+                            
+                            <input type="radio" class="btn-check" name="service_type" id="dash_fcl" value="FCL">
+                            <label class="btn btn-xs btn-light-toggle flex-fill border-0 d-flex align-items-center justify-content-center text-uppercase fw-bold" for="dash_fcl" style="font-size: 0.65rem;">FCL</label>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold border-0 d-flex align-items-center justify-content-center shadow-sm" style="height: 31px; border-radius: 4px;">
+                            <i class="bi bi-search me-2"></i> Query Rate Matrix
+                        </button>
+                    </div>
+                    
+                    <!-- DYNAMIC QUANTITY VECTOR (INJECTED) -->
+                    <div class="col-12 mt-2 pt-2 border-top" style="border-color: rgba(0,0,0,0.05) !important;">
+                        <!-- LCL DYNAMIC INPUTS -->
+                        <div id="dash_extra_lcl" class="row g-2">
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-muted fw-bold" style="font-size:0.65rem;">QTY / TYPE</span>
+                                    <input type="number" name="item_qty[]" class="form-control fw-bold" value="1" min="1">
+                                    <select name="item_type[]" class="form-select fw-bold" style="max-width:90px;">
+                                        <option value="Pallet">Plt</option><option value="Box">Box</option><option value="Crate">Crt</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-muted fw-bold" style="font-size:0.65rem;">WT (KG)</span>
+                                    <input type="number" name="item_weight[]" class="form-control fw-bold" placeholder="e.g. 500" value="100">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-muted fw-bold" style="font-size:0.65rem;">VOL (CBM)</span>
+                                    <input type="number" name="item_volume[]" class="form-control fw-bold" placeholder="e.g. 2.5" value="1" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- FCL DYNAMIC INPUTS -->
+                        <div id="dash_extra_fcl" class="row g-2" style="display:none;">
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-muted fw-bold" style="font-size:0.65rem;">UNIT TYPE</span>
+                                    <select name="cont_type[]" class="form-select fw-bold">
+                                        <option value="20' ST">20' Standard</option>
+                                        <option value="40' ST">40' Standard</option>
+                                        <option value="40' HC">40' High Cube</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-muted fw-bold" style="font-size:0.65rem;">QTY</span>
+                                    <input type="number" name="cont_qty[]" class="form-control fw-bold" value="1" min="1">
+                                </div>
+                            </div>
+                            <!-- Silent FCL safety anchors -->
+                            <input type="hidden" name="cont_weight[]" value="1000">
+                            <input type="hidden" name="cont_volume[]" value="20">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance & Access Tiles -->
+<div class="row g-3 mb-4 intel-fade-in" style="animation-delay: 0.1s;">
+    <div class="col-md-4">
+        <div class="bg-white border p-3 d-flex align-items-center h-100 stat-node" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3 rounded-circle" style="width: 42px; height: 42px; transition: 0.2s;">
+                <i class="bi bi-box-seam fs-5"></i>
+            </div>
+            <div>
+                <div class="text-muted text-uppercase ls-1 fw-bold mb-0" style="font-size: 0.65rem;">Active Operations</div>
+                <div class="d-flex align-items-center">
+                    <h4 class="fw-bold text-dark mb-0 me-2" style="letter-spacing: -0.02em;">{{ total_active }}</h4>
+                    <span class="text-success fw-bold d-flex align-items-center" style="font-size: 0.75rem;">
+                        <span class="pulse-dot"></span>Live
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-white border p-3 d-flex align-items-center h-100 stat-node" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="bg-secondary bg-opacity-10 text-secondary d-flex align-items-center justify-content-center me-3 rounded-circle" style="width: 42px; height: 42px;">
+                <i class="bi bi-building fs-5"></i>
+            </div>
+            <div>
+                <div class="text-muted text-uppercase ls-1 fw-bold mb-0" style="font-size: 0.65rem;">Node Entity</div>
+                <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem; max-width: 200px;">
+                    {{ current_user.company.name if current_user.company else 'Independent Node' }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-white border p-3 d-flex align-items-center h-100 stat-node" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="bg-light text-secondary border d-flex align-items-center justify-content-center me-3 rounded-circle" style="width: 42px; height: 42px;">
+                <i class="bi bi-shield-check fs-5"></i>
+            </div>
+            <div>
+                <div class="text-muted text-uppercase ls-1 fw-bold mb-0" style="font-size: 0.65rem;">Access Certificate</div>
+                <div class="font-monospace fw-bold text-dark" style="font-size: 0.8rem;">
+                    {{ current_user.company.ftl_code if current_user.company else 'GUEST' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Workspace Registry Layout -->
+<div class="row g-4 intel-fade-in" style="animation-delay: 0.2s;">
+    <div class="col-lg-12">
+        <div class="bg-white border" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="d-flex align-items-center justify-content-between p-3 border-bottom" style="background-color: #F8FAFC;">
+                <h6 class="fw-bold text-dark mb-0" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
+                    <i class="bi bi-list-task text-primary me-2"></i>Audit Registry
+                </h6>
+                {% if recent_shipments %}
+                <a href="{{ url_for('customer.my_shipments') }}" class="btn btn-xs btn-light border fw-bold" style="font-size: 0.65rem;">
+                    Audit Trail <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+                {% endif %}
+            </div>
+
+            {% if recent_shipments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
+                    <thead>
+                        <tr class="bg-light">
+                            <th class="ps-3 text-muted fw-bold border-bottom-0 py-2" style="font-size: 0.65rem; text-transform: uppercase;">Reference</th>
+                            <th class="text-muted fw-bold border-bottom-0 py-2" style="font-size: 0.65rem; text-transform: uppercase;">Vector</th>
+                            <th class="text-muted fw-bold border-bottom-0 py-2" style="font-size: 0.65rem; text-transform: uppercase;">NVOCC</th>
+                            <th class="text-muted fw-bold border-bottom-0 py-2 text-center" style="font-size: 0.65rem; text-transform: uppercase;">Stage</th>
+                            <th class="pe-3 border-bottom-0 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shipment in recent_shipments %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="font-monospace fw-bold text-dark">#{{ shipment.id }}</div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="fw-bold text-dark" style="font-size: 0.75rem;">{{ shipment.origin }}</span>
+                                    <i class="bi bi-arrow-right-short mx-2 text-muted"></i>
+                                    <span class="fw-bold text-dark" style="font-size: 0.75rem;">{{ shipment.destination }}</span>
+                                </div>
+                            </td>
+                            <td><span class="text-secondary" style="font-size: 0.75rem;">{{ shipment.selected_nvocc }}</span></td>
+                            <td class="text-center">
+                                {% if 'Transit' in shipment.status %}
+                                    <span class="badge rounded-pill border table-badge table-badge-primary fw-bold" style="font-size: 0.6rem;">IN_TRANSIT</span>
+                                {% elif shipment.status == 'Booked' or 'Confirmed' in shipment.status %}
+                                    <span class="badge rounded-pill border table-badge table-badge-success fw-bold" style="font-size: 0.6rem;">LOCKED</span>
+                                {% else %}
+                                    <span class="badge rounded-pill border table-badge table-badge-secondary fw-bold" style="font-size: 0.6rem;">{{ shipment.status.upper() }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3 text-end">
+                                <a href="{{ url_for('tracking.track_shipment', booking_id=shipment.id) }}" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">
+                                    <i class="bi bi-chevron-right text-muted" style="font-size: 0.65rem;"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center">
+                <p class="text-muted small mb-0">Grid registry empty. Initiate request stream to begin.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- LEAFLET LOGISTICS SCRIPTS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize premium global map focused on world trade central (Europe/MiddleEast/Asia view)
+    var map = L.map('globalLogisticsMap', {
+        center: [30.0, 20.0],
+        zoom: 3,
+        zoomControl: false, // Cleaner look
+        attributionControl: false,
+        scrollWheelZoom: false
+    });
+
+    // Use Premium Clean Map Tiles (CartoDB Positron - Light European Standard)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+    }).addTo(map);
+
+    // Add minor zoom control in top right corner
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // Pull dynamic theme color variable for visualization lines
+    const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#0077ff';
+
+    // Global Logistics Major Port Nodes
+    const majorHubs = [
+        { name: 'Shanghai', coords: [31.23, 121.47] },
+        { name: 'Rotterdam', coords: [51.92, 4.47] },
+        { name: 'Dubai', coords: [25.20, 55.27] },
+        { name: 'Singapore', coords: [1.35, 103.82] },
+        { name: 'New York', coords: [40.71, -74.00] }
+    ];
+
+    // Draw custom circular pulse icon markers
+    majorHubs.forEach(hub => {
+        L.circleMarker(hub.coords, {
+            radius: 4,
+            fillColor: themeColor,
+            color: "#FFFFFF",
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(map).bindTooltip(hub.name, {permanent: false, direction: 'top'});
+    });
+
+    // Define trade lane connections for high-end active visualization
+    const tradeLanes = [
+        [majorHubs[0].coords, majorHubs[1].coords], // Shanghai -> Rotterdam
+        [majorHubs[2].coords, majorHubs[1].coords], // Dubai -> Rotterdam
+        [majorHubs[3].coords, majorHubs[2].coords], // Singapore -> Dubai
+        [majorHubs[1].coords, majorHubs[4].coords]  // Rotterdam -> New York
+    ];
+
+    // Draw trade lanes with dynamic weight and curvature simulation
+    tradeLanes.forEach(lane => {
+        L.polyline(lane, {
+            color: themeColor,
+            weight: 2,
+            opacity: 0.4,
+            dashArray: '4, 6',
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).addTo(map);
+    });
+
+    // SETUP DYNAMIC SEARCH BAR TOGGLES
+    const lclRadio = document.getElementById('dash_lcl');
+    const fclRadio = document.getElementById('dash_fcl');
+    const extraLcl = document.getElementById('dash_extra_lcl');
+    const extraFcl = document.getElementById('dash_extra_fcl');
+
+    function refreshExtraInputs() {
+        if(lclRadio.checked) {
+            extraLcl.style.display = 'flex';
+            extraFcl.style.display = 'none';
+        } else {
+            extraLcl.style.display = 'none';
+            extraFcl.style.display = 'flex';
+        }
+    }
+    
+    lclRadio.addEventListener('change', refreshExtraInputs);
+    fclRadio.addEventListener('change', refreshExtraInputs);
+});
+</script>
+
+<style>
+/* Visual Consistency Hacks for inputs inherited from Base */
+/* PULSATING LIVE INDICATOR */
+.pulse-dot {
+    width: 8px; height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-green 2.5s infinite;
+    margin-right: 6px;
+}
+@keyframes pulse-green {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* INTERACTIVE CARDS */
+.stat-node {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid #E2E8F0 !important;
+}
+.stat-node:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08) !important;
+    border-color: var(--primary-color) !important;
+}
+.stat-node:hover i {
+    transform: scale(1.1);
+}
+
+/* HIGH CONTRAST STATUS BADGES */
+.table-badge {
+    font-weight: 800 !important;
+    letter-spacing: 0.04em !important;
+    padding: 0.45em 0.85em !important;
+    text-shadow: none;
+}
+.table-badge-primary { 
+    background-color: #DBEAFE !important; 
+    color: #1D4ED8 !important; 
+    border-color: #93C5FD !important; 
+}
+.table-badge-success { 
+    background-color: #DCFCE7 !important; 
+    color: #15803D !important; 
+    border-color: #86EFAC !important; 
+}
+.table-badge-secondary { 
+    background-color: #F3F4F6 !important; 
+    color: #374151 !important; 
+    border-color: #D1D5DB !important; 
+}
+
+/* SIDEBAR LINKS */
+.hover-action-link {
+    border: 1px solid #E2E8F0 !important;
+    transition: all 0.2s ease;
+}
+.hover-action-link:hover {
+    border-color: var(--primary-color) !important;
+    background-color: #F8FAFC !important;
+    transform: translateX(2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.btn-check:checked + .btn-light-toggle {
+    background-color: var(--primary-color) !important;
+    color: #FFFFFF !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.btn-light-toggle {
+    background-color: transparent;
+    color: #64748B;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+.hover-bg-light:hover {
+    background-color: #F8FAFC !important;
+}
+.backdrop-blur {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+</style>
+{% endblock %}

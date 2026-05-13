@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% block title %}System Topology & Branding{% endblock %}
+{% block content %}
+<div class="mb-4 intel-fade-in">
+    <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">System Node Parameters</h3>
+    <p class="text-muted small mb-0">Configure the core application viewport, branding vectors, and stylistic definitions.</p>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="intel-fade-in" style="animation-delay: 0.1s;">
+    <div class="row g-4">
+        <!-- Visual Branding Identity Column -->
+        <div class="col-lg-8">
+            <div class="bg-white border p-4 mb-4" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                <div class="d-flex align-items-center mb-4 border-bottom pb-3">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="bi bi-image-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Primary Branding Vectors</h6>
+                        <span class="text-muted small">Update the global interface imagery and landing portals.</span>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Organization Logo -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light bg-opacity-10 h-100">
+                            <label class="fw-bold text-dark d-block mb-2" style="font-size: 0.8rem;">Navigation Logo</label>
+                            <div class="bg-white border d-flex align-items-center justify-content-center mb-3" style="height: 120px; border-radius: 4px; background-image: linear-gradient(45deg, #f8fafc 25%, transparent 25%, transparent 75%, #f8fafc 75%, #f8fafc), linear-gradient(45deg, #f8fafc 25%, transparent 25%, transparent 75%, #f8fafc 75%, #f8fafc); background-size: 16px 16px; background-position: 0 0, 8px 8px;">
+                                <img src="{{ system_logo_url }}" class="img-fluid" style="max-height: 60px;" alt="Current Logo">
+                            </div>
+                            <input type="file" name="logo_file" id="logo_file" class="form-control form-control-sm" accept=".png,.jpg,.jpeg,.svg">
+                            <div class="small text-muted mt-1" style="font-size: 0.65rem;">Recommended: Transparent PNG, Max 2MB</div>
+                        </div>
+                    </div>
+
+                    <!-- Login Banner -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light bg-opacity-10 h-100">
+                            <label class="fw-bold text-dark d-block mb-2" style="font-size: 0.8rem;">Login Portal Hero Banner</label>
+                            <div class="bg-dark border overflow-hidden d-flex align-items-center justify-content-center mb-3" style="height: 120px; border-radius: 4px; background: #1E293B;">
+                                <img src="{{ system_banner_url }}" class="w-100 h-100" style="object-fit: cover; opacity: 0.8;" alt="Current Banner">
+                            </div>
+                            <input type="file" name="banner_file" id="banner_file" class="form-control form-control-sm" accept=".png,.jpg,.jpeg">
+                            <div class="small text-muted mt-1" style="font-size: 0.65rem;">High resolution landscape image advised.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Core UI Logic -->
+            <div class="bg-white border p-4" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                <div class="d-flex align-items-center mb-4 border-bottom pb-3">
+                    <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="bi bi-columns-gap"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Interface Topography</h6>
+                        <span class="text-muted small">Control structural navigation alignments.</span>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Sidebar Layout -->
+                    <div class="col-md-6">
+                        <label class="layout-selector-wrapper w-100">
+                            <input type="radio" name="default_layout" value="sidebar" {% if settings.default_layout == 'sidebar' %}checked{% endif %}>
+                            <div class="layout-card border p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-frame bg-light rounded d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-layout-sidebar text-secondary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">Authoritative Sidebar</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">Vertical hierarchy (Recommended)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <!-- Topbar Layout -->
+                    <div class="col-md-6">
+                        <label class="layout-selector-wrapper w-100">
+                            <input type="radio" name="default_layout" value="topbar" {% if settings.default_layout == 'topbar' %}checked{% endif %}>
+                            <div class="layout-card border p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-frame bg-light rounded d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-layout-three-columns text-secondary" style="transform: rotate(90deg);"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">Horizontal Navbar</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">Maximized canvas width</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side Sidebar Configuration -->
+        <div class="col-lg-4">
+            <div class="bg-white border p-4 sticky-top" style="top: 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                <div class="d-flex align-items-center mb-4 border-bottom pb-3">
+                    <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="bi bi-palette"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-0" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Accent Matrix</h6>
+                </div>
+
+                <p class="text-muted mb-3" style="font-size: 0.75rem;">Determine the core aesthetic frequency for the entire global node suite.</p>
+                
+                <div class="theme-radio-grid">
+                    <!-- Blue -->
+                    <label class="theme-option mb-2">
+                        <input type="radio" name="theme_color" value="blue" {% if settings.theme_color == 'blue' %}checked{% endif %}>
+                        <div class="theme-selector-card d-flex align-items-center border rounded p-2">
+                            <span class="color-swatch me-3 rounded-circle" style="background: #0077ff; width: 16px; height: 16px;"></span>
+                            <span class="fw-bold text-dark" style="font-size: 0.8rem;">Deep Sea Blue</span>
+                        </div>
+                    </label>
+                    <!-- Purple -->
+                    <label class="theme-option mb-2">
+                        <input type="radio" name="theme_color" value="purple" {% if settings.theme_color == 'purple' %}checked{% endif %}>
+                        <div class="theme-selector-card d-flex align-items-center border rounded p-2">
+                            <span class="color-swatch me-3 rounded-circle" style="background: #8B5CF6; width: 16px; height: 16px;"></span>
+                            <span class="fw-bold text-dark" style="font-size: 0.8rem;">Royal Purple</span>
+                        </div>
+                    </label>
+                    <!-- Teal -->
+                    <label class="theme-option mb-2">
+                        <input type="radio" name="theme_color" value="teal" {% if settings.theme_color == 'teal' %}checked{% endif %}>
+                        <div class="theme-selector-card d-flex align-items-center border rounded p-2">
+                            <span class="color-swatch me-3 rounded-circle" style="background: #14B8A6; width: 16px; height: 16px;"></span>
+                            <span class="fw-bold text-dark" style="font-size: 0.8rem;">Aurora Teal</span>
+                        </div>
+                    </label>
+                    <!-- Green -->
+                    <label class="theme-option mb-2">
+                        <input type="radio" name="theme_color" value="green" {% if settings.theme_color == 'green' %}checked{% endif %}>
+                        <div class="theme-selector-card d-flex align-items-center border rounded p-2">
+                            <span class="color-swatch me-3 rounded-circle" style="background: #10B981; width: 16px; height: 16px;"></span>
+                            <span class="fw-bold text-dark" style="font-size: 0.8rem;">Eco Green</span>
+                        </div>
+                    </label>
+                    <!-- Orange -->
+                    <label class="theme-option mb-2">
+                        <input type="radio" name="theme_color" value="orange" {% if settings.theme_color == 'orange' %}checked{% endif %}>
+                        <div class="theme-selector-card d-flex align-items-center border rounded p-2">
+                            <span class="color-swatch me-3 rounded-circle" style="background: #F97316; width: 16px; height: 16px;"></span>
+                            <span class="fw-bold text-dark" style="font-size: 0.8rem;">Solar Orange</span>
+                        </div>
+                    </label>
+
+                    <!-- CUSTOM COLOR -->
+                    {% set is_custom = settings.theme_color not in ['blue', 'purple', 'teal', 'green', 'orange'] %}
+                    {% set current_custom_hex = settings.theme_color if is_custom and settings.theme_color.startswith('#') else '#3B82F6' %}
+                    
+                    <label class="theme-option mb-2">
+                        <input type="radio" name="theme_color" id="custom-color-radio" value="{{ current_custom_hex }}" {% if is_custom %}checked{% endif %}>
+                        <div id="custom-color-wrapper" class="theme-selector-card d-flex align-items-center border rounded p-2 bg-light bg-opacity-25 cursor-pointer">
+                            <div class="me-3 position-relative" style="width: 24px; height: 24px;">
+                                <input type="color" id="color-picker" value="{{ current_custom_hex }}" class="position-absolute top-0 start-0 opacity-0 w-100 h-100 cursor-pointer">
+                                <span id="color-preview" class="color-swatch d-block w-100 h-100 rounded-circle border shadow-sm" style="background: {{ current_custom_hex }};"></span>
+                            </div>
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold text-dark" style="font-size: 0.8rem;">Arbitrary Custom Vector</span>
+                                <span class="text-muted" style="font-size: 0.6rem;" id="hex-label">{{ current_custom_hex }}</span>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="mt-5 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary w-100 rounded-1 py-2 fw-bold border-0 shadow-sm d-flex align-items-center justify-content-center" style="font-size: 0.85rem;">
+                        <i class="bi bi-check-circle me-2"></i> Apply Configurations
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const colorPicker = document.getElementById('color-picker');
+    const colorRadio = document.getElementById('custom-color-radio');
+    const colorPreview = document.getElementById('color-preview');
+    const hexLabel = document.getElementById('hex-label');
+
+    // Direct trigger logic for wrapping card
+    const customWrapper = document.getElementById('custom-color-wrapper');
+    if (customWrapper) {
+        customWrapper.addEventListener('click', function(e) {
+            // Don't infinite loop if picker was the event target
+            if (e.target !== colorPicker) {
+                colorPicker.click();
+            }
+        });
+    }
+
+    colorPicker.addEventListener('input', function(e) {
+        const val = e.target.value;
+        colorRadio.value = val;
+        colorRadio.checked = true;
+        colorPreview.style.backgroundColor = val;
+        hexLabel.textContent = val.toUpperCase();
+    });
+    
+    colorPicker.addEventListener('change', function(e) {
+        colorRadio.checked = true;
+    });
+});
+</script>
+
+<style>
+/* Minimal Utility CSS to enforce select state cleanly without bloated overrides */
+.layout-selector-wrapper input[type="radio"],
+.theme-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.layout-card,
+.theme-selector-card {
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-radius: 6px;
+}
+
+.layout-card:hover,
+.theme-selector-card:hover {
+    border-color: #CBD5E1 !important;
+    background-color: #F8FAFC;
+}
+
+/* Active Logic */
+input[type="radio"]:checked + .layout-card,
+input[type="radio"]:checked + .theme-selector-card {
+    border-color: var(--primary-color) !important;
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.03);
+    position: relative;
+}
+
+input[type="radio"]:checked + .layout-card::after,
+input[type="radio"]:checked + .theme-selector-card::after {
+    content: '\F272'; /* Bootstrap icon-check-circle-fill code conceptually */
+    font-family: "bootstrap-icons";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.theme-option {
+    display: block;
+    cursor: pointer;
+}
+</style>
+{% endblock %}

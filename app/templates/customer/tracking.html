@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Track Shipment #{{ booking.id }}{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card glass-card p-4 rounded-4 mb-4">
+            <h5 class="text-uppercase text-muted fw-bold small mb-4"><i class="bi bi-geo-alt me-2"></i> Shipment Tracking</h5>
+            
+            <!-- Summary Header -->
+            <div class="bg-white-5 rounded-4 p-4 border border-white-10 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <div class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Ref ID</div>
+                        <div class="h5 fw-bold text-white mb-3">#{{ booking.id }}</div>
+                        
+                        <div class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Carrier</div>
+                        <div class="h6 fw-bold text-accent-glow">{{ booking.selected_nvocc }}</div>
+                    </div>
+                    <div class="col-md-7 border-start border-white-10 ps-md-4">
+                        <div class="text-uppercase text-muted fw-bold mb-2 text-center" style="font-size: 0.7rem; letter-spacing: 1px;">Route Summary</div>
+                        <div class="route-box p-3 rounded-3 d-flex align-items-center justify-content-center">
+                            <span class="route-highlight h5 mb-0">{{ booking.origin }}</span>
+                            <i class="bi bi-arrow-right-circle h4 mx-3 text-accent-glow"></i>
+                            <span class="route-highlight h5 mb-0">{{ booking.destination }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Timeline -->
+            <div class="tracking-list px-2 mt-4">
+                {% for event in events %}
+                <div class="tracking-item pb-4">
+                    <div class="tracking-rail"></div>
+                    <div class="tracking-marker {% if loop.first %}pulse-accent{% endif %}"></div>
+                    <div class="tracking-content glass-card p-3 border-white-10">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold h5 text-white mb-0">{{ event.status }}</span>
+                            <span class="badge bg-white-10 text-muted small">{{ event.timestamp.strftime('%H:%M %p') }}</span>
+                        </div>
+                        <div class="text-secondary small">
+                            <i class="bi bi-clock me-1"></i> {{ event.timestamp.strftime('%Y-%m-%d') }} 
+                            <span class="mx-2 text-muted">|</span>
+                            <i class="bi bi-geo-alt me-1"></i> <span class="text-accent-glow">{{ event.location }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card glass-card p-4 rounded-4">
+            <h6 class="text-uppercase text-muted fw-bold small mb-3"><i class="bi bi-check2-all me-2"></i> Milestones</h6>
+            <ul class="list-unstyled milestone-list mb-0">
+                {% for step in steps %}
+                {% set is_completed = booking.status == step or events|map(attribute='status')|select('equalto', step)|list %}
+                <li class="mb-2 d-flex align-items-center {% if is_completed %}completed{% endif %} {% if booking.status == step %}active{% endif %}">
+                    <div class="me-3">
+                        {% if is_completed %}
+                        <i class="bi bi-check-circle-fill h5 mb-0"></i>
+                        {% else %}
+                        <i class="bi bi-circle h5 mb-0 text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="fw-bold {% if booking.status == step %}text-white{% else %}text-muted{% endif %}" style="font-size: 0.9rem;">{{ step }}</div>
+                        {% if is_completed %}
+                        <div class="text-success small fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Achieved</div>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

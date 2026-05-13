@@ -1,0 +1,49 @@
+origin,destination,nvocc_name,base_rate,surcharges,transit_days,validity_start,validity_end
+Jebel Ali,Hamburg,CMA CGM,1237,192,39,2026-01-01,2026-12-31
+Jebel Ali,Rotterdam,MSC,1252,382,22,2026-01-01,2026-12-31
+Jebel Ali,Genoa,CMA CGM,727,404,31,2026-01-01,2026-12-31
+Jebel Ali,Barcelona,Maersk,796,298,16,2026-01-01,2026-12-31
+Jebel Ali,Piraeus,Maersk,629,284,16,2026-01-01,2026-12-31
+Jebel Ali,Istanbul,Hapag-Lloyd,1017,390,16,2026-01-01,2026-12-31
+Nhava Sheva,Hamburg,Maersk,1016,369,37,2026-01-01,2026-12-31
+Nhava Sheva,Rotterdam,MSC,978,348,38,2026-01-01,2026-12-31
+Nhava Sheva,Genoa,Emirates Shipping,954,197,27,2026-01-01,2026-12-31
+Nhava Sheva,Barcelona,Hapag-Lloyd,871,222,22,2026-01-01,2026-12-31
+Nhava Sheva,Piraeus,Maersk,1158,339,13,2026-01-01,2026-12-31
+Nhava Sheva,Istanbul,CMA CGM,1026,244,12,2026-01-01,2026-12-31
+Mundra,Hamburg,CMA CGM,688,161,37,2026-01-01,2026-12-31
+Mundra,Rotterdam,CMA CGM,745,407,13,2026-01-01,2026-12-31
+Mundra,Genoa,Emirates Shipping,1451,198,36,2026-01-01,2026-12-31
+Mundra,Barcelona,MSC,1419,295,17,2026-01-01,2026-12-31
+Mundra,Piraeus,MSC,1434,285,30,2026-01-01,2026-12-31
+Mundra,Istanbul,MSC,1072,382,40,2026-01-01,2026-12-31
+Karachi,Hamburg,Hapag-Lloyd,782,328,24,2026-01-01,2026-12-31
+Karachi,Rotterdam,Emirates Shipping,873,386,31,2026-01-01,2026-12-31
+Karachi,Genoa,Maersk,748,229,17,2026-01-01,2026-12-31
+Karachi,Barcelona,Emirates Shipping,604,210,24,2026-01-01,2026-12-31
+Karachi,Piraeus,MSC,1079,309,37,2026-01-01,2026-12-31
+Karachi,Istanbul,Emirates Shipping,1024,266,30,2026-01-01,2026-12-31
+Chennai,Hamburg,Maersk,737,427,21,2026-01-01,2026-12-31
+Chennai,Rotterdam,Emirates Shipping,1105,409,17,2026-01-01,2026-12-31
+Chennai,Genoa,Emirates Shipping,1167,391,13,2026-01-01,2026-12-31
+Chennai,Barcelona,CMA CGM,1345,418,28,2026-01-01,2026-12-31
+Chennai,Piraeus,Maersk,956,340,21,2026-01-01,2026-12-31
+Chennai,Istanbul,MSC,1201,447,37,2026-01-01,2026-12-31
+Colombo,Hamburg,MSC,1356,238,15,2026-01-01,2026-12-31
+Colombo,Rotterdam,MSC,1082,167,13,2026-01-01,2026-12-31
+Colombo,Genoa,MSC,1134,440,19,2026-01-01,2026-12-31
+Colombo,Barcelona,CMA CGM,914,352,37,2026-01-01,2026-12-31
+Colombo,Piraeus,CMA CGM,804,371,13,2026-01-01,2026-12-31
+Colombo,Istanbul,Emirates Shipping,1380,416,14,2026-01-01,2026-12-31
+Doha,Hamburg,MSC,993,190,32,2026-01-01,2026-12-31
+Doha,Rotterdam,Hapag-Lloyd,608,413,35,2026-01-01,2026-12-31
+Doha,Genoa,Emirates Shipping,728,398,19,2026-01-01,2026-12-31
+Doha,Barcelona,MSC,791,367,29,2026-01-01,2026-12-31
+Doha,Piraeus,Maersk,782,372,28,2026-01-01,2026-12-31
+Doha,Istanbul,Hapag-Lloyd,1310,186,23,2026-01-01,2026-12-31
+Abu Dhabi,Hamburg,MSC,1429,244,26,2026-01-01,2026-12-31
+Abu Dhabi,Rotterdam,Emirates Shipping,942,286,16,2026-01-01,2026-12-31
+Abu Dhabi,Genoa,MSC,1439,277,19,2026-01-01,2026-12-31
+Abu Dhabi,Barcelona,CMA CGM,1072,440,19,2026-01-01,2026-12-31
+Abu Dhabi,Piraeus,CMA CGM,1066,325,19,2026-01-01,2026-12-31
+Abu Dhabi,Istanbul,Hapag-Lloyd,671,434,30,2026-01-01,2026-12-31

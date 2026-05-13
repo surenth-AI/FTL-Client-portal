@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Tax Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-9">
+        <!-- Header Actions -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="{{ url_for('billing.manage') }}" class="btn btn-link text-white-50 text-decoration-none ps-0">
+                    <i class="bi bi-arrow-left me-2"></i> Back to Billing Dashboard
+                </a>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('billing.download_invoice', id=invoice.id) }}" class="btn btn-premium rounded-pill px-4 shadow-accent">
+                    <i class="bi bi-download me-2"></i> DOWNLOAD PDF
+                </a>
+            </div>
+        </div>
+
+        <div class="card glass-card border-white-10 rounded-4 shadow-2xl overflow-hidden">
+            <!-- Professional Invoice Header -->
+            <div class="card-header bg-white-5 border-white-10 p-5">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="h3 text-white fw-bold mb-0 text-accent-glow"><i class="bi bi-globe me-2"></i>AXEGLOBAL</div>
+                        <h6 class="text-accent-glow text-uppercase fw-bold tracking-widest mb-1">AxeGlobal Logistics GmbH</h6>
+                        <p class="text-white-50 small mb-0">Logistics Center, Port Road 42<br>20457 Hamburg, Germany</p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="badge bg-success-glow text-success px-3 py-2 rounded-pill border border-success-20 mb-3">
+                            <i class="bi bi-check-circle-fill me-2"></i> FINAL TAX INVOICE
+                        </div>
+                        <h2 class="text-white fw-bold display-6 mb-1">{{ invoice.invoice_number }}</h2>
+                        <p class="text-white-50 mb-0">Date Issued: {{ invoice.issued_at.strftime('%d %b %Y') }}</p>
+                        <p class="text-white-50">Booking Ref: <span class="text-white fw-bold">AXEGLOBAL-{{ invoice.booking_id }}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-5">
+                <!-- Parties Info -->
+                <div class="row mb-5">
+                    <div class="col-md-6">
+                        <div class="p-4 rounded-4 bg-white-5 border border-white-10 h-100">
+                            <h6 class="text-accent-glow text-uppercase fw-bold small mb-3">Billed To</h6>
+                            <h5 class="text-white fw-bold mb-2">{{ invoice.booking.customer.name }}</h5>
+                            <p class="text-white-50 small mb-0">{{ invoice.booking.customer.email }}</p>
+                            <p class="text-white-50 small">Customer ID: #{{ invoice.booking.customer_id }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-4 rounded-4 bg-white-5 border border-white-10 h-100">
+                            <h6 class="text-accent-glow text-uppercase fw-bold small mb-3">Shipment Summary</h6>
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <div class="text-muted x-small text-uppercase">Route</div>
+                                    <div class="text-white small">{{ invoice.booking.origin }} <i class="bi bi-arrow-right mx-1"></i> {{ invoice.booking.destination }}</div>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <div class="text-muted x-small text-uppercase">Vessel</div>
+                                    <div class="text-white small">{{ invoice.booking.vessel_name or 'TBA' }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted x-small text-uppercase">MBL Number</div>
+                                    <div class="text-white small">{{ invoice.booking.mbl_number or 'N/A' }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted x-small text-uppercase">Payment Ref</div>
+                                    <div class="text-success small fw-bold">{{ invoice.proforma.payment_reference or 'SETTLED' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charges Table -->
+                <div class="table-responsive mb-5">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr class="text-muted small text-uppercase border-white-10">
+                                <th class="py-3">Description of Services</th>
+                                <th class="py-3 text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            {% for charge in invoice.charge_lines %}
+                            <tr class="border-white-5">
+                                <td class="py-4">
+                                    <div class="text-white fw-bold">{{ charge.description }}</div>
+                                    <div class="text-white-50 x-small mt-1">Standard logistics tariff applied</div>
+                                </td>
+                                <td class="py-4 text-end">
+                                    <span class="text-white fw-bold h5 mb-0">{{ "%.2f"|format(charge.amount) }}</span>
+                                    <span class="text-muted small ms-1">{{ invoice.currency }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totals -->
+                <div class="row justify-content-end">
+                    <div class="col-md-5">
+                        <div class="p-4 rounded-4 bg-success-glow-5 border border-success-20">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-white-50">Subtotal</span>
+                                <span class="text-white">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom border-white-10">
+                                <span class="text-white-50">Tax / VAT (0%)</span>
+                                <span class="text-white">0.00 {{ invoice.currency }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-white fw-bold h5 mb-0">TOTAL PAID</span>
+                                <span class="text-success-glow display-6 fw-bold mb-0">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="card-footer bg-white-5 border-white-10 p-5 text-center">
+                <p class="text-white-50 small mb-4">
+                    Thank you for choosing AxeGlobal Logistics. This invoice confirms full settlement of all freight and destination charges for the mentioned shipment. All services are rendered under ADSp conditions.
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{{ url_for('customer.dashboard') }}" class="btn btn-glass rounded-pill px-5">
+                        DASHBOARD
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important; }
+    .bg-success-glow-5 { background: rgba(16, 185, 129, 0.05) !important; }
+    .x-small { font-size: 0.7rem; }
+</style>
+{% endblock %}

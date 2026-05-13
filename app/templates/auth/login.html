@@ -1,0 +1,685 @@
+{% extends 'base.html' %}
+{% block title %}Sign In{% endblock %}
+{% block content %}
+
+<div class="auth-page-wrapper d-flex align-items-center justify-content-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-xl-10">
+                <div class="auth-mega-card glass-card overflow-hidden p-0 border-0 shadow-mega d-flex flex-column" id="auth-container">
+                    <!-- Main Login / Branding View -->
+                    <div class="row g-0 flex-grow-1" id="login-view">
+                        <!-- Visual Branding Panel -->
+                        <div class="col-lg-6 d-none d-lg-block position-relative hero-panel">
+                            <div class="hero-img-overlay"></div>
+                            <img src="{{ system_banner_url }}" class="hero-bg-img" alt="Logistics Dashboard">
+                            
+                            <div class="hero-content d-flex flex-column h-100 p-5 justify-content-between position-relative z-3 overflow-hidden">
+                                <!-- Floating Kinetic Ambient Mesh -->
+                                <div class="ambient-ring"></div>
+                                <div class="ambient-ring ambient-ring-2"></div>
+                                <div class="particles-layer">
+                                    <div class="particle"></div>
+                                    <div class="particle"></div>
+                                    <div class="particle"></div>
+                                    <div class="particle"></div>
+                                    <div class="particle"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Panel -->
+                        <div class="col-lg-6 bg-white" id="login-panel">
+                            <div class="p-4 p-sm-5 h-100 d-flex flex-column animate-stagger-container">
+                                <div class="mb-5 d-lg-none text-center reveal-item">
+                                    <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="45">
+                                </div>
+
+                                <div class="mb-4 mt-lg-3 reveal-item">
+                                    <h2 class="fw-bold text-dark mb-1">Welcome back</h2>
+                                    <p class="text-muted fw-medium">Log in to your enterprise account to continue.</p>
+                                </div>
+
+                                <form method="POST" class="auth-form flex-grow-1">
+                                    {{ form.hidden_tag() }}
+                                    
+                                    <div class="mb-3 reveal-item">
+                                        <label class="form-label text-uppercase text-muted small fw-bold ls-1">Email Address</label>
+                                        <div class="input-group input-group-custom float-focus-field">
+                                            <span class="input-group-text bg-transparent"><i class="bi bi-envelope text-muted icon-animate"></i></span>
+                                            {{ form.email(class="form-control border-start-0 ps-0", placeholder="name@company.com") }}
+                                        </div>
+                                        {% for error in form.email.errors %}
+                                            <div class="text-danger mt-1 small d-flex align-items-center"><i class="bi bi-exclamation-circle me-1"></i> {{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <div class="mb-4 reveal-item">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label text-uppercase text-muted small fw-bold ls-1 mb-0">Password</label>
+                                            <a href="#" class="small text-primary text-decoration-none fw-semibold nav-hover-slide">Forgot Password?</a>
+                                        </div>
+                                        <div class="input-group input-group-custom float-focus-field">
+                                            <span class="input-group-text bg-transparent"><i class="bi bi-lock text-muted icon-animate"></i></span>
+                                            {{ form.password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
+                                        </div>
+                                        {% for error in form.password.errors %}
+                                            <div class="text-danger mt-1 small d-flex align-items-center"><i class="bi bi-exclamation-circle me-1"></i> {{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <div class="d-grid gap-2 mb-4 reveal-item">
+                                        <button type="submit" name="login-submit" class="btn btn-primary btn-lg fw-bold shadow-accent py-3 rounded-3 position-relative overflow-hidden premium-btn-glow">
+                                            <div class="shine-effect"></div>
+                                            <span class="position-relative z-2 d-flex align-items-center justify-content-center">
+                                                Sign In <i class="bi bi-arrow-right ms-2 translate-right-hover"></i>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </form>
+                                
+                                <div class="text-center mb-4 reveal-item">
+                                    <p class="text-muted small mb-0 fw-medium">Don't have an account yet? <br class="d-sm-none">
+                                        <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#registrationTypeModal" class="text-primary fw-bold text-decoration-none ms-1 border-bottom border-primary-subtle pb-1 magnetic-text">Request Access</a>
+                                    </p>
+                                </div>
+
+                                <!-- Spacer or other future footer placement -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State 3: Register Company View -->
+                    <div class="p-4 p-md-5 d-none flex-grow-1" id="reg-company-view">
+                        <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+                            <div>
+                                <h3 class="fw-bold text-dark mb-0">Company Onboarding</h3>
+                                <p class="text-muted small mb-0 fw-medium">Establish your enterprise organization account.</p>
+                            </div>
+                            <button onclick="setView('login')" class="btn btn-sm btn-light border rounded-3 fw-semibold hover-scale-active"><i class="bi bi-x-lg"></i></button>
+                        </div>
+
+                        <form method="POST">
+                            {{ company_form.hidden_tag() }}
+                            
+                            <div class="row g-3 mb-4">
+                                <h6 class="fw-bold text-primary text-uppercase ls-1 mb-2 mt-2 small"><i class="bi bi-building-check me-2"></i> Organizational Data</h6>
+                                <div class="col-12">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Company Name</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-building text-muted icon-animate"></i></span>
+                                        {{ company_form.company_name(class="form-control border-start-0 ps-0", placeholder="Legal Entity Name") }}
+                                    </div>
+                                    {% for error in company_form.company_name.errors %}<div class="text-danger smaller mt-1"><i class="bi bi-info-circle me-1"></i>{{ error }}</div>{% endfor %}
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">VAT / Tax Number</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-hash text-muted icon-animate"></i></span>
+                                        {{ company_form.vat_number(class="form-control border-start-0 ps-0", placeholder="e.g. BE0123456") }}
+                                    </div>
+                                    {% for error in company_form.vat_number.errors %}<div class="text-danger smaller mt-1"><i class="bi bi-info-circle me-1"></i>{{ error }}</div>{% endfor %}
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">EORI Number</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-upc text-muted icon-animate"></i></span>
+                                        {{ company_form.eori_number(class="form-control border-start-0 ps-0", placeholder="Registration ID") }}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12"><hr class="my-2 opacity-25"></div>
+                                
+                                <h6 class="fw-bold text-primary text-uppercase ls-1 mb-2 mt-1 small"><i class="bi bi-geo-alt-fill me-2"></i> Headquarters Address</h6>
+                                <div class="col-12">
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-geo text-muted icon-animate"></i></span>
+                                        {{ company_form.address(class="form-control border-start-0 ps-0", placeholder="Full Street Address & Building") }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-geo-fill text-muted icon-animate"></i></span>
+                                        {{ company_form.zip_code(class="form-control border-start-0 ps-0", placeholder="ZIP", id="c_zip") }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-custom">
+                                        {{ company_form.city(class="form-control", placeholder="City", id="c_city") }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-custom">
+                                        {{ company_form.country(class="form-control", placeholder="Country", id="c_country") }}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12"><hr class="my-2 opacity-25"></div>
+
+                                <h6 class="fw-bold text-accent text-uppercase ls-1 mb-2 mt-1 small"><i class="bi bi-person-badge me-2"></i> Super Admin Credentials</h6>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Full Name</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-person text-muted icon-animate"></i></span>
+                                        {{ company_form.contact_name(class="form-control border-start-0 ps-0", placeholder="Contact Name") }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Contact Email</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-envelope text-muted icon-animate"></i></span>
+                                        {{ company_form.contact_email(class="form-control border-start-0 ps-0", placeholder="corp@email.com") }}
+                                    </div>
+                                    {% for error in company_form.contact_email.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Mobile</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-telephone text-muted icon-animate"></i></span>
+                                        {{ company_form.mobile(class="form-control border-start-0 ps-0", placeholder="+1 000") }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Create Password</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-lock text-muted icon-animate"></i></span>
+                                        {{ company_form.password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Confirm</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-shield-check text-muted icon-animate"></i></span>
+                                        {{ company_form.confirm_password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid pt-2">
+                                <button type="submit" name="company-submit" class="btn btn-primary btn-lg fw-bold rounded-3 shadow-accent premium-btn-glow position-relative overflow-hidden py-3">
+                                    <div class="shine-effect"></div>
+                                    <span class="position-relative z-2">Submit Corporate Request <i class="bi bi-arrow-right ms-1 translate-right-hover"></i></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- State 4: Join User View -->
+                    <div class="p-4 p-md-5 d-none flex-grow-1" id="reg-user-view">
+                        <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+                            <div>
+                                <h3 class="fw-bold text-dark mb-0">Join Existing Team</h3>
+                                <p class="text-muted small mb-0 fw-medium">Secure access to your corporate portal.</p>
+                            </div>
+                            <button onclick="setView('login')" class="btn btn-sm btn-light border rounded-3 fw-semibold hover-scale-active"><i class="bi bi-x-lg"></i></button>
+                        </div>
+
+                        <form method="POST" class="col-lg-9 mx-auto">
+                            {{ user_form.hidden_tag() }}
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Company Referral Code</label>
+                                <div class="input-group input-group-custom border-primary-subtle">
+                                    <span class="input-group-text bg-transparent"><i class="bi bi-key-fill text-primary icon-animate"></i></span>
+                                    {{ user_form.ftl_code(class="form-control border-start-0 ps-0", placeholder="e.g. FTL-BE-001") }}
+                                </div>
+                                <div class="smaller text-muted mt-1"><i class="bi bi-info-circle me-1"></i>Provided by your admin.</div>
+                                {% for error in user_form.ftl_code.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Legal Full Name</label>
+                                <div class="input-group input-group-custom">
+                                    <span class="input-group-text bg-transparent"><i class="bi bi-person-fill text-muted icon-animate"></i></span>
+                                    {{ user_form.name(class="form-control border-start-0 ps-0", placeholder="Enter full name") }}
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Corporate Email</label>
+                                <div class="input-group input-group-custom">
+                                    <span class="input-group-text bg-transparent"><i class="bi bi-envelope-at text-muted icon-animate"></i></span>
+                                    {{ user_form.email(class="form-control border-start-0 ps-0", placeholder="yourname@company.com") }}
+                                </div>
+                                <div class="smaller text-muted mt-1">Verified domain required.</div>
+                                {% for error in user_form.email.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+
+                            <div class="row g-3 mb-4 pt-2">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Account Password</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-lock-fill text-muted icon-animate"></i></span>
+                                        {{ user_form.password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Confirm Password</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-shield-check text-muted icon-animate"></i></span>
+                                        {{ user_form.confirm_password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
+                                    </div>
+                                    {% for error in user_form.confirm_password.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="d-grid mb-2 pt-2">
+                                <button type="submit" name="user-submit" class="btn btn-dark btn-lg fw-bold rounded-3 shadow premium-btn-glow position-relative overflow-hidden py-3">
+                                    <div class="shine-effect" style="background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);"></div>
+                                    <span class="position-relative z-2">Request Team Access <i class="bi bi-arrow-right ms-1 translate-right-hover"></i></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Selection Popup (Modal) -->
+<div class="modal fade" id="registrationTypeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-light border-0 pt-4 px-4">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark mb-1">Join the Fast Transit Line Network</h5>
+                    <p class="text-muted mb-0 small">Select your registration type to continue</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="option-card border rounded-4 p-4 h-100 cursor-pointer transition-transform hover-scale-active shadow-sm bg-white d-flex flex-column align-items-start"
+                             onclick="handleModalSelection('reg_company')">
+                            <div class="icon-box bg-primary-soft text-primary mb-3 rounded-3 group-float">
+                                <i class="bi bi-briefcase-fill fs-4 icon-float"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-2">Register Company</h5>
+                            <p class="text-muted small mb-4">Onboard your entire organization as a new business partner.</p>
+                            <div class="mt-auto w-100">
+                                <div class="btn btn-outline-primary w-100 rounded-3 fw-bold transition-ripple">Create Account</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="option-card border rounded-4 p-4 h-100 cursor-pointer transition-transform hover-scale-active shadow-sm bg-white d-flex flex-column align-items-start"
+                             onclick="handleModalSelection('reg_user')">
+                            <div class="icon-box bg-accent-soft text-accent mb-3 rounded-3 group-float">
+                                <i class="bi bi-people-fill fs-4 icon-float"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-2">Join Existing Team</h5>
+                            <p class="text-muted small mb-4">Use your verified email domain and code to connect to a company.</p>
+                            <div class="mt-auto w-100">
+                                <div class="btn btn-outline-dark w-100 rounded-3 fw-bold transition-ripple">Join Now</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Base Structural Layouts */
+.auth-page-wrapper {
+    min-height: 80vh;
+    padding: 2rem 0;
+}
+
+/* Re-integrated Utility Styling */
+.hero-logo-filter { filter: brightness(0) invert(1); }
+.bg-white-glass { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); }
+.backdrop-blur { backdrop-filter: blur(10px); }
+
+.input-group-custom .input-group-text { border: none; padding-left: 1.2rem; }
+.input-group-custom .form-control { border: none; background: transparent; padding: 14px; box-shadow: none !important; }
+
+.icon-box { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+.bg-primary-soft { background-color: #eff6ff; color: #2563eb !important; }
+.bg-accent-soft { background-color: #f0fdfa; color: #0d9488 !important; }
+.smaller { font-size: 0.75rem; }
+.icon-circle { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.bg-primary-subtle { background-color: #eff6ff; }
+.border-dashed { border-style: dashed !important; }
+
+.option-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1.5px solid #e2e8f0 !important; }
+
+/* Core Root Animations */
+@keyframes kenBurns {
+    0% { transform: scale(1) translate(0, 0); }
+    50% { transform: scale(1.15) translate(-2%, -2%); }
+    100% { transform: scale(1) translate(0, 0); }
+}
+
+@keyframes revealDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rotateAmbient {
+    0% { transform: rotate(0deg) translate(-50%, -50%); }
+    100% { transform: rotate(360deg) translate(-50%, -50%); }
+}
+
+@keyframes floatParticles {
+    0% { transform: translateY(0px) translateX(0px) scale(1); opacity: 0.2; }
+    50% { transform: translateY(-40px) translateX(20px) scale(1.2); opacity: 0.6; }
+    100% { transform: translateY(-80px) translateX(0px) scale(1); opacity: 0; }
+}
+
+@keyframes pulseLight {
+    0% { box-shadow: 0 0 0 0 rgba(0, 119, 255, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 119, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 119, 255, 0); }
+}
+
+@keyframes shineSwipe {
+    0% { left: -100%; }
+    20% { left: 100%; }
+    100% { left: 100%; }
+}
+
+/* Layout and Card Intro */
+.auth-mega-card {
+    animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    min-height: 600px;
+    border-radius: 24px !important;
+    background: #ffffff;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08) !important;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+#login-view, #reg-company-view, #reg-user-view {
+    flex: 1 1 auto;
+    min-height: 600px; /* Explicit floor enforcement matching parent */
+}
+
+/* Kinetic Background Styling */
+.hero-panel {
+    background-color: #080e1a;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%; /* Essential safeguard */
+}
+
+.hero-bg-img {
+    position: absolute;
+    top: 0; 
+    bottom: 0; 
+    left: 0; 
+    right: 0;
+    width: 100%; 
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.8;
+    animation: kenBurns 30s ease-in-out infinite;
+    transform-origin: center center;
+    z-index: 0;
+}
+
+.hero-img-overlay {
+    position: absolute;
+    top: 0; 
+    bottom: 0; 
+    left: 0; 
+    right: 0;
+    width: 100%; 
+    height: 100%;
+    background: radial-gradient(circle at 20% 30%, rgba(15, 23, 42, 0.7) 0%, rgba(8, 14, 26, 0.95) 100%);
+    z-index: 1;
+}
+
+/* Ambient Animations Container (Empty but Dynamic) */
+.ambient-ring {
+    position: absolute;
+    top: 30%; left: 30%;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 119, 255, 0.15) 0%, transparent 70%);
+    filter: blur(40px);
+    transform-origin: top left;
+    animation: rotateAmbient 25s linear infinite;
+    z-index: 1;
+}
+
+.ambient-ring-2 {
+    top: 70%; left: 80%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 60%);
+    animation: rotateAmbient 35s linear infinite reverse;
+}
+
+.particles-layer {
+    position: absolute;
+    bottom: 0; left: 0; width: 100%; height: 60%;
+    z-index: 2;
+}
+
+.particle {
+    position: absolute;
+    bottom: -20px;
+    width: 4px; height: 4px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    animation: floatParticles 10s infinite ease-in;
+}
+
+.particle:nth-child(1) { left: 15%; animation-duration: 12s; animation-delay: 0s; }
+.particle:nth-child(2) { left: 35%; width: 6px; height: 6px; animation-duration: 15s; animation-delay: 2s; }
+.particle:nth-child(3) { left: 55%; animation-duration: 11s; animation-delay: 5s; }
+.particle:nth-child(4) { left: 75%; width: 3px; height: 3px; animation-duration: 18s; animation-delay: 1s; }
+.particle:nth-child(5) { left: 90%; animation-duration: 14s; animation-delay: 8s; }
+
+/* Staggered Reveal Effect for Form Content */
+.reveal-item {
+    opacity: 0;
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.reveal-item:nth-child(1) { animation-delay: 0.2s; }
+.reveal-item:nth-child(2) { animation-delay: 0.3s; }
+.reveal-item:nth-child(3) { animation-delay: 0.4s; }
+.reveal-item:nth-child(4) { animation-delay: 0.5s; }
+.reveal-item:nth-child(5) { animation-delay: 0.6s; }
+.reveal-item:nth-child(6) { animation-delay: 0.7s; }
+.reveal-item:nth-child(7) { animation-delay: 0.8s; }
+
+/* Interactive Elements & Micro-Animations */
+.input-group-custom {
+    border-radius: 12px;
+    background-color: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.input-group-custom:focus-within {
+    background-color: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 20px rgba(0, 119, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+.icon-animate {
+    transition: all 0.3s ease;
+}
+
+.input-group-custom:focus-within .icon-animate {
+    color: var(--primary-color) !important;
+    transform: scale(1.15);
+}
+
+.premium-btn-glow {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.premium-btn-glow:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 10px 25px rgba(0, 119, 255, 0.35) !important;
+}
+
+.shine-effect {
+    position: absolute;
+    top: 0; height: 100%; width: 50%;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: skewX(-20deg);
+    animation: shineSwipe 4s infinite ease-in-out;
+    z-index: 1;
+}
+
+.translate-right-hover {
+    transition: transform 0.3s ease;
+}
+
+.premium-btn-glow:hover .translate-right-hover {
+    transform: translateX(5px);
+}
+
+.nav-hover-slide {
+    position: relative;
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.nav-hover-slide:hover {
+    transform: translateX(3px);
+}
+
+.pulsate-gentle {
+    animation: pulseLight 3s infinite;
+}
+
+/* Registration Grid Effects */
+.hover-scale-active {
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.hover-scale-active:hover {
+    transform: translateY(-8px) scale(1.02);
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.06) !important;
+}
+
+.icon-float {
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hover-scale-active:hover .icon-float {
+    transform: scale(1.2) rotate(-5deg);
+}
+
+/* General Overrides */
+
+.z-3 { z-index: 3; }
+.bg-light-subtle { background-color: #f8fafc; }
+.cursor-pointer { cursor: pointer; }
+
+@media (max-width: 991.98px) {
+    .auth-mega-card { min-height: auto; border-radius: 20px !important; margin-bottom: 2rem; }
+    .p-4.p-sm-5 { padding: 2.5rem 1.5rem !important; }
+}
+
+@media (max-width: 575.98px) {
+    .auth-page-wrapper { padding: 1rem 0.5rem; min-height: calc(100vh - 120px); }
+    .auth-mega-card { border-radius: 16px !important; }
+    h2.fw-bold { font-size: 1.5rem; }
+    .demo-box { flex-direction: column; text-align: center; }
+    .demo-box .icon-circle { margin-bottom: 0.75rem; margin-right: 0 !important; }
+}
+
+/* Fix for short height landscape modes */
+@media (max-height: 600px) and (orientation: landscape) {
+    .auth-page-wrapper { min-height: auto; padding-top: 3rem; padding-bottom: 3rem; }
+    .hero-panel { display: none !important; }
+    .col-lg-6.bg-white { flex: 0 0 100%; max-width: 100%; }
+}
+</style>
+
+<script>
+const views = {
+    login: document.getElementById('login-view'),
+    reg_company: document.getElementById('reg-company-view'),
+    reg_user: document.getElementById('reg-user-view')
+};
+const container = document.getElementById('auth-container');
+
+function setView(target) {
+    // Smooth shrink
+    container.style.opacity = '0.5';
+    container.style.transform = 'scale(0.98)';
+    
+    setTimeout(() => {
+        // Hide all views
+        Object.values(views).forEach(v => { if(v) v.classList.add('d-none'); });
+        
+        // Show target
+        if (views[target]) {
+            views[target].classList.remove('d-none');
+        }
+        
+        // Adapt container logic if needed
+        if (target === 'reg_company') {
+            container.style.maxWidth = '900px';
+            container.style.marginLeft = 'auto';
+            container.style.marginRight = 'auto';
+        } else {
+            container.style.maxWidth = '';
+            container.style.marginLeft = '';
+            container.style.marginRight = '';
+        }
+
+        // Restore pop
+        container.style.opacity = '1';
+        container.style.transform = 'scale(1)';
+    }, 200);
+}
+
+function handleModalSelection(targetView) {
+    const modalElement = document.getElementById('registrationTypeModal');
+    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+    if (modalInstance) {
+        modalInstance.hide();
+    }
+    // Wait for modal to close before changing view for smoothest transition
+    setTimeout(() => {
+        setView(targetView);
+    }, 300);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Backend context check
+    const serverActiveTab = "{{ active_tab }}";
+    if (serverActiveTab && serverActiveTab !== 'login' && serverActiveTab !== 'selection') {
+        setView(serverActiveTab);
+    }
+
+    // Zip code mock loader
+    const zInput = document.getElementById('c_zip');
+    if(zInput) {
+        zInput.addEventListener('input', function(e) {
+            const zipMap = {'2000': {c: 'Antwerp', y: 'Belgium'}, '1000': {c: 'Brussels', y: 'Belgium'}};
+            if (zipMap[e.target.value]) {
+                document.getElementById('c_city').value = zipMap[e.target.value].c;
+                document.getElementById('c_country').value = zipMap[e.target.value].y;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

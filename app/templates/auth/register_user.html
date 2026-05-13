@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Join Company{% endblock %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-lg-5 col-md-7">
+        <div class="card glass-card p-4 p-md-5 rounded-4 border-white-10 shadow-lg">
+            <!-- Branding Header -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="80">
+                </div>
+                <h3 class="fw-bold text-white mb-1">Join Your Team</h3>
+                <p class="text-muted small text-uppercase fw-bold tracking-widest">Register under an existing customer</p>
+            </div>
+
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-4">
+                    <label class="form-label">FTL Company Code</label>
+                    {{ form.ftl_code(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. FTL-BE-001") }}
+                    {% for error in form.ftl_code.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                    <div class="text-muted-xs mt-2 opacity-50">Request this code from your company administrator.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Full Name</label>
+                    {{ form.name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter your full name") }}
+                    {% for error in form.name.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Work Email ID</label>
+                    {{ form.email(class="form-control bg-white-5 border-white-10 text-white", placeholder="your.name@company.com") }}
+                    {% for error in form.email.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                    <div class="text-muted-xs mt-2 opacity-50">Email domain must match your company's domain.</div>
+                </div>
+
+                <div class="row g-3 mb-5">
+                    <div class="col-md-6">
+                        <label class="form-label">Password</label>
+                        {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                        {% for error in form.password.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Re-enter Password</label>
+                        {{ form.confirm_password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                        {% for error in form.confirm_password.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-3">
+                    {{ form.submit(class="btn btn-primary py-3 rounded-pill fw-bold text-uppercase tracking-wide shadow-accent") }}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-glass py-3 rounded-pill fw-bold">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.text-muted-xs {
+    font-size: 0.7rem;
+    font-style: italic;
+}
+</style>
+{% endblock %}

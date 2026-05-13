@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AxeGlobal Logistics - {% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% if system_theme and system_theme.startswith('#') %}
+    <style>
+        :root {
+            --primary-color: {{ system_theme }} !important;
+            --primary-hover: {{ system_theme }}cc !important; /* Slightly transparent on hover fallback */
+        }
+        /* System-wide saturation enforcement */
+        .bg-primary, .btn-primary { background-color: var(--primary-color) !important; border-color: var(--primary-color) !important; }
+        .text-primary { color: var(--primary-color) !important; }
+        .border-primary { border-color: var(--primary-color) !important; }
+    </style>
+    {% endif %}
+    <script>
+        // Apply layout mode immediately to prevent flicker, but only for authenticated users
+        (function() {
+            const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+            const savedMode = localStorage.getItem('navMode');
+            if (isAuthenticated && (savedMode === 'sidebar' || savedMode === null)) {
+                document.documentElement.classList.add('sidebar-active-init');
+            }
+        })();
+    </script>
+    <style>
+        /* AUTOMATED MASTER LAYOUT ENGINE */
+        .app-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR MODE: Actively locked left navigation */
+        .sidebar-active .sidebar {
+            transform: translateX(0) !important;
+            display: flex !important;
+        }
+        .sidebar-active .main-content {
+            margin-left: 260px !important; /* var(--sidebar-width) */
+        }
+        .sidebar-active .topbar-nav {
+            display: none !important;
+        }
+        .sidebar-active .topbar-logo {
+            display: none !important;
+        }
+
+        /* TOPBAR MODE: High-Performance Horizontal View */
+        .app-container:not(.sidebar-active) .sidebar {
+            display: none !important;
+        }
+        .app-container:not(.sidebar-active) .main-content {
+            margin-left: 0 !important;
+        }
+        .app-container:not(.sidebar-active) .topbar-nav {
+            display: flex !important;
+        }
+        .app-container:not(.sidebar-active) .topbar-logo {
+            display: block !important;
+        }
+
+        /* PREMIUM TOPBAR SYSTEM OVERRIDES */
+        .topbar-nav {
+            list-style: none;
+            gap: 0.25rem;
+            align-items: center;
+        }
+        .topbar-nav .nav-link {
+            color: #475569 !important; /* text-slate-600 */
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 0.01em;
+            padding: 0.5rem 0.875rem !important;
+            border-radius: 6px;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .topbar-nav .nav-link:hover {
+            background-color: #F1F5F9;
+            color: var(--primary-color) !important;
+        }
+        .topbar-nav .nav-link.active {
+            background-color: var(--primary-color) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Initialization anti-flicker */
+        .sidebar-active-init .app-container { display: flex; }
+        .sidebar-active-init .sidebar { transform: translateX(0) !important; }
+        .sidebar-active-init .main-content { margin-left: 260px !important; }
+        
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='rgba(0, 0, 0, 0.5)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important;
+        }
+        
+        /* SEAMLESS TRANSLATION SYSTEM OVERRIDES (AGGRESSIVE SILENCER) */
+        .goog-te-banner-frame, .goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon, iframe.skiptranslate { 
+            display: none !important; 
+            visibility: hidden !important;
+            height: 0px !important;
+            width: 0px !important;
+            border: none !important;
+        }
+        body, html { top: 0px !important; position: static !important; }
+        .goog-te-gadget { color: transparent !important; font-size: 0px !important; display: none !important; }
+        .goog-te-gadget .goog-te-combo { display: none !important; }
+        .goog-text-highlight { background: none !important; box-shadow: none !important; }
+        #google_translate_element { display: none !important; height: 0; overflow: hidden; }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100" data-theme="{{ system_theme }}">
+    <div class="bg-wrapper"></div>
+    <div class="bg-overlay"></div>
+
+    <div class="app-container" id="appContainer">
+        <!-- Sidebar -->
+        {% if current_user.is_authenticated %}
+        <aside class="sidebar">
+            <div class="d-flex align-items-center mb-4 ps-2">
+                <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="65" class="navbar-logo">
+            </div>
+
+            
+            <ul class="sidebar-nav">
+                {% if current_user.role in ['super_admin', 'admin', 'operation_executive'] %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Admin Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.shipment_intelligence' %}active{% endif %}" href="{{ url_for('admin.shipment_intelligence') }}">
+                            <i class="bi bi-bar-chart-line"></i> Shipment Intelligence
+                        </a>
+                    </li>
+                    {% if current_user.role == 'super_admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" href="{{ url_for('admin.manage_users') }}">
+                            <i class="bi bi-shield-lock"></i> User Management
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">
+                            <i class="bi bi-list-ul"></i> Rates Sheet
+                        </a>
+                    </li>
+
+                    {% if current_user.role in ['super_admin', 'admin'] %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
+                            <i class="bi bi-gear"></i> System Settings
+                        </a>
+                    </li>
+                    {% endif %}
+                {% elif current_user.role == 'customer' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">
+                            <i class="bi bi-plus-circle"></i> New Booking
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">
+                            <i class="bi bi-box-seam"></i> My Shipments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'tracking' in request.endpoint %}active{% endif %}" href="{{ url_for('tracking.index') }}">
+                            <i class="bi bi-geo-alt"></i> Live Tracking
+                        </a>
+                    </li>
+
+                {% elif current_user.role == 'agent' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'agent.dashboard' %}active{% endif %}" href="{{ url_for('agent.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Agent Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'agent.upload_edi' %}active{% endif %}" href="{{ url_for('agent.upload_edi') }}">
+                            <i class="bi bi-upload"></i> Upload EDI
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+
+            <div class="mt-auto ps-2">
+                <a class="btn btn-logout w-100 rounded-pill" href="{{ url_for('auth.logout') }}">
+                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                </a>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content Area -->
+        <main class="main-content {% if not current_user.is_authenticated %}ms-0{% endif %}">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="d-flex align-items-center">
+                    {% if current_user.is_authenticated %}
+                        <button class="btn text-white d-lg-none me-3" onclick="document.querySelector('.sidebar').classList.toggle('show')">
+                            <i class="bi bi-list fs-3"></i>
+                        </button>
+                        <img src="{{ system_logo_url }}" alt="Logo" height="40" class="ms-3 d-none d-md-block navbar-logo topbar-logo">
+                    {% else %}
+                        <a href="/">
+                            <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="50" class="navbar-logo">
+                        </a>
+                    {% endif %}
+
+                    <!-- Topbar Navigation (Visible only in topbar mode) -->
+                    {% if current_user.is_authenticated %}
+                    <ul class="topbar-nav ms-4 mb-0">
+                        {% if current_user.role in ['super_admin', 'admin', 'operation_executive'] %}
+                            <li><a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'admin.shipment_intelligence' %}active{% endif %}" href="{{ url_for('admin.shipment_intelligence') }}">Shipment Intelligence</a></li>
+                            {% if current_user.role == 'super_admin' %}
+                            <li><a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" href="{{ url_for('admin.manage_users') }}">Users</a></li>
+                            {% endif %}
+
+                            <li><a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">Rates</a></li>
+
+                            {% if current_user.role in ['super_admin', 'admin'] %}
+                            <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
+                            {% endif %}
+                        {% elif current_user.role == 'customer' %}
+                            <li><a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">Dashboard</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">New Booking</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">Shipments</a></li>
+                        {% elif current_user.role == 'agent' %}
+                            <li><a class="nav-link {% if request.endpoint == 'agent.dashboard' %}active{% endif %}" href="{{ url_for('agent.dashboard') }}">Agent Dashboard</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'agent.upload_edi' %}active{% endif %}" href="{{ url_for('agent.upload_edi') }}">Upload EDI</a></li>
+                        {% endif %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <!-- PRECISE LANGUAGE SWITCHER -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-sm btn-white border d-flex align-items-center dropdown-toggle fw-bold text-dark" type="button" id="langSwitch" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.7rem; border-radius:6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <i class="bi bi-translate me-1 text-muted"></i> <span id="activeLangDisplay">EN</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="langSwitch" style="font-size: 0.8rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
+                            <li><a class="dropdown-item fw-medium py-2" href="javascript:void(0);" onclick="setLanguage('en')"><span class="me-2">🇬🇧</span> English</a></li>
+                            <li><a class="dropdown-item fw-medium py-2" href="javascript:void(0);" onclick="setLanguage('nl')"><span class="me-2">🇳🇱</span> Dutch (Nederlands)</a></li>
+                            <li><a class="dropdown-item fw-medium py-2" href="javascript:void(0);" onclick="setLanguage('it')"><span class="me-2">🇮🇹</span> Italian (Italiano)</a></li>
+                        </ul>
+                    </div>
+
+                    {% if current_user.is_authenticated %}
+                        <div class="topbar-logout-container me-3">
+                            <a class="btn btn-logout btn-sm rounded-pill px-3 py-1" href="{{ url_for('auth.logout') }}">
+                                <i class="bi bi-box-arrow-right me-1"></i> Logout
+                            </a>
+                        </div>
+                        <div class="user-profile-section me-3 border-start ps-3">
+                            <span class="text-dark fw-bold small">
+                                <i class="bi bi-person-circle me-2 text-accent"></i>{{ current_user.name }}
+                            </span>
+                        </div>
+                    {% else %}
+                        <a class="btn btn-glass btn-sm me-2 px-4 shadow-sm" href="{{ url_for('auth.login') }}">Login</a>
+                        <a class="btn btn-premium btn-sm px-4 shadow-accent" href="{{ url_for('auth.register') }}">Register</a>
+                    {% endif %}
+                </div>
+            </header>
+
+            <div class="container-fluid px-lg-5 py-4">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show glass-card border-0 mb-4">
+                                <i class="bi bi-info-circle me-2"></i> {{ message }}
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('appContainer');
+            const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+            
+            if (isAuthenticated) {
+                const defaultMode = '{{ system_layout }}';
+                if (defaultMode === 'sidebar') {
+                    container.classList.add('sidebar-active');
+                } else {
+                    container.classList.remove('sidebar-active');
+                }
+
+
+            } else {
+                // Guests always get topbar mode
+                container.classList.remove('sidebar-active');
+            }
+            
+            // Remove the init class once styles are applied via normal JS logic
+            document.documentElement.classList.remove('sidebar-active-init');
+        });
+    </script>
+    <!-- GLOBAL DYNAMIC TRANSLATION ENGINE -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en', 
+                includedLanguages: 'en,nl,it', 
+                autoDisplay: false,
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+
+        // DEFINITIVE LOCALIZATION DICTIONARY MATRIX (FAIL-SAFE)
+        const LOCAL_DICTIONARY = {
+            'nl': {
+                'Dashboard': 'Dashboard', 'My Shipments': 'Mijn Zendingen', 'New Booking': 'Nieuwe Boeking',
+                'Rates': 'Tarieven', 'Registrations': 'Registraties', 'Settings': 'Instellingen', 'Logout': 'Uitloggen',
+                'Search': 'Zoeken', 'Origin': 'Oorsprong', 'Destination': 'Bestemming', 'Weight': 'Gewicht',
+                'Volume': 'Volume', 'Quantity': 'Aantal', 'Type': 'Type', 'Submit': 'Indienen', 'Edit': 'Bewerken',
+                'View': 'Bekijken', 'Manage': 'Beheer', 'Admin Dashboard': 'Admin Dashboard',
+                'placeholder': {
+                    'Origin City': 'Stad van oorsprong', 'Target Destination': 'Doelbestemming', 
+                    'Type origin': 'Type oorsprong', 'Type destination': 'Type bestemming',
+                    'Search for quotes': 'Zoek offertes', 'e.g.': 'bijv.'
+                }
+            },
+            'it': {
+                'Dashboard': 'Pannello', 'My Shipments': 'Mie Spedizioni', 'New Booking': 'Nuova Prenotazione',
+                'Rates': 'Tariffe', 'Registrations': 'Registrazioni', 'Settings': 'Impostazioni', 'Logout': 'Esci',
+                'Search': 'Cerca', 'Origin': 'Origine', 'Destination': 'Destinazione', 'Weight': 'Peso',
+                'Volume': 'Volume', 'Quantity': 'Quantità', 'Type': 'Tipo', 'Submit': 'Invia', 'Edit': 'Modifica',
+                'View': 'Visualizza', 'Manage': 'Gestisci', 'Admin Dashboard': 'Pannello Amministratore',
+                'placeholder': {
+                    'Origin City': 'Città di origine', 'Target Destination': 'Destinazione bersaglio',
+                    'Type origin': 'Digita origine', 'Type destination': 'Digita destinazione',
+                    'Search for quotes': 'Cerca quotazioni', 'e.g.': 'es.'
+                }
+            }
+        };
+
+        function applyHardcoreTranslation(langCode) {
+            if (langCode === 'en' || !LOCAL_DICTIONARY[langCode]) return;
+            const dict = LOCAL_DICTIONARY[langCode];
+            
+            // 1. Target all TEXT NODES and BUTTONS for guaranteed menu translation
+            document.querySelectorAll('a.nav-link, button, label, h3, h4, h6, th, .badge, .btn').forEach(el => {
+                const txt = el.innerText.trim();
+                for (let key in dict) {
+                    if (txt.includes(key) && key !== 'placeholder') {
+                        el.innerHTML = el.innerHTML.replace(key, dict[key]);
+                    }
+                }
+            });
+
+            // 2. DEFINITIVE PLACEHOLDER CONVERSION
+            document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(input => {
+                const ph = input.getAttribute('placeholder');
+                for (let k in dict.placeholder) {
+                    if (ph && ph.includes(k)) {
+                        input.setAttribute('placeholder', ph.replace(k, dict.placeholder[k]));
+                    }
+                }
+            });
+        }
+
+        function setLanguage(langCode) {
+            // SET DOMAIN COOKIES FOR GLOBAL ENGINE
+            const cookieString = "googtrans=/en/" + langCode + "; path=/; domain=" + location.hostname;
+            const genericCookieString = "googtrans=/en/" + langCode + "; path=/";
+            
+            document.cookie = cookieString;
+            document.cookie = genericCookieString;
+            
+            // SYNC DOM ATTRIBUTE (CRITICAL FOR GOOGLE TRANSLATE ATTRIBUTE PICKUP)
+            document.documentElement.lang = langCode;
+            localStorage.setItem('selected_site_lang', langCode);
+            
+            // FORCED REFRESH
+            window.location.reload();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedLang = localStorage.getItem('selected_site_lang') || 'en';
+            
+            // Force standard attribute for search/accessibility/engine engines
+            document.documentElement.lang = savedLang;
+
+            const indicator = document.getElementById('activeLangDisplay');
+            if(indicator) {
+                indicator.innerText = savedLang.toUpperCase();
+            }
+            
+            // Fire deterministic dictionary overwrite AFTER general load
+            setTimeout(() => {
+                applyHardcoreTranslation(savedLang);
+            }, 800);
+        });
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+</body>
+</html>

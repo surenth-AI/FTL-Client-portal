@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-end intel-fade-in">
+    <div>
+        <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">Organization Registry</h3>
+        <p class="text-muted small mb-0">Authoritative management of directory roles, access, and department mappings.</p>
+    </div>
+    <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary border-0 rounded-1 px-3 py-2 d-flex align-items-center">
+        <i class="bi bi-person-plus me-2"></i> Provision User
+    </a>
+</div>
+
+<div class="row g-4 intel-fade-in" style="animation-delay: 0.1s;">
+    <!-- Staff Matrix -->
+    <div class="col-12">
+        <div class="bg-white border" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: #FDFDFD;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                        <i class="bi bi-shield-lock" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">Personnel Authentication Matrix</h6>
+                </div>
+                <span class="badge bg-light text-secondary border rounded-pill fw-bold" style="font-size: 0.65rem; letter-spacing: 0.02em;">COUNT: {{ staff|length }}</span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
+                    <thead style="background-color: #F8FAFC;">
+                        <tr>
+                            <th class="ps-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Descriptor</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Network Address</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Privilege Logic</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Domain</th>
+                            <th class="text-end pe-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Operations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in staff %}
+                        <tr style="border-bottom: 1px solid #F1F5F9;">
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-box bg-primary text-white d-flex align-items-center justify-content-center fw-bold rounded-circle me-3 shadow-sm" style="width: 34px; height: 34px; font-size: 0.8rem; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));">
+                                        {{ user.name[:1].upper() }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ user.name }}</div>
+                                        <div class="d-flex align-items-center text-success" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.03em;">
+                                            <span class="bi bi-circle-fill me-1" style="font-size: 4px;"></span> ACTIVE
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-secondary py-3" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">{{ user.email }}</td>
+                            <td class="py-3">
+                                {% if user.role == 'super_admin' %}
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #FEF2F2; color: #B91C1C; border: 1px solid #FEE2E2; font-size: 0.6rem;">SUPER ADMIN</span>
+                                {% elif user.role == 'admin' %}
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #DBEAFE; font-size: 0.6rem;">SYSTEM ADMIN</span>
+                                {% else %}
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #ECFDF5; color: #047857; border: 1px solid #D1FAE5; font-size: 0.6rem;">OPERATIONS</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                {% if user.department %}
+                                    <span class="badge text-secondary bg-light border rounded-1 px-2 fw-bold text-uppercase" style="font-size: 0.625rem;">{{ user.department }}</span>
+                                {% else %}
+                                    <span class="text-muted opacity-50" style="font-size: 0.75rem; font-style: italic;">Global</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4 py-3">
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm border btn-white shadow-none text-dark px-3 rounded-pill fw-bold" style="font-size: 0.75rem; transition: all 0.2s;">
+                                    Manage <i class="bi bi-chevron-right ms-1" style="font-size: 0.6rem; opacity: 0.7;"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Grid -->
+    <div class="col-12">
+        <div class="bg-white border" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: #FDFDFD;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                        <i class="bi bi-people" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">Subscriber Index</h6>
+                </div>
+                <span class="badge bg-light text-secondary border rounded-pill fw-bold" style="font-size: 0.65rem; letter-spacing: 0.02em;">COUNT: {{ customers|length }}</span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
+                    <thead style="background-color: #F8FAFC;">
+                        <tr>
+                            <th class="ps-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Identity</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Entity Correlation</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Vector</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Validation</th>
+                            <th class="text-end pe-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in customers %}
+                        <tr style="border-bottom: 1px solid #F1F5F9;">
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light text-secondary border d-flex align-items-center justify-content-center fw-bold rounded-circle me-3" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                                        {{ user.name[:1].upper() }}
+                                    </div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ user.name }}</div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                {% if user.company %}
+                                    <div class="fw-bold text-dark" style="font-size: 0.8rem;">{{ user.company.name }}</div>
+                                    <div class="text-muted" style="font-size: 0.65rem; font-family: 'JetBrains Mono', monospace;">{{ user.company.ftl_code }}</div>
+                                {% else %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border rounded-pill px-2 fw-bold" style="font-size: 0.6rem; filter: brightness(0.9);">UNLINKED</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-secondary py-3" style="font-size: 0.75rem;">{{ user.email }}</td>
+                            <td class="py-3">
+                                {% if user.status == 'active' %}
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #ECFDF5; color: #059669; border: 1px solid #D1FAE5; font-size: 0.6rem;">VERIFIED</span>
+                                {% else %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border rounded-pill px-2 py-1 fw-bold" style="font-size: 0.6rem; filter: brightness(0.9);">{{ user.status.upper() }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4 py-3">
+                                <button class="btn btn-light btn-sm border rounded-circle" style="width: 28px; height: 28px; padding: 0; line-height: 1;">
+                                    <i class="bi bi-gear-fill text-muted" style="font-size: 0.7rem;"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

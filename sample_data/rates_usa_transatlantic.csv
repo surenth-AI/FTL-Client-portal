@@ -1,0 +1,6 @@
+origin,destination,nvocc_name,base_rate,surcharges,transit_days,validity_start,validity_end
+New York,Hamburg,Hapag-Lloyd,850,250,14,2026-01-01,2026-12-31
+Savannah,Rotterdam,Maersk,920,280,16,2026-01-01,2026-12-31
+Charleston,Antwerp,MSC,880,260,15,2026-01-01,2026-12-31
+Norfolk,Felixstowe,CMA CGM,900,270,14,2026-01-01,2026-12-31
+Miami,Bremerhaven,Atlantic Container,1100,350,18,2026-01-01,2026-12-31

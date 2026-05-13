@@ -1,0 +1,33 @@
+# Environments
+venv/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+# Sensitive Files
+instance/
+config.py.bak
+client_secrets.json
+token.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Project Specific
+uploads/
+scratch/

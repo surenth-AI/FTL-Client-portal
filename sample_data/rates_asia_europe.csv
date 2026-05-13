@@ -1,0 +1,6 @@
+origin,destination,nvocc_name,base_rate,surcharges,transit_days,validity_start,validity_end
+Shanghai,Hamburg,Maersk Line,1200,450,32,2026-01-01,2026-12-31
+Ningbo,Rotterdam,MSC,1150,400,34,2026-01-01,2026-12-31
+Shenzhen,Felixstowe,CMA CGM,1300,500,28,2026-01-01,2026-12-31
+Qingdao,Antwerp,Hapag-Lloyd,1100,420,35,2026-01-01,2026-12-31
+Singapore,Le Havre,ONE,1050,380,26,2026-01-01,2026-12-31

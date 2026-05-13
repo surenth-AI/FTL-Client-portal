@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Tracking Results - {{ container_no }}{% endblock %}
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="text-white fw-bold mb-0">Live Tracking: <span class="text-accent-glow">{{ container_no }}</span></h2>
+        <p class="text-muted mb-0">Real-time logistics milestone monitoring.</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('tracking.index') }}" class="btn btn-outline-light rounded-pill px-4">
+            <i class="bi bi-search me-1"></i> New Search
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Container Info Sidebar -->
+    <div class="col-lg-4">
+        <div class="card glass-card p-4 h-100">
+            <h5 class="text-white fw-bold mb-4 border-bottom border-white-10 pb-2">Vessel & Asset Details</h5>
+            <div class="mb-3">
+                <label class="text-muted small text-uppercase fw-bold d-block">Container Type</label>
+                <div class="text-white fw-bold fs-5">{{ parsed_data.container_info.type }}</div>
+            </div>
+            <div class="mb-3">
+                <label class="text-muted small text-uppercase fw-bold d-block">Current Status</label>
+                <div class="badge bg-primary bg-opacity-10 text-primary border border-primary px-3 py-2 rounded-pill mt-1">
+                    <i class="bi bi-ship me-1"></i> {{ parsed_data.container_info.status }}
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="text-muted small text-uppercase fw-bold d-block">Assigned Vessel</label>
+                <div class="text-accent fw-bold fs-6">{{ parsed_data.container_info.vessel }}</div>
+            </div>
+            <div class="mb-0">
+                <label class="text-muted small text-uppercase fw-bold d-block">Last Known Location</label>
+                <div class="text-white">{{ parsed_data.container_info.last_location }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tracking Timeline -->
+    <div class="col-lg-8">
+        <div class="card glass-card p-4">
+            <h5 class="text-white fw-bold mb-4 border-bottom border-white-10 pb-2">Journey Milestones</h5>
+            <div class="tracking-timeline mt-4">
+                {% for event in parsed_data.journey_milestones %}
+                <div class="timeline-item pb-4 position-relative">
+                    <!-- Vertical Line -->
+                    {% if not loop.last %}
+                    <div class="position-absolute start-0 top-0 h-100 border-start border-2 border-white-10 ms-2 mt-2"></div>
+                    {% endif %}
+                    
+                    <div class="d-flex">
+                        <div class="timeline-marker me-4 position-relative z-1">
+                            {% if event.status == 'Completed' %}
+                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" style="width: 20px; height: 20px;">
+                                <i class="bi bi-check text-white" style="font-size: 14px;"></i>
+                            </div>
+                            {% elif event.status == 'Active' %}
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center pulse-blue" style="width: 20px; height: 20px;">
+                                <div class="bg-white rounded-circle" style="width: 8px; height: 8px;"></div>
+                            </div>
+                            {% else %}
+                            <div class="bg-dark border border-white-50 rounded-circle" style="width: 20px; height: 20px;"></div>
+                            {% endif %}
+                        </div>
+                        <div class="timeline-content flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h6 class="text-white fw-bold mb-0">{{ event.activity }}</h6>
+                                <span class="text-muted small">{{ event.date }}</span>
+                            </div>
+                            <div class="text-muted small d-flex align-items-center">
+                                <i class="bi bi-geo-alt me-1"></i> {{ event.location }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tracking-timeline .timeline-item:last-child {
+        padding-bottom: 0 !important;
+    }
+    
+    .pulse-blue {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7);
+        animation: pulse-blue 2s infinite;
+    }
+    
+    @keyframes pulse-blue {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+        }
+    }
+</style>
+{% endblock %}
