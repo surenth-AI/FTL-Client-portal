@@ -8,7 +8,7 @@ import secrets
 api_bp = Blueprint('api', __name__)
 
 # Shared Secret Token for API Authentication
-ATLAS_SHARED_TOKEN = "YOUR_ATLAS_SECRET_TOKEN"
+ATLAS_SHARED_TOKEN = "1"
 
 def check_auth(req):
     auth_header = req.headers.get('Authorization')
