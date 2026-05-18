@@ -97,6 +97,46 @@
                     </div>
                 </div>
             </div>
+
+            <!-- System Email / SMTP configuration -->
+            {% if current_user.role == 'super_admin' %}
+            <div class="bg-white border p-4 mt-4" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                <div class="d-flex align-items-center mb-4 border-bottom pb-3">
+                    <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="bi bi-envelope-at-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Outbound Email Configuration</h6>
+                        <span class="text-muted small">SMTP server parameters for transactional emails (Password Resets, Approvals).</span>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label text-dark fw-bold" style="font-size: 0.8rem;">SMTP Server Host</label>
+                        <input type="text" name="smtp_server" class="form-control" placeholder="smtp.gmail.com" value="{{ settings.smtp_server or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-dark fw-bold" style="font-size: 0.8rem;">SMTP Port</label>
+                        <input type="number" name="smtp_port" class="form-control" placeholder="587" value="{{ settings.smtp_port or '587' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-dark fw-bold" style="font-size: 0.8rem;">Sender Email (SMTP User)</label>
+                        <input type="email" name="smtp_user" class="form-control" placeholder="noreply@company.com" value="{{ settings.smtp_user or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-dark fw-bold" style="font-size: 0.8rem;">SMTP Password (or App Password)</label>
+                        <input type="password" name="smtp_password" class="form-control" placeholder="••••••••" value="">
+                        <div class="form-text" style="font-size: 0.65rem;">Leave blank to keep current password.</div>
+                    </div>
+                    <div class="col-md-12 mt-4 pt-3 border-top">
+                        <label class="form-label text-dark fw-bold" style="font-size: 0.8rem;">Internal Receiver Email</label>
+                        <input type="email" name="receiver_email" class="form-control" placeholder="operations@company.com" value="{{ settings.receiver_email or '' }}">
+                        <div class="form-text" style="font-size: 0.65rem;">Where registration approval notifications should be sent.</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Right Side Sidebar Configuration -->

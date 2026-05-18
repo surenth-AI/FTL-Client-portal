@@ -82,3 +82,70 @@ class EmailService:
 
         except Exception as e:
             return {"success": False, "message": str(e)}
+
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from app.models.models import SystemSetting
+
+class SystemMailer:
+    @staticmethod
+    def send_email(to_email, subject, html_content):
+        # Fetch settings
+        settings = SystemSetting.query.first()
+        if not settings or not settings.smtp_server or not settings.smtp_user or not settings.smtp_password:
+            print("SystemMailer Error: SMTP settings are incomplete in the Admin Dashboard.")
+            return False
+
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"AxeGlobal Portal <{settings.smtp_user}>"
+        msg['To'] = to_email
+
+        msg.attach(MIMEText(html_content, 'html'))
+
+        try:
+            server = smtplib.SMTP(settings.smtp_server, int(settings.smtp_port or 587))
+            server.starttls()
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.sendmail(settings.smtp_user, [to_email], msg.as_string())
+            server.quit()
+            return True
+        except Exception as e:
+            print(f"SystemMailer Exception: {e}")
+            return False
+
+    @staticmethod
+    def send_password_reset(user_email, reset_link):
+        subject = "AxeGlobal - Password Reset Request"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2>Password Reset</h2>
+            <p>You requested to reset your password. Click the secure link below to proceed:</p>
+            <p><a href="{reset_link}" style="display:inline-block; padding: 10px 20px; background-color: #0077ff; color: #fff; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+            <p>If you did not request this, please ignore this email.</p>
+        </div>
+        """
+        return SystemMailer.send_email(user_email, subject, html)
+
+    @staticmethod
+    def send_approval_request(user_name, user_email, company_name):
+        settings = SystemSetting.query.first()
+        if not settings or not settings.receiver_email:
+            print("SystemMailer Error: Operations Receiver Email not set.")
+            return False
+
+        subject = "Action Required: New Portal Registration Request"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2>New Registration Pending Approval</h2>
+            <p>A new user has requested access to the portal:</p>
+            <ul>
+                <li><strong>Name:</strong> {user_name}</li>
+                <li><strong>Email:</strong> {user_email}</li>
+                <li><strong>Company:</strong> {company_name}</li>
+            </ul>
+            <p>Please log in to the admin dashboard to review their request.</p>
+        </div>
+        """
+        return SystemMailer.send_email(settings.receiver_email, subject, html)

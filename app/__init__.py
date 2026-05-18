@@ -2,12 +2,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from config import Config
+from flasgger import Swagger
 import os
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'info'
+swagger = Swagger()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -15,6 +17,7 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     login_manager.init_app(app)
+    swagger.init_app(app)
 
     # Ensure upload folder exists
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -22,7 +25,10 @@ def create_app(config_class=Config):
 
     with app.app_context():
         from app.models import models
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            app.logger.warning(f"Skipping auto-table creation: {e}")
         # Safe self-healing SQLite column alteration
         try:
             db.session.execute(db.text("ALTER TABLE system_setting ADD COLUMN default_layout VARCHAR(50) DEFAULT 'sidebar';"))
@@ -79,6 +85,7 @@ def create_app(config_class=Config):
     from app.routes.agent import agent_bp
     from app.routes.soa import soa_bp
     from app.routes.ap_invoices import ap_invoices_bp
+    from app.routes.api import api_bp
 
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(admin, url_prefix='/admin')
@@ -90,10 +97,14 @@ def create_app(config_class=Config):
     app.register_blueprint(agent_bp, url_prefix='/agent')
     app.register_blueprint(soa_bp, url_prefix='/soa')
     app.register_blueprint(ap_invoices_bp, url_prefix='/ap-invoices')
+    app.register_blueprint(api_bp, url_prefix='/api')
 
     with app.app_context():
         from app.models import models
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            app.logger.warning(f"Skipping second auto-table creation: {e}")
         try:
             seed_admin()
         except Exception as e:

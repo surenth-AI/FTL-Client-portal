@@ -57,7 +57,7 @@
                                     <div class="mb-4 reveal-item">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                             <label class="form-label text-uppercase text-muted small fw-bold ls-1 mb-0">Password</label>
-                                            <a href="#" class="small text-primary text-decoration-none fw-semibold nav-hover-slide">Forgot Password?</a>
+                                            <a href="{{ url_for('auth.forgot_password') }}" class="small text-primary text-decoration-none fw-semibold nav-hover-slide">Forgot Password?</a>
                                         </div>
                                         <div class="input-group input-group-custom float-focus-field">
                                             <span class="input-group-text bg-transparent"><i class="bi bi-lock text-muted icon-animate"></i></span>
@@ -80,131 +80,14 @@
                                 
                                 <div class="text-center mb-4 reveal-item">
                                     <p class="text-muted small mb-0 fw-medium">Don't have an account yet? <br class="d-sm-none">
-                                        <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#registrationTypeModal" class="text-primary fw-bold text-decoration-none ms-1 border-bottom border-primary-subtle pb-1 magnetic-text">Request Access</a>
+                                        <a href="javascript:void(0);" onclick="setView('reg_user')" class="text-primary fw-bold text-decoration-none ms-1 border-bottom border-primary-subtle pb-1 magnetic-text">Request Access</a>
                                     </p>
                                 </div>
 
                                 <!-- Spacer or other future footer placement -->
-                            </div>
                         </div>
                     </div>
-
-                    <!-- State 3: Register Company View -->
-                    <div class="p-4 p-md-5 d-none flex-grow-1" id="reg-company-view">
-                        <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
-                            <div>
-                                <h3 class="fw-bold text-dark mb-0">Company Onboarding</h3>
-                                <p class="text-muted small mb-0 fw-medium">Establish your enterprise organization account.</p>
-                            </div>
-                            <button onclick="setView('login')" class="btn btn-sm btn-light border rounded-3 fw-semibold hover-scale-active"><i class="bi bi-x-lg"></i></button>
-                        </div>
-
-                        <form method="POST">
-                            {{ company_form.hidden_tag() }}
-                            
-                            <div class="row g-3 mb-4">
-                                <h6 class="fw-bold text-primary text-uppercase ls-1 mb-2 mt-2 small"><i class="bi bi-building-check me-2"></i> Organizational Data</h6>
-                                <div class="col-12">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Company Name</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-building text-muted icon-animate"></i></span>
-                                        {{ company_form.company_name(class="form-control border-start-0 ps-0", placeholder="Legal Entity Name") }}
-                                    </div>
-                                    {% for error in company_form.company_name.errors %}<div class="text-danger smaller mt-1"><i class="bi bi-info-circle me-1"></i>{{ error }}</div>{% endfor %}
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">VAT / Tax Number</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-hash text-muted icon-animate"></i></span>
-                                        {{ company_form.vat_number(class="form-control border-start-0 ps-0", placeholder="e.g. BE0123456") }}
-                                    </div>
-                                    {% for error in company_form.vat_number.errors %}<div class="text-danger smaller mt-1"><i class="bi bi-info-circle me-1"></i>{{ error }}</div>{% endfor %}
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">EORI Number</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-upc text-muted icon-animate"></i></span>
-                                        {{ company_form.eori_number(class="form-control border-start-0 ps-0", placeholder="Registration ID") }}
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12"><hr class="my-2 opacity-25"></div>
-                                
-                                <h6 class="fw-bold text-primary text-uppercase ls-1 mb-2 mt-1 small"><i class="bi bi-geo-alt-fill me-2"></i> Headquarters Address</h6>
-                                <div class="col-12">
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-geo text-muted icon-animate"></i></span>
-                                        {{ company_form.address(class="form-control border-start-0 ps-0", placeholder="Full Street Address & Building") }}
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-geo-fill text-muted icon-animate"></i></span>
-                                        {{ company_form.zip_code(class="form-control border-start-0 ps-0", placeholder="ZIP", id="c_zip") }}
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="input-group input-group-custom">
-                                        {{ company_form.city(class="form-control", placeholder="City", id="c_city") }}
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="input-group input-group-custom">
-                                        {{ company_form.country(class="form-control", placeholder="Country", id="c_country") }}
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12"><hr class="my-2 opacity-25"></div>
-
-                                <h6 class="fw-bold text-accent text-uppercase ls-1 mb-2 mt-1 small"><i class="bi bi-person-badge me-2"></i> Super Admin Credentials</h6>
-                                <div class="col-md-6">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Full Name</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-person text-muted icon-animate"></i></span>
-                                        {{ company_form.contact_name(class="form-control border-start-0 ps-0", placeholder="Contact Name") }}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Contact Email</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-envelope text-muted icon-animate"></i></span>
-                                        {{ company_form.contact_email(class="form-control border-start-0 ps-0", placeholder="corp@email.com") }}
-                                    </div>
-                                    {% for error in company_form.contact_email.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Mobile</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-telephone text-muted icon-animate"></i></span>
-                                        {{ company_form.mobile(class="form-control border-start-0 ps-0", placeholder="+1 000") }}
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Create Password</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-lock text-muted icon-animate"></i></span>
-                                        {{ company_form.password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label mb-1 smaller fw-bold text-muted ls-1 text-uppercase">Confirm</label>
-                                    <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-shield-check text-muted icon-animate"></i></span>
-                                        {{ company_form.confirm_password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="d-grid pt-2">
-                                <button type="submit" name="company-submit" class="btn btn-primary btn-lg fw-bold rounded-3 shadow-accent premium-btn-glow position-relative overflow-hidden py-3">
-                                    <div class="shine-effect"></div>
-                                    <span class="position-relative z-2">Submit Corporate Request <i class="bi bi-arrow-right ms-1 translate-right-hover"></i></span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                </div>
 
                     <!-- State 4: Join User View -->
                     <div class="p-4 p-md-5 d-none flex-grow-1" id="reg-user-view">
@@ -219,44 +102,81 @@
                         <form method="POST" class="col-lg-9 mx-auto">
                             {{ user_form.hidden_tag() }}
                             
-                            <div class="mb-4">
-                                <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Company Referral Code</label>
-                                <div class="input-group input-group-custom border-primary-subtle">
-                                    <span class="input-group-text bg-transparent"><i class="bi bi-key-fill text-primary icon-animate"></i></span>
-                                    {{ user_form.ftl_code(class="form-control border-start-0 ps-0", placeholder="e.g. FTL-BE-001") }}
-                                </div>
-                                <div class="smaller text-muted mt-1"><i class="bi bi-info-circle me-1"></i>Provided by your admin.</div>
-                                {% for error in user_form.ftl_code.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Legal Full Name</label>
-                                <div class="input-group input-group-custom">
-                                    <span class="input-group-text bg-transparent"><i class="bi bi-person-fill text-muted icon-animate"></i></span>
-                                    {{ user_form.name(class="form-control border-start-0 ps-0", placeholder="Enter full name") }}
-                                </div>
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Corporate Email</label>
-                                <div class="input-group input-group-custom">
-                                    <span class="input-group-text bg-transparent"><i class="bi bi-envelope-at text-muted icon-animate"></i></span>
-                                    {{ user_form.email(class="form-control border-start-0 ps-0", placeholder="yourname@company.com") }}
-                                </div>
-                                <div class="smaller text-muted mt-1">Verified domain required.</div>
-                                {% for error in user_form.email.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
-                            </div>
-
-                            <div class="row g-3 mb-4 pt-2">
+                            <!-- Row 1: Referral Code & Company Name -->
+                            <div class="row g-3 mb-4">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Account Password</label>
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Company Referral Code <span class="text-muted fw-normal lowercase font-monospace text-none" style="font-size: 0.75rem;">(Optional)</span></label>
+                                    <div class="input-group input-group-custom border-primary-subtle">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-key-fill text-primary icon-animate"></i></span>
+                                        {{ user_form.ftl_code(class="form-control border-start-0 ps-0", placeholder="FTL-BE-001") }}
+                                    </div>
+                                    <div class="smaller text-muted mt-1"><i class="bi bi-info-circle me-1"></i>Optional. Provided by your admin.</div>
+                                    {% for error in user_form.ftl_code.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Company Full Name</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-building text-muted icon-animate"></i></span>
+                                        {{ user_form.company_name(class="form-control border-start-0 ps-0", placeholder="Fast Transit Line") }}
+                                    </div>
+                                    {% for error in user_form.company_name.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Row 2: First Name & Last Name -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">First Name</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-person-fill text-muted icon-animate"></i></span>
+                                        {{ user_form.first_name(class="form-control border-start-0 ps-0", placeholder="Enter first name") }}
+                                    </div>
+                                    {% for error in user_form.first_name.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Last Name</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-person-fill text-muted icon-animate"></i></span>
+                                        {{ user_form.last_name(class="form-control border-start-0 ps-0", placeholder="Enter last name") }}
+                                    </div>
+                                    {% for error in user_form.last_name.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Mail ID & Mobile/Telephone -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Mail ID</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-envelope-at text-muted icon-animate"></i></span>
+                                        {{ user_form.email(class="form-control border-start-0 ps-0", placeholder="yourname@company.com") }}
+                                    </div>
+                                    <div class="smaller text-muted mt-1"><i class="bi bi-info-circle me-1"></i>This will be your User ID.</div>
+                                    {% for error in user_form.email.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Mobile / Telephone</label>
+                                    <div class="input-group input-group-custom">
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-telephone-fill text-muted icon-animate"></i></span>
+                                        {{ user_form.mobile(class="form-control border-start-0 ps-0", placeholder="+1 555-0199") }}
+                                    </div>
+                                    <div class="smaller text-muted mt-1"><i class="bi bi-globe me-1"></i>Include country code.</div>
+                                    {% for error in user_form.mobile.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Row 4: Password & Repeat Password -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Password</label>
                                     <div class="input-group input-group-custom">
                                         <span class="input-group-text bg-transparent"><i class="bi bi-lock-fill text-muted icon-animate"></i></span>
                                         {{ user_form.password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
                                     </div>
+                                    {% for error in user_form.password.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Confirm Password</label>
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Repeat Password</label>
                                     <div class="input-group input-group-custom">
                                         <span class="input-group-text bg-transparent"><i class="bi bi-shield-check text-muted icon-animate"></i></span>
                                         {{ user_form.confirm_password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
@@ -265,6 +185,7 @@
                                 </div>
                             </div>
 
+                            <!-- Submit Action -->
                             <div class="d-grid mb-2 pt-2">
                                 <button type="submit" name="user-submit" class="btn btn-dark btn-lg fw-bold rounded-3 shadow premium-btn-glow position-relative overflow-hidden py-3">
                                     <div class="shine-effect" style="background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);"></div>
@@ -280,51 +201,7 @@
     </div>
 </div>
 
-<!-- Selection Popup (Modal) -->
-<div class="modal fade" id="registrationTypeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header bg-light border-0 pt-4 px-4">
-                <div>
-                    <h5 class="modal-title fw-bold text-dark mb-1">Join the Fast Transit Line Network</h5>
-                    <p class="text-muted mb-0 small">Select your registration type to continue</p>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="option-card border rounded-4 p-4 h-100 cursor-pointer transition-transform hover-scale-active shadow-sm bg-white d-flex flex-column align-items-start"
-                             onclick="handleModalSelection('reg_company')">
-                            <div class="icon-box bg-primary-soft text-primary mb-3 rounded-3 group-float">
-                                <i class="bi bi-briefcase-fill fs-4 icon-float"></i>
-                            </div>
-                            <h5 class="fw-bold text-dark mb-2">Register Company</h5>
-                            <p class="text-muted small mb-4">Onboard your entire organization as a new business partner.</p>
-                            <div class="mt-auto w-100">
-                                <div class="btn btn-outline-primary w-100 rounded-3 fw-bold transition-ripple">Create Account</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="option-card border rounded-4 p-4 h-100 cursor-pointer transition-transform hover-scale-active shadow-sm bg-white d-flex flex-column align-items-start"
-                             onclick="handleModalSelection('reg_user')">
-                            <div class="icon-box bg-accent-soft text-accent mb-3 rounded-3 group-float">
-                                <i class="bi bi-people-fill fs-4 icon-float"></i>
-                            </div>
-                            <h5 class="fw-bold text-dark mb-2">Join Existing Team</h5>
-                            <p class="text-muted small mb-4">Use your verified email domain and code to connect to a company.</p>
-                            <div class="mt-auto w-100">
-                                <div class="btn btn-outline-dark w-100 rounded-3 fw-bold transition-ripple">Join Now</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <style>
 /* Base Structural Layouts */
@@ -614,7 +491,6 @@
 <script>
 const views = {
     login: document.getElementById('login-view'),
-    reg_company: document.getElementById('reg-company-view'),
     reg_user: document.getElementById('reg-user-view')
 };
 const container = document.getElementById('auth-container');
@@ -632,34 +508,11 @@ function setView(target) {
         if (views[target]) {
             views[target].classList.remove('d-none');
         }
-        
-        // Adapt container logic if needed
-        if (target === 'reg_company') {
-            container.style.maxWidth = '900px';
-            container.style.marginLeft = 'auto';
-            container.style.marginRight = 'auto';
-        } else {
-            container.style.maxWidth = '';
-            container.style.marginLeft = '';
-            container.style.marginRight = '';
-        }
 
         // Restore pop
         container.style.opacity = '1';
         container.style.transform = 'scale(1)';
     }, 200);
-}
-
-function handleModalSelection(targetView) {
-    const modalElement = document.getElementById('registrationTypeModal');
-    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-    if (modalInstance) {
-        modalInstance.hide();
-    }
-    // Wait for modal to close before changing view for smoothest transition
-    setTimeout(() => {
-        setView(targetView);
-    }, 300);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

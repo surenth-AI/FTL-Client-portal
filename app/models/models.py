@@ -22,17 +22,41 @@ class Company(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     users = db.relationship('User', foreign_keys='User.company_id', backref='company', lazy=True)
 
+class UserAccountMapping(db.Model):
+    __tablename__ = 'user_account_mapping'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    account_id = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class UserBranchMapping(db.Model):
+    __tablename__ = 'user_branch_mapping'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    branch_id = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='customer') # super_admin, admin, operation_executive, customer
-    email_token = db.Column(db.Text, nullable=True) # Stores the JSON serialized token
+    email_token = db.Column(db.String(256), nullable=True) # Stores the JSON serialized token
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    email_token_expiry = db.Column(db.DateTime, nullable=True)
+    password_reset_token = db.Column(db.String(256), nullable=True)
+    password_reset_token_expiry = db.Column(db.DateTime, nullable=True)
+    deactivation_reason = db.Column(db.String(1000), nullable=True)
+    rejection_reason = db.Column(db.String(1000), nullable=True)
     mobile = db.Column(db.String(20))
     department = db.Column(db.String(50)) # export, import, warehouse, finance
-    status = db.Column(db.String(20), default='pending_ops') # pending_ops, active, rejected
+    status = db.Column(db.String(20), default='pending_verification') # pending_verification, pending_approval, activated, rejected, deactivated
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    
+    # Relationships
+    accounts = db.relationship('UserAccountMapping', backref='user', lazy=True, cascade="all, delete-orphan")
+    branches = db.relationship('UserBranchMapping', backref='user', lazy=True, cascade="all, delete-orphan")
     bookings = db.relationship('Booking', backref='customer', lazy=True)
 
 class Rate(db.Model):
@@ -367,3 +391,10 @@ class SystemSetting(db.Model):
     logo_path = db.Column(db.String(255), default='img/logo.png')
     login_banner_path = db.Column(db.String(255), default='img/login_hero.png')
     default_layout = db.Column(db.String(50), default='sidebar') # sidebar, topbar
+
+    # SMTP Configuration
+    smtp_server = db.Column(db.String(255), nullable=True)
+    smtp_port = db.Column(db.Integer, default=587)
+    smtp_user = db.Column(db.String(255), nullable=True)
+    smtp_password = db.Column(db.String(255), nullable=True)
+    receiver_email = db.Column(db.String(255), nullable=True)

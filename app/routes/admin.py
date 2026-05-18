@@ -317,6 +317,22 @@ def settings():
             banner_file.save(save_path)
             sys_settings.login_banner_path = 'img/' + filename
             
+        # Handle SMTP Settings (Only allowed for super_admin / Platform Admin)
+        if current_user.role == 'super_admin':
+            sys_settings.smtp_server = request.form.get('smtp_server') or None
+            
+            smtp_port = request.form.get('smtp_port')
+            sys_settings.smtp_port = int(smtp_port) if smtp_port and smtp_port.isdigit() else 587
+            
+            sys_settings.smtp_user = request.form.get('smtp_user') or None
+            
+            # Only update password if a new one is provided (so we don't overwrite with blanks)
+            smtp_pw = request.form.get('smtp_password')
+            if smtp_pw and smtp_pw.strip() != '':
+                sys_settings.smtp_password = smtp_pw
+                
+            sys_settings.receiver_email = request.form.get('receiver_email') or None
+
         db.session.commit()
         flash('System settings updated successfully.', 'success')
         return redirect(url_for('admin.settings'))

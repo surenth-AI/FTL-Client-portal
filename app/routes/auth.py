@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models.models import User, Company
 from app import db
-from app.services.email_service import EmailService
+from app.services.email_service import EmailService, SystemMailer
 import os
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
@@ -11,43 +11,17 @@ from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
 
 auth = Blueprint('auth', __name__)
 
-class CompanyRegistrationForm(FlaskForm):
-    # Company Details
-    company_name = StringField('Registered Company Name', validators=[DataRequired()])
-    address = StringField('Full Address', validators=[DataRequired()])
-    zip_code = StringField('Zip Code', validators=[DataRequired()])
-    city = StringField('City', validators=[DataRequired()])
-    country = StringField('Country', validators=[DataRequired()])
-    vat_number = StringField('BTW/VAT Number', validators=[DataRequired()])
-    eori_number = StringField('EORI Number', validators=[DataRequired()])
-    
-    # Contact Person Details
-    contact_name = StringField('Contact Person Full Name', validators=[DataRequired()])
-    contact_email = StringField('Email ID', validators=[DataRequired(), Email()])
-    mobile = StringField('Mobile Number', validators=[DataRequired()])
-    
-    # Security
-    password = PasswordField('Password', validators=[DataRequired()])
-    confirm_password = PasswordField('Re-enter Password', validators=[DataRequired(), EqualTo('password')])
-    
-    submit = SubmitField('Request Access')
 
-    def validate_vat_number(self, vat_number):
-        company = Company.query.filter_by(vat_number=vat_number.data).first()
-        if company:
-            raise ValidationError('VAT number already exists. Please contact support or use "Join Company".')
-
-    def validate_contact_email(self, contact_email):
-        user = User.query.filter_by(email=contact_email.data).first()
-        if user:
-            raise ValidationError('Email already registered.')
 
 class JoinCompanyForm(FlaskForm):
-    ftl_code = StringField('FTL Code', validators=[DataRequired()])
-    name = StringField('Full Name', validators=[DataRequired()])
-    email = StringField('Email ID', validators=[DataRequired(), Email()])
+    ftl_code = StringField('Company Referral Code', validators=[])
+    company_name = StringField('Company Full Name', validators=[DataRequired()])
+    first_name = StringField('First Name', validators=[DataRequired()])
+    last_name = StringField('Last Name', validators=[DataRequired()])
+    email = StringField('Corporate Email', validators=[DataRequired(), Email()])
+    mobile = StringField('Mobile/Telephone Number', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
-    confirm_password = PasswordField('Re-enter Password', validators=[DataRequired(), EqualTo('password')])
+    confirm_password = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
     
     submit = SubmitField('Request Access')
 
@@ -61,49 +35,22 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
 
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email Address', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Password Reset Link')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match')])
+    submit = SubmitField('Reset Password')
+
 @auth.route('/register')
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('customer.dashboard'))
-    return render_template('auth/register_selection.html')
+    return redirect(url_for('auth.login', active_tab='reg_user'))
 
-@auth.route('/register/company', methods=['GET', 'POST'])
-def register_company():
-    if current_user.is_authenticated:
-        return redirect(url_for('customer.dashboard'))
-    form = CompanyRegistrationForm()
-    if form.validate_on_submit():
-        # Create Company
-        company = Company(
-            name=form.company_name.data,
-            address=form.address.data,
-            zip_code=form.zip_code.data,
-            city=form.city.data,
-            country=form.country.data,
-            vat_number=form.vat_number.data,
-            eori_number=form.eori_number.data,
-            status='pending_finance'
-        )
-        db.session.add(company)
-        db.session.flush() # Get company.id
-        
-        # Create User
-        hashed_password = generate_password_hash(form.password.data)
-        user = User(
-            name=form.contact_name.data,
-            email=form.contact_email.data,
-            password_hash=hashed_password,
-            role='customer',
-            mobile=form.mobile.data,
-            company_id=company.id,
-            status='pending_ops'
-        )
-        db.session.add(user)
-        db.session.commit()
-        
-        flash('Registration request submitted! Awaiting Finance and Operations approval.', 'info')
-        return redirect(url_for('auth.login'))
-    return render_template('auth/register_company.html', form=form)
+
 
 @auth.route('/register/user', methods=['GET', 'POST'])
 def register_user():
@@ -111,26 +58,30 @@ def register_user():
         return redirect(url_for('customer.dashboard'))
     form = JoinCompanyForm()
     if form.validate_on_submit():
-        company = Company.query.filter_by(ftl_code=form.ftl_code.data).first()
-        if not company:
-            flash('Invalid FTL Code.', 'danger')
-            return render_template('auth/register_user.html', form=form)
-        
-        # Domain check
-        existing_user = User.query.filter_by(company_id=company.id).first()
-        if existing_user:
-            domain = existing_user.email.split('@')[-1]
-            if form.email.data.split('@')[-1] != domain:
-                flash(f'Email domain must match the company domain: @{domain}', 'danger')
+        company_id = None
+        if form.ftl_code.data:
+            company = Company.query.filter_by(ftl_code=form.ftl_code.data).first()
+            if not company:
+                flash('Invalid Company Referral Code.', 'danger')
                 return render_template('auth/register_user.html', form=form)
+            company_id = company.id
+            
+            # Domain check
+            existing_user = User.query.filter_by(company_id=company.id).first()
+            if existing_user:
+                domain = existing_user.email.split('@')[-1]
+                if form.email.data.split('@')[-1] != domain:
+                    flash(f'Email domain must match the company domain: @{domain}', 'danger')
+                    return render_template('auth/register_user.html', form=form)
         
         hashed_password = generate_password_hash(form.password.data)
         user = User(
-            name=form.name.data,
+            name=f"{form.first_name.data} {form.last_name.data}",
             email=form.email.data,
+            mobile=form.mobile.data,
             password_hash=hashed_password,
             role='customer',
-            company_id=company.id,
+            company_id=company_id,
             status='pending_ops'
         )
         db.session.add(user)
@@ -150,22 +101,21 @@ def login():
         return redirect(url_for('customer.dashboard'))
     
     login_form = LoginForm(prefix="login")
-    company_form = CompanyRegistrationForm(prefix="company")
     user_form = JoinCompanyForm(prefix="user")
     
-    active_tab = 'login' # default state tracker for rendering
+    active_tab = request.args.get('active_tab', 'login') # state tracker for rendering
     
     # 1. Handle Login Submit
     if login_form.validate_on_submit() and 'login-submit' in request.form:
         user = User.query.filter_by(email=login_form.email.data).first()
         if user and check_password_hash(user.password_hash, login_form.password.data):
             if user.role not in ['super_admin', 'admin']:
-                if user.status != 'active':
+                if user.status not in ['active', 'activated']:
                     flash(f'Your account is {user.status.replace("_", " ")}. Please wait for approval.', 'warning')
-                    return render_template('auth/login.html', form=login_form, company_form=company_form, user_form=user_form, active_tab='login')
+                    return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab='login')
                 if user.company and user.company.status != 'active':
                     flash(f'Your company status is {user.company.status.replace("_", " ")}. Please wait for approval.', 'warning')
-                    return render_template('auth/login.html', form=login_form, company_form=company_form, user_form=user_form, active_tab='login')
+                    return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab='login')
             
             login_user(user)
             next_page = request.args.get('next')
@@ -177,68 +127,39 @@ def login():
         else:
             flash('Login unsuccessful. Check email and password.', 'danger')
 
-    # 2. Handle Company Registration Submit
-    elif company_form.validate_on_submit() and 'company-submit' in request.form:
-        # Create Company
-        company = Company(
-            name=company_form.company_name.data,
-            address=company_form.address.data,
-            zip_code=company_form.zip_code.data,
-            city=company_form.city.data,
-            country=company_form.country.data,
-            vat_number=company_form.vat_number.data,
-            eori_number=company_form.eori_number.data,
-            status='pending_finance'
-        )
-        db.session.add(company)
-        db.session.flush() # Get company.id
-        
-        # Create User
-        hashed_password = generate_password_hash(company_form.password.data)
-        user = User(
-            name=company_form.contact_name.data,
-            email=company_form.contact_email.data,
-            password_hash=hashed_password,
-            role='customer',
-            mobile=company_form.mobile.data,
-            company_id=company.id,
-            status='pending_ops'
-        )
-        db.session.add(user)
-        db.session.commit()
-        
-        flash('Registration request submitted! Awaiting Finance and Operations approval.', 'info')
-        return redirect(url_for('auth.login'))
-    
-    elif company_form.errors and 'company-submit' in request.form:
-        active_tab = 'reg_company'
-
     # 3. Handle User Join Submit
     elif user_form.validate_on_submit() and 'user-submit' in request.form:
-        company = Company.query.filter_by(ftl_code=user_form.ftl_code.data).first()
-        if not company:
-            flash('Invalid FTL Code.', 'danger')
-            return render_template('auth/login.html', form=login_form, company_form=company_form, user_form=user_form, active_tab='reg_user')
-        
-        # Domain check
-        existing_user = User.query.filter_by(company_id=company.id).first()
-        if existing_user:
-            domain = existing_user.email.split('@')[-1]
-            if user_form.email.data.split('@')[-1] != domain:
-                flash(f'Email domain must match the company domain: @{domain}', 'danger')
-                return render_template('auth/login.html', form=login_form, company_form=company_form, user_form=user_form, active_tab='reg_user')
+        company_id = None
+        company = None
+        if user_form.ftl_code.data:
+            company = Company.query.filter_by(ftl_code=user_form.ftl_code.data).first()
+            if not company:
+                flash('Invalid Company Referral Code.', 'danger')
+                return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab='reg_user')
+            company_id = company.id
+            
+            # Domain check
+            existing_user = User.query.filter_by(company_id=company.id).first()
+            if existing_user:
+                domain = existing_user.email.split('@')[-1]
+                if user_form.email.data.split('@')[-1] != domain:
+                    flash(f'Email domain must match the company domain: @{domain}', 'danger')
+                    return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab='reg_user')
         
         hashed_password = generate_password_hash(user_form.password.data)
         user = User(
-            name=user_form.name.data,
+            name=f"{user_form.first_name.data} {user_form.last_name.data}",
             email=user_form.email.data,
+            mobile=user_form.mobile.data,
             password_hash=hashed_password,
             role='customer',
-            company_id=company.id,
+            company_id=company_id,
             status='pending_ops'
         )
         db.session.add(user)
         db.session.commit()
+        
+        SystemMailer.send_approval_request(user.name, user.email, company.name if company else (user_form.company_name.data or "N/A"))
         
         flash('Join request submitted! Awaiting Operations approval.', 'info')
         return redirect(url_for('auth.login'))
@@ -247,13 +168,65 @@ def login():
         active_tab = 'reg_user'
 
     # If GET request or failures
-    return render_template('auth/login.html', form=login_form, company_form=company_form, user_form=user_form, active_tab=active_tab)
+    return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab=active_tab)
 
 @auth.route('/logout')
 @login_required
 def logout():
     logout_user()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
+
+import secrets
+from datetime import datetime, timedelta
+
+@auth.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('customer.dashboard'))
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            token = secrets.token_urlsafe(32)
+            user.password_reset_token = token
+            user.password_reset_token_expiry = datetime.utcnow() + timedelta(hours=24)
+            db.session.commit()
+            # Construct reset link
+            reset_link = url_for('auth.reset_password', token=token, _external=True)
+            mail_sent = SystemMailer.send_password_reset(user.email, reset_link)
+            if mail_sent:
+                flash('An email has been sent with instructions to reset your password.', 'info')
+            else:
+                flash(f'SystemMailer failed. Check Admin SMTP config. (Simulated Link: {reset_link})', 'warning')
+        else:
+            flash('If an account with that email exists, a password reset link has been sent.', 'info')
+        return redirect(url_for('auth.login'))
+    return render_template('auth/forgot_password.html', form=form)
+
+@auth.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('customer.dashboard'))
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user:
+        flash('That is an invalid or expired token.', 'warning')
+        return redirect(url_for('auth.forgot_password'))
+        
+    if user.password_reset_token_expiry and datetime.utcnow() > user.password_reset_token_expiry:
+        flash('That token has expired.', 'warning')
+        return redirect(url_for('auth.forgot_password'))
+        
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        hashed_password = generate_password_hash(form.password.data)
+        user.password_hash = hashed_password
+        user.password_reset_token = None
+        user.password_reset_token_expiry = None
+        db.session.commit()
+        flash('Your password has been updated! You are now able to log in.', 'success')
+        return redirect(url_for('auth.login'))
+    return render_template('auth/reset_password.html', form=form)
 
 @auth.route('/email/login')
 def email_login():
