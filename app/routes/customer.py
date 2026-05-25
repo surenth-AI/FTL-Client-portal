@@ -105,19 +105,73 @@ def process_cargo_items(booking, form, service_type):
 def dashboard():
     if current_user.role == 'admin':
         return redirect(url_for('admin.dashboard'))
-    
-    recent_shipments = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).limit(3).all()
-    total_active = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status != 'Delivered').count()
-    
-    # Get unique origins and destinations for the quick search form
+
+    recent_shipments = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).limit(5).all()
+    total_shipments = Booking.query.filter_by(user_id=current_user.id).count()
+    in_transit = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status.contains('Transit')).count()
+    delivered = Booking.query.filter_by(user_id=current_user.id, status='Delivered').count()
+    pending = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status.contains('Pending')).count()
+    booked = Booking.query.filter_by(user_id=current_user.id, status='Booked').count()
+    si_needed = Booking.query.filter_by(user_id=current_user.id, status='Booked', is_si_submitted=False).first()
+
+    return render_template('customer/dashboard.html',
+                         recent_shipments=recent_shipments,
+                         total_active=total_shipments - delivered,
+                         total_shipments=total_shipments,
+                         in_transit=in_transit,
+                         delivered=delivered,
+                         pending=pending,
+                         booked=booked,
+                         si_needed=si_needed,
+                         today=datetime.now())
+
+@customer.route('/rates', methods=['GET', 'POST'])
+@login_required
+def rates():
+    if current_user.role not in ['customer', 'agent']:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        origin = request.form.get('origin')
+        destination = request.form.get('destination')
+        service_type = request.form.get('service_type', 'LCL')
+        total_volume = 0.0
+        cargo_items = []
+        if service_type == 'LCL':
+            item_qtys = request.form.getlist('item_qty[]')
+            item_types = request.form.getlist('item_type[]')
+            item_weights = request.form.getlist('item_weight[]')
+            item_volumes = request.form.getlist('item_volume[]')
+            for i in range(len(item_qtys)):
+                vol = float(item_volumes[i]) if i < len(item_volumes) and item_volumes[i] else 0.0
+                total_volume += vol
+                cargo_items.append({'qty': item_qtys[i], 'type': item_types[i],
+                                    'weight': item_weights[i], 'volume': vol})
+        else:
+            cont_types = request.form.getlist('cont_type[]')
+            cont_qtys = request.form.getlist('cont_qty[]')
+            c_volumes = request.form.getlist('cont_volume[]')
+            for i in range(len(cont_types)):
+                vol = float(c_volumes[i]) if i < len(c_volumes) and c_volumes[i] else 0.0
+                qty = int(cont_qtys[i]) if i < len(cont_qtys) and cont_qtys[i] else 1
+                total_volume += (vol * qty)
+                cargo_items.append({'cont_type': cont_types[i], 'cont_qty': qty, 'volume': vol})
+        session['search_query'] = {
+            'origin': origin,
+            'destination': destination,
+            'volume': total_volume,
+            'service_type': service_type,
+            'cargo_items': cargo_items,
+            'pickup_address': request.form.get('pickup_address'),
+            'place_of_delivery': request.form.get('place_of_delivery')
+        }
+        return redirect(url_for('customer.rate_results'))
     origins = db.session.query(Rate.origin).distinct().all()
     destinations = db.session.query(Rate.destination).distinct().all()
-    
-    return render_template('customer/dashboard.html', 
-                         recent_shipments=recent_shipments,
-                         total_active=total_active,
-                         origins=[o[0] for o in origins if o], 
+    return render_template('customer/rates.html',
+                         origins=[o[0] for o in origins if o],
                          destinations=[d[0] for d in destinations if d])
+
 
 @customer.route('/new-booking', methods=['GET', 'POST'])
 @login_required

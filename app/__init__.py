@@ -38,15 +38,49 @@ def create_app(config_class=Config):
             
         # Safe self-healing for login_banner_path
         try:
-            db.session.execute(db.text("ALTER TABLE system_setting ADD COLUMN login_banner_path VARCHAR(255) DEFAULT 'img/login_hero.png';"))
+            db.session.execute(db.text("ALTER TABLE system_setting ADD login_banner_path VARCHAR(255) DEFAULT 'img/login_hero.png';"))
             db.session.commit()
         except Exception:
             db.session.rollback()
 
+        # Safe self-healing for SMTP columns
+        for col, col_type in [
+            ('smtp_server', 'VARCHAR(255) NULL'),
+            ('smtp_port', 'INTEGER DEFAULT 587'),
+            ('smtp_user', 'VARCHAR(255) NULL'),
+            ('smtp_password', 'VARCHAR(255) NULL'),
+            ('receiver_email', 'VARCHAR(255) NULL'),
+            ('typography', "VARCHAR(100) DEFAULT 'Inter'")
+        ]:
+            try:
+                db.session.execute(db.text(f"ALTER TABLE system_setting ADD {col} {col_type};"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        # Safe self-healing for user columns
+        for col, col_type in [
+            ('email_verified', 'BOOLEAN DEFAULT 0'),
+            ('email_token_expiry', 'DATETIME NULL'),
+            ('password_reset_token', 'VARCHAR(256) NULL'),
+            ('password_reset_token_expiry', 'DATETIME NULL'),
+            ('deactivation_reason', 'VARCHAR(1000) NULL'),
+            ('rejection_reason', 'VARCHAR(1000) NULL')
+        ]:
+            try:
+                db.session.execute(db.text(f"ALTER TABLE user ADD {col} {col_type};"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
         from app.models.models import SystemSetting
         try:
-            if not SystemSetting.query.first():
-                db.session.add(SystemSetting(theme_color='blue', logo_path='img/logo.png', default_layout='sidebar'))
+            s = SystemSetting.query.first()
+            if not s:
+                db.session.add(SystemSetting(theme_color='blue', logo_path='img/logo.png', default_layout='sidebar', typography='Inter'))
+                db.session.commit()
+            elif not s.typography:
+                s.typography = 'Inter'
                 db.session.commit()
         except Exception:
             db.session.rollback()
@@ -61,18 +95,21 @@ def create_app(config_class=Config):
             logo = settings.logo_path if settings else 'img/logo.png'
             banner = settings.login_banner_path if settings and hasattr(settings, 'login_banner_path') else 'img/login_hero.png'
             layout = settings.default_layout if settings and settings.default_layout else 'sidebar'
+            typography = settings.typography if settings and hasattr(settings, 'typography') and settings.typography else 'Inter'
         except Exception:
             theme = 'blue'
             logo = 'img/logo.png'
             banner = 'img/login_hero.png'
             layout = 'sidebar'
+            typography = 'Inter'
         logo_url = url_for('static', filename=logo)
         banner_url = url_for('static', filename=banner) if banner else url_for('static', filename='img/login_hero.png')
         return {
             'system_theme': theme,
             'system_logo_url': logo_url,
             'system_banner_url': banner_url,
-            'system_layout': layout
+            'system_layout': layout,
+            'system_typography': typography
         }
 
     from app.routes.auth import auth
@@ -146,19 +183,32 @@ def create_app(config_class=Config):
 def seed_admin():
     from app.models.models import User
     from werkzeug.security import generate_password_hash
-    
+
     admin_user = User.query.filter_by(email='admin@axeglobal.com').first()
     if not admin_user:
         admin_user = User(
             name='System Admin',
             email='admin@axeglobal.com',
-            password_hash=generate_password_hash('admin123'),
+            password_hash=generate_password_hash('Admin@123456!'),
             role='admin',
             status='active'
         )
         db.session.add(admin_user)
         db.session.commit()
-        print("Admin user created: admin@axeglobal.com / admin123")
+        print("Admin user created: admin@axeglobal.com / Admin@123456!")
+
+    demo_customer = User.query.filter_by(email='customer@demo.com').first()
+    if not demo_customer:
+        demo_customer = User(
+            name='Demo Customer',
+            email='customer@demo.com',
+            password_hash=generate_password_hash('Customer@123456!'),
+            role='customer',
+            status='active'
+        )
+        db.session.add(demo_customer)
+        db.session.commit()
+        print("Demo customer created: customer@demo.com / Customer@123456!")
 
 
 # ====================================================================

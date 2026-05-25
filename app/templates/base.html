@@ -4,9 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AxeGlobal Logistics - {% block title %}{% endblock %}</title>
+    <!-- Anti-flicker: apply color scheme before first paint -->
+    <script>(function(){var s=localStorage.getItem('colorScheme');if(s==='dark')document.documentElement.setAttribute('data-color-scheme','dark');})()</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- PRECISE PREMIUM TYPOGRAPHY INJECTION MATRICES -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body, html, input, button, select, textarea, .fw-bold, .nav-link, .btn, h1, h2, h3, h4, h5, h6, .vector-node, .table, th, td {
+            font-family: '{{ system_typography or "Inter" }}', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        }
+
+        /* GLOBAL PREMIUM CUSTOM CHECKBOX STYLING */
+        input[type="checkbox"], .form-check-input {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 17px;
+            height: 17px;
+            border: 2px solid var(--glass-border, #CBD5E1) !important;
+            border-radius: 4px;
+            background-color: var(--glass-bg, #ffffff);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.15s ease-in-out;
+            vertical-align: middle;
+        }
+
+        input[type="checkbox"]:hover, .form-check-input:hover {
+            border-color: var(--primary-color, #2563EB) !important;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color, #2563EB) 15%, transparent);
+        }
+
+        input[type="checkbox"]:checked, .form-check-input:checked {
+            background-color: var(--primary-color, #2563EB) !important;
+            border-color: var(--primary-color, #2563EB) !important;
+        }
+
+        input[type="checkbox"]:checked::after, .form-check-input:checked::after {
+            content: "\F26E"; /* Bootstrap icons check mark */
+            font-family: "bootstrap-icons" !important;
+            font-weight: 900;
+            font-size: 11px;
+            color: #ffffff;
+            display: block;
+            line-height: 1;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Dark mode overrides for checkbox */
+        html[data-color-scheme='dark'] input[type="checkbox"],
+        html[data-color-scheme='dark'] .form-check-input {
+            border-color: #475569 !important;
+            background-color: #1E293B;
+        }
+        html[data-color-scheme='dark'] input[type="checkbox"]:checked,
+        html[data-color-scheme='dark'] .form-check-input:checked {
+            background-color: var(--primary-color, #2563EB) !important;
+            border-color: var(--primary-color, #2563EB) !important;
+        }
+    </style>
     {% if system_theme and system_theme.startswith('#') %}
     <style>
         :root {
@@ -67,13 +129,17 @@
         }
 
         /* PREMIUM TOPBAR SYSTEM OVERRIDES */
+        :root {
+            --topbar-nav-color: #475569;
+            --topbar-nav-hover-bg: #F1F5F9;
+        }
         .topbar-nav {
             list-style: none;
             gap: 0.25rem;
             align-items: center;
         }
         .topbar-nav .nav-link {
-            color: #475569 !important; /* text-slate-600 */
+            color: var(--topbar-nav-color) !important;
             font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 0.8rem;
@@ -83,7 +149,7 @@
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .topbar-nav .nav-link:hover {
-            background-color: #F1F5F9;
+            background-color: var(--topbar-nav-hover-bg);
             color: var(--primary-color) !important;
         }
         .topbar-nav .nav-link.active {
@@ -96,6 +162,8 @@
         .sidebar-active-init .app-container { display: flex; }
         .sidebar-active-init .sidebar { transform: translateX(0) !important; }
         .sidebar-active-init .main-content { margin-left: 260px !important; }
+        .sidebar-active-init .topbar-nav { display: none !important; }
+        .sidebar-active-init .topbar-logo { display: none !important; }
         
         .navbar-toggler-icon {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='rgba(0, 0, 0, 0.5)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important;
@@ -112,15 +180,22 @@
         body, html { top: 0px !important; position: static !important; }
         .goog-te-gadget { color: transparent !important; font-size: 0px !important; display: none !important; }
         .goog-te-gadget .goog-te-combo { display: none !important; }
-        .goog-text-highlight { background: none !important; box-shadow: none !important; }
-        #google_translate_element { display: none !important; height: 0; overflow: hidden; }
+        /* DYNAMIC BRANDING BACKGROUND OVERRIDES */
+        .bg-wrapper {
+            background-image: url('{{ system_banner_url }}') !important;
+            opacity: 0.035 !important;
+            transition: opacity 0.3s ease;
+        }
+        html[data-color-scheme='dark'] .bg-wrapper {
+            opacity: 0.015 !important; /* Extremely soft, high-end opacity for dark theme */
+        }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100" data-theme="{{ system_theme }}">
     <div class="bg-wrapper"></div>
     <div class="bg-overlay"></div>
 
-    <div class="app-container" id="appContainer">
+    <div class="app-container {% if current_user.is_authenticated and (system_layout == 'sidebar' or not system_layout) %}sidebar-active{% endif %}" id="appContainer">
         <!-- Sidebar -->
         {% if current_user.is_authenticated %}
         <aside class="sidebar">
@@ -133,7 +208,7 @@
                 {% if current_user.role in ['super_admin', 'admin', 'operation_executive'] %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
-                            <i class="bi bi-speedometer2"></i> Admin Dashboard
+                            <i class="bi bi-grid-fill"></i> Admin Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
@@ -155,17 +230,20 @@
                         </a>
                     </li>
 
-                    {% if current_user.role in ['super_admin', 'admin'] %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
-                            <i class="bi bi-gear"></i> System Settings
+                            <i class="bi bi-gear"></i> {% if current_user.role in ['super_admin', 'admin'] %}System Settings{% else %}Settings{% endif %}
                         </a>
                     </li>
-                    {% endif %}
                 {% elif current_user.role == 'customer' %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">
-                            <i class="bi bi-speedometer2"></i> Dashboard
+                            <i class="bi bi-grid-fill"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'customer.rates' %}active{% endif %}" href="{{ url_for('customer.rates') }}">
+                            <i class="bi bi-search"></i> Search Rates
                         </a>
                     </li>
                     <li class="nav-item">
@@ -183,16 +261,26 @@
                             <i class="bi bi-geo-alt"></i> Live Tracking
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
+                            <i class="bi bi-gear"></i> Settings
+                        </a>
+                    </li>
 
                 {% elif current_user.role == 'agent' %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'agent.dashboard' %}active{% endif %}" href="{{ url_for('agent.dashboard') }}">
-                            <i class="bi bi-speedometer2"></i> Agent Dashboard
+                            <i class="bi bi-grid-fill"></i> Agent Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'agent.upload_edi' %}active{% endif %}" href="{{ url_for('agent.upload_edi') }}">
                             <i class="bi bi-upload"></i> Upload EDI
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
+                            <i class="bi bi-gear"></i> Settings
                         </a>
                     </li>
                 {% endif %}
@@ -234,25 +322,33 @@
 
                             <li><a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">Rates</a></li>
 
-                            {% if current_user.role in ['super_admin', 'admin'] %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
-                            {% endif %}
                         {% elif current_user.role == 'customer' %}
                             <li><a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">Dashboard</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'customer.rates' %}active{% endif %}" href="{{ url_for('customer.rates') }}">Search Rates</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">New Booking</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">Shipments</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% elif current_user.role == 'agent' %}
                             <li><a class="nav-link {% if request.endpoint == 'agent.dashboard' %}active{% endif %}" href="{{ url_for('agent.dashboard') }}">Agent Dashboard</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'agent.upload_edi' %}active{% endif %}" href="{{ url_for('agent.upload_edi') }}">Upload EDI</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% endif %}
                     </ul>
                     {% endif %}
                 </div>
 
                 <div class="d-flex align-items-center">
+                    <!-- THEME TOGGLE -->
+                    <button id="themeToggle" onclick="toggleColorScheme()"
+                            class="btn btn-sm me-2 d-flex align-items-center justify-content-center"
+                            style="width:34px;height:34px;border-radius:8px;padding:0;border:1px solid #E2E8F0;background:transparent;"
+                            aria-label="Toggle dark / light mode">
+                        <i id="themeIcon" class="bi bi-moon" style="font-size:0.95rem;"></i>
+                    </button>
                     <!-- PRECISE LANGUAGE SWITCHER -->
                     <div class="dropdown me-3">
-                        <button class="btn btn-sm btn-white border d-flex align-items-center dropdown-toggle fw-bold text-dark" type="button" id="langSwitch" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.7rem; border-radius:6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <button class="btn btn-sm btn-white border d-flex align-items-center dropdown-toggle fw-bold" type="button" id="langSwitch" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.7rem; border-radius:6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                             <i class="bi bi-translate me-1 text-muted"></i> <span id="activeLangDisplay">EN</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="langSwitch" style="font-size: 0.8rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
@@ -299,10 +395,38 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ---- Theme toggle ----
+        function toggleColorScheme() {
+            var html = document.documentElement;
+            var isDark = html.getAttribute('data-color-scheme') === 'dark';
+            var next = isDark ? 'light' : 'dark';
+            html.setAttribute('data-color-scheme', next);
+            localStorage.setItem('colorScheme', next);
+            _syncThemeUI(next);
+        }
+
+        function _syncThemeUI(scheme) {
+            var icon = document.getElementById('themeIcon');
+            var btn  = document.getElementById('themeToggle');
+            if (!icon || !btn) return;
+            if (scheme === 'dark') {
+                icon.className      = 'bi bi-sun-fill';
+                icon.style.color    = '#F59E0B';
+                btn.style.borderColor  = '#334155';
+                btn.style.background   = '#263348';
+            } else {
+                icon.className      = 'bi bi-moon';
+                icon.style.color    = '';
+                btn.style.borderColor  = '#E2E8F0';
+                btn.style.background   = 'transparent';
+            }
+        }
+        // ---- /Theme toggle ----
+
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('appContainer');
             const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
-            
+
             if (isAuthenticated) {
                 const defaultMode = '{{ system_layout }}';
                 if (defaultMode === 'sidebar') {
@@ -310,15 +434,14 @@
                 } else {
                     container.classList.remove('sidebar-active');
                 }
-
-
             } else {
-                // Guests always get topbar mode
                 container.classList.remove('sidebar-active');
             }
-            
-            // Remove the init class once styles are applied via normal JS logic
+
             document.documentElement.classList.remove('sidebar-active-init');
+
+            // Sync theme icon to current state
+            _syncThemeUI(localStorage.getItem('colorScheme') || 'light');
         });
     </script>
     <!-- GLOBAL DYNAMIC TRANSLATION ENGINE -->

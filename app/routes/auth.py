@@ -8,9 +8,15 @@ import os
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
+from app.utils import validate_password_strength
 
 auth = Blueprint('auth', __name__)
 
+
+def _password_strength_validator(form, field):
+    ok, msg = validate_password_strength(field.data or '')
+    if not ok:
+        raise ValidationError(msg)
 
 
 class JoinCompanyForm(FlaskForm):
@@ -20,7 +26,7 @@ class JoinCompanyForm(FlaskForm):
     last_name = StringField('Last Name', validators=[DataRequired()])
     email = StringField('Corporate Email', validators=[DataRequired(), Email()])
     mobile = StringField('Mobile/Telephone Number', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired(), _password_strength_validator])
     confirm_password = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
     
     submit = SubmitField('Request Access')
@@ -40,7 +46,7 @@ class ForgotPasswordForm(FlaskForm):
     submit = SubmitField('Send Password Reset Link')
 
 class ResetPasswordForm(FlaskForm):
-    password = PasswordField('New Password', validators=[DataRequired()])
+    password = PasswordField('New Password', validators=[DataRequired(), _password_strength_validator])
     confirm_password = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match')])
     submit = SubmitField('Reset Password')
 

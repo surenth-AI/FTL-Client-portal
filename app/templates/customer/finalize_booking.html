@@ -4,7 +4,7 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card glass-card overflow-hidden">
-            <div class="p-4 text-white" style="background: linear-gradient(135deg, var(--primary-color) 0%, #0055aa 100%);">
+            <div class="p-4 text-white" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);">
                 <h4 class="mb-1"><i class="bi bi-check2-circle me-2"></i> Finalize Your Shipment</h4>
                 <p class="mb-0 opacity-75">Review details and provide pickup information.</p>
             </div>
@@ -355,7 +355,11 @@
                     <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Pickup Address<span class="required-star">*</span></label>
-                                    <textarea name="pickup_address" class="form-control" rows="3" placeholder="Full address for collection" required></textarea>
+                                    <textarea name="pickup_address" class="form-control" rows="3" placeholder="Full address for collection" required>{{ query.pickup_address or '' }}</textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Place of Delivery</label>
+                                    <textarea name="place_of_delivery" class="form-control" rows="3" placeholder="Consignee warehouse address, city, postcode...">{{ query.place_of_delivery or '' }}</textarea>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Freight Terms<span class="required-star">*</span></label>
@@ -380,7 +384,7 @@
                                 
                                 <div class="col-md-12 mb-4">
                                     <label class="form-label fw-bold">Attachments (Images/Docs)</label>
-                                    <div class="upload-area border-white-10 rounded-4 p-5 text-center bg-white-5" id="drop-zone" style="border: 2px dashed rgba(255,255,255,0.1)">
+                                    <div class="upload-area rounded-4 p-5 text-center bg-white-5" id="drop-zone" style="border: 2px dashed var(--glass-border)">
                                         <i class="bi bi-cloud-arrow-up display-5 text-accent-glow mb-3 pulse-icon"></i>
                                         <h5 class="text-white fw-bold">Secure File Center</h5>
                                         <p class="mb-0 text-muted small">Drag & drop shipping documents here or click to browse</p>

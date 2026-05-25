@@ -1,0 +1,1562 @@
+{% extends 'base.html' %}
+{% block title %}Search Rates{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        --primary-blue: var(--primary-color) !important;
+        --primary-blue-dark: var(--primary-hover) !important;
+        --border-color: var(--glass-border);
+        --bg-gray: var(--midnight-bg);
+        --bg-white: var(--glass-bg);
+        --success-green: #10b981;
+        --error-red: #ef4444;
+        --hover-bg: color-mix(in srgb, var(--primary-color) 6%, var(--glass-bg));
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Table & Card layout styling */
+    .history-card {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin-top: 1rem;
+    }
+
+    .premium-badge {
+        font-size: 0.725rem;
+        font-weight: 700;
+        padding: 0.25rem 0.6rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+
+    .premium-badge.lcl {
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--primary-blue);
+    }
+
+    .premium-badge.fcl {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    /* Autocomplete inputs */
+    .searchable-select {
+        position: relative;
+    }
+
+    .searchable-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 180px;
+        overflow-y: auto;
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        margin-top: 0.25rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        z-index: 30000;
+        display: none;
+    }
+
+    .searchable-dropdown.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        padding: 0.65rem 1rem;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+        background: var(--hover-bg);
+    }
+
+    .dropdown-item-name {
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    /* Cargo rows & dynamic calculators styling */
+    .cargo-row {
+        background: var(--bg-gray);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        position: relative;
+    }
+
+    .cargo-row-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.25rem;
+    }
+
+    .cargo-row-title {
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: var(--text-primary);
+    }
+
+    .unit-toggle {
+        display: flex;
+        gap: 0.25rem;
+        background: color-mix(in srgb, var(--primary-color) 6%, var(--bg-gray));
+        padding: 0.15rem;
+        border-radius: 4px;
+        width: fit-content;
+    }
+
+    .unit-option {
+        padding: 0.2rem 0.5rem;
+        background: transparent;
+        border: none;
+        border-radius: 3px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        color: var(--text-secondary);
+    }
+
+    .unit-option.active {
+        background: var(--bg-white);
+        color: var(--primary-blue);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .dimensions-section {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .dimensions-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.35rem;
+    }
+
+    .dimensions-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .dimension-item {
+        display: grid;
+        grid-template-columns: 45px repeat(3, 1fr) 1.1fr 28px;
+        gap: 0.25rem;
+        align-items: end;
+        margin-bottom: 0.35rem;
+    }
+
+    .dimension-input-small {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .dimension-input-small label {
+        font-size: 0.6rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.1rem;
+        font-weight: 600;
+    }
+
+    .dimension-input-small input {
+        width: 100%;
+        min-width: 0;
+        padding: 0.2rem 0.35rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 0.7rem;
+    }
+
+    .remove-dim-btn {
+        background: transparent;
+        border: none;
+        color: var(--error-red);
+        font-size: 0.8rem;
+        font-weight: 800;
+        cursor: pointer;
+        padding: 0;
+        height: 26px;
+        width: 26px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+    }
+
+    .remove-btn {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        font-size: 0.675rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 0.25rem 0.55rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .remove-btn:hover {
+        background: var(--error-red);
+        color: white !important;
+        border-color: var(--error-red);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+    }
+
+    /* Incoterm optional services */
+    .section-subtitle {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .charges-inline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 1rem;
+        background: var(--bg-gray);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+    }
+
+    .charge-item-inline {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex: 1;
+    }
+
+    .charge-item-inline input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--primary-blue);
+    }
+
+    .charge-item-inline label {
+        font-size: 0.775rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+
+    .charge-badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0.1rem 0.4rem;
+        border-radius: 3px;
+        margin-left: 0.35rem;
+    }
+
+    .charge-badge.included {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .charge-badge.excluded {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .service-card {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .service-card:hover {
+        border-color: var(--primary-blue);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+    }
+
+    .service-card.selected {
+        border-color: var(--primary-blue);
+        background: color-mix(in srgb, var(--primary-color) 4%, var(--bg-white));
+    }
+
+    .service-card input[type="checkbox"] {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--primary-blue);
+    }
+
+    .service-name {
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.15rem;
+        font-size: 0.8rem;
+    }
+
+    .service-description {
+        font-size: 0.725rem;
+        color: var(--text-secondary);
+        line-height: 1.3;
+    }
+
+    .vector-node {
+        font-family: 'Inter', -apple-system, sans-serif;
+        font-size: 0.725rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        background-color: var(--bg-gray);
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        display: inline-flex;
+        align-items: center;
+    }
+
+    /* HIGH CONTRAST STATUS BADGES CONSISTENT WITH DASHBOARD */
+    .table-badge {
+        font-weight: 800 !important;
+        letter-spacing: 0.04em !important;
+        padding: 0.45em 0.85em !important;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        border-radius: 20px;
+    }
+    .table-badge-primary { background-color: #DBEAFE !important; color: #1D4ED8 !important; border: 1px solid #93C5FD !important; }
+    .table-badge-success { background-color: #DCFCE7 !important; color: #15803D !important; border: 1px solid #86EFAC !important; }
+    .table-badge-warning { background-color: #FEF3C7 !important; color: #B45309 !important; border: 1px solid #FCD34D !important; }
+    .table-badge-secondary { background-color: #F3F4F6 !important; color: #374151 !important; border: 1px solid #D1D5DB !important; }
+
+    /* ---- Dark mode support ---- */
+    html[data-color-scheme='dark'] .table-badge-primary   { background-color: rgba(59,130,246,0.15) !important; color: #93C5FD !important; border-color: rgba(59,130,246,0.3) !important; }
+    html[data-color-scheme='dark'] .table-badge-success   { background-color: rgba(34,197,94,0.15)  !important; color: #86EFAC !important; border-color: rgba(34,197,94,0.3)  !important; }
+    html[data-color-scheme='dark'] .table-badge-warning   { background-color: rgba(234,179,8,0.15)  !important; color: #FDE047 !important; border-color: rgba(234,179,8,0.3)   !important; }
+    html[data-color-scheme='dark'] .table-badge-secondary { background-color: rgba(100,116,139,0.15)!important; color: #94A3B8 !important; border-color: rgba(100,116,139,0.3)!important; }
+
+    /* Segment Switcher Cargo Mode (Unified Design) */
+    .booking-mode-switcher {
+        background: color-mix(in srgb, var(--primary-color) 6%, var(--midnight-bg)) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 30px !important;
+        padding: 2px !important;
+        display: inline-flex !important;
+        align-items: center;
+        gap: 2px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        height: auto !important;
+    }
+
+    .booking-mode-switcher .btn-light-mode {
+        border: none !important;
+        background: transparent !important;
+        padding: 0.35rem 1.1rem !important;
+        font-size: 0.725rem !important;
+        font-weight: 700 !important;
+        color: #64748B !important;
+        border-radius: 20px !important;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    .booking-mode-switcher .btn-check:checked + .btn-light-mode {
+        background: var(--primary-color) !important;
+        color: white !important;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;
+    }
+
+    /* ============================================================
+       WIZARD MODAL SYSTEM OVERLAYS (BLUR BACKDROP)
+       ============================================================ */
+    .wizard-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        overflow-y: auto;
+        padding: 1.5rem 0;
+    }
+
+    .wizard-overlay.show {
+        display: flex;
+    }
+
+    .wizard-modal-box {
+        width: 90%;
+        max-width: 800px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        box-shadow: 0 25px 70px -10px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: modalSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalSlide {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .wizard-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-white);
+    }
+
+    .wizard-modal-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin-bottom: 0;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .wizard-modal-close {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0.2rem;
+    }
+
+    .wizard-modal-close:hover {
+        color: var(--error-red);
+    }
+
+    /* Steps ribbon inside Wizard popup */
+    .wiz-steps-ribbon {
+        display: flex;
+        background: var(--bg-white);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .wiz-step {
+        flex: 1;
+        padding: 0.875rem 1.25rem;
+        border-right: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        text-align: center;
+    }
+
+    .wiz-step:last-child {
+        border-right: none;
+    }
+
+    .wiz-step.active {
+        background: var(--primary-blue);
+        color: white !important;
+    }
+
+    .wiz-step.active .wiz-step-label,
+    .wiz-step.active .wiz-step-value {
+        color: white !important;
+    }
+
+    .wiz-step-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 0.1rem;
+    }
+
+    .wiz-step-value {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .wiz-step.completed::after {
+        content: '✓';
+        position: absolute;
+        top: 0.85rem;
+        right: 1rem;
+        width: 18px;
+        height: 18px;
+        background: var(--success-green);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .wiz-panel {
+        display: none;
+        padding: 1.25rem;
+        max-height: 55vh;
+        overflow-y: auto;
+        background: var(--bg-gray);
+    }
+
+    .wiz-panel.open {
+        display: block;
+    }
+
+    .wiz-actions-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        background: var(--bg-white);
+        border-top: 1px solid var(--border-color);
+    }
+
+    /* Custom Alert Overlay */
+    .custom-alert-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        backdrop-filter: blur(4px);
+    }
+
+    .custom-alert-overlay.show {
+        display: flex;
+    }
+
+    .custom-alert-box {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    }
+
+    .custom-alert-message {
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+        white-space: pre-line;
+        font-weight: 500;
+    }
+
+    .custom-alert-button {
+        width: 100%;
+        padding: 0.625rem;
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        border-radius: 4px;
+    }
+
+    /* ============================================================
+       DARK MODE SUPPORT FOR CARGO DETAILS & WIZARD
+       ============================================================ */
+    html[data-color-scheme='dark'] .cargo-row {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    html[data-color-scheme='dark'] .dimension-input-small label {
+        color: #cbd5e1 !important;
+    }
+
+    html[data-color-scheme='dark'] .dimension-input-small input {
+        background: #0f172a !important;
+        border-color: #475569 !important;
+        color: #f1f5f9 !important;
+    }
+
+    html[data-color-scheme='dark'] .unit-toggle {
+        background: #0f172a !important;
+    }
+
+    html[data-color-scheme='dark'] .unit-option {
+        color: #94a3b8 !important;
+    }
+
+    html[data-color-scheme='dark'] .unit-option.active {
+        background: #1e293b !important;
+        color: var(--primary-color) !important;
+    }
+
+    html[data-color-scheme='dark'] .form-check-label {
+        color: #cbd5e1 !important;
+    }
+
+    /* HAZMAT Subform Dark Mode */
+    html[data-color-scheme='dark'] [id$="-hazardousFields"] {
+        background: rgba(239, 68, 68, 0.08) !important; /* Soft, light-density red glow */
+        border-color: rgba(239, 68, 68, 0.3) !important;
+    }
+
+    html[data-color-scheme='dark'] [id$="-hazardousFields"] h6 {
+        color: #f87171 !important; /* Elegant rose text */
+    }
+
+    html[data-color-scheme='dark'] [id$="-hazardousFields"] input {
+        background: #0f172a !important; /* Clean dark-navy inputs */
+        border-color: #334155 !important;
+        color: #cbd5e1 !important;
+    }
+
+    html[data-color-scheme='dark'] [id$="-hazardousFields"] input::placeholder {
+        color: #64748b !important;
+        opacity: 0.8;
+    }
+</style>
+
+<!-- Header View with Action Search button in top-right -->
+<div class="d-flex justify-content-between align-items-center mb-4 intel-fade-in">
+    <div>
+        <h4 class="fw-bold mb-1 text-dark">Search Freight Rates</h4>
+        <p class="text-muted small mb-0">View your past search records or launch a new dynamic rate lookup.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <!-- Pulse Primary Search Rates Action Button -->
+        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-accent" onclick="openWizard()">
+            <i class="bi bi-search me-1"></i> Search Rates
+        </button>
+        <a href="{{ url_for('customer.new_booking') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-flex align-items-center">
+            <i class="bi bi-pencil-square me-1"></i> Manual Request
+        </a>
+    </div>
+</div>
+
+<!-- ============================================================
+     1. PAST RECORD HISTORY TABLE VIEW
+     ============================================================ -->
+<div class="glass-card shipments-container intel-fade-in p-0 overflow-hidden" style="border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); animation-delay: 0.05s; margin-bottom: 2rem;">
+    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white-5">
+        <h5 class="fw-bold mb-0 text-dark" style="font-size:0.875rem; letter-spacing: -0.01em;">Recent Query & Rates History</h5>
+        <button type="button" class="btn btn-xs btn-outline-danger" onclick="clearQueryHistory()" style="font-size:0.65rem; font-weight:700; padding:0.2rem 0.5rem; border-radius: 4px;">Clear History</button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
+            <thead class="bg-white-5">
+                <tr>
+                    <th class="ps-4 text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Query Ref & Date</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Route Vector</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Cargo Load Details</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Service Mode</th>
+                    <th class="pe-4 text-end border-bottom-0 py-3" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <!-- Javascript populates query rows from localStorage or fallback defaults -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ============================================================
+     2. PREMIUM BLUR-GLASS INTERACTIVE WIZARD MODAL POPUP
+     ============================================================ -->
+<div class="wizard-overlay" id="wizardModalOverlay">
+    <div class="wizard-modal-box">
+        <!-- Popup Header -->
+        <div class="wizard-modal-header">
+            <h5 class="wizard-modal-title">
+                <span>Interactive Rate Search Assistant</span>
+            </h5>
+            <button type="button" class="wizard-modal-close" onclick="closeWizard()">✕</button>
+        </div>
+
+        <!-- 3-Step progress ribbon -->
+        <div class="wiz-steps-ribbon">
+            <div class="wiz-step active" id="wizStepRoute" onclick="navigateWizTo('route')">
+                <div class="wiz-step-label">Step 1</div>
+                <div class="wiz-step-value" id="wizRouteValue">Route Details</div>
+            </div>
+            <div class="wiz-step" id="wizStepCargo" onclick="navigateWizTo('cargo')">
+                <div class="wiz-step-label">Step 2</div>
+                <div class="wiz-step-value" id="wizCargoValue">Cargo Details</div>
+            </div>
+            <div class="wiz-step" id="wizStepServices" onclick="navigateWizTo('services')">
+                <div class="wiz-step-label">Step 3</div>
+                <div class="wiz-step-value">Value Services</div>
+            </div>
+        </div>
+
+        <!-- Dynamic wizard search form -->
+        <form action="{{ url_for('customer.rates') }}" method="POST" id="wizardSearchForm">
+            <input type="hidden" name="service_type" id="wiz_hidden_service_type" value="LCL">
+
+            <!-- Panel 1: Shipment Route Selection with Details fields -->
+            <div class="wiz-panel open" id="wizPanelRoute">
+                <h6 class="fw-bold mb-3" style="font-size:0.875rem;">Step 1: Configure detailed shipping route</h6>
+                
+                <!-- Origin Route Section -->
+                <div class="route-section mb-3 p-3 border rounded bg-white">
+                    <h6 class="fw-bold mb-3 small text-primary">Origin Particulars</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4 form-group">
+                            <label class="form-label">Location Type <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="wizOriginType" onchange="handleWizTypeChange('origin')">
+                                <option value="port">Port</option>
+                                <option value="door">Door</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8 form-group">
+                            <label class="form-label" id="wizOriginLabel">Origin Port / City <span class="text-danger">*</span></label>
+                            <div class="searchable-select">
+                                <input type="text" class="form-control form-control-sm searchable-input fw-bold" id="wizOriginLocation"
+                                    placeholder="Search available origin ports..." onfocus="showWizDropdown('origin')"
+                                    oninput="filterWizLocations('origin')" autocomplete="off">
+                                <div class="searchable-dropdown" id="wizOriginDropdown"></div>
+                            </div>
+                            <input type="hidden" name="origin" id="wiz_hidden_origin" required>
+                        </div>
+                    </div>
+                    <!-- Details fields inside search route -->
+                    <div class="form-group mt-2" id="wizOriginAddressGroup" style="display: none;">
+                        <label class="form-label" style="font-size:0.65rem;">Pickup Address Details</label>
+                        <textarea name="pickup_address" id="wizPickupAddress" class="form-control form-control-sm" rows="2" placeholder="Street name, warehouse number, ZIP..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Destination Route Section -->
+                <div class="route-section p-3 border rounded bg-white">
+                    <h6 class="fw-bold mb-3 small text-success">Destination Particulars</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4 form-group">
+                            <label class="form-label">Location Type <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="wizDestType" onchange="handleWizTypeChange('dest')">
+                                <option value="port">Port</option>
+                                <option value="door">Door</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8 form-group">
+                            <label class="form-label" id="wizDestLabel">Destination Port / City <span class="text-danger">*</span></label>
+                            <div class="searchable-select">
+                                <input type="text" class="form-control form-control-sm searchable-input fw-bold" id="wizDestLocation"
+                                    placeholder="Search available destination ports..." onfocus="showWizDropdown('dest')"
+                                    oninput="filterWizLocations('dest')" autocomplete="off">
+                                <div class="searchable-dropdown" id="wizDestDropdown"></div>
+                            </div>
+                            <input type="hidden" name="destination" id="wiz_hidden_destination" required>
+                        </div>
+                    </div>
+                    <!-- Details fields inside search route -->
+                    <div class="form-group mt-2" id="wizDestAddressGroup" style="display: none;">
+                        <label class="form-label" style="font-size:0.65rem;">Final Place of Delivery Details</label>
+                        <input type="text" name="place_of_delivery" id="wizDeliveryPlace" class="form-control form-control-sm" placeholder="Consignee warehouse address, city, postcode...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Cargo configurations -->
+            <div class="wiz-panel" id="wizPanelCargo">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h6 class="fw-bold mb-0" style="font-size:0.875rem;">Step 2: Configure shipment loads</h6>
+                    <div class="booking-mode-switcher">
+                        <input type="radio" class="btn-check" name="wiz_service_toggle_radio" id="wiz_tab_lcl" value="LCL" checked onchange="setWizService('LCL')">
+                        <label class="btn btn-light-mode" for="wiz_tab_lcl">LCL</label>
+                        
+                        <input type="radio" class="btn-check" name="wiz_service_toggle_radio" id="wiz_tab_fcl" value="FCL" onchange="setWizService('FCL')">
+                        <label class="btn btn-light-mode" for="wiz_tab_fcl">FCL</label>
+                    </div>
+                </div>
+
+                <!-- LCL Wiz rows -->
+                <div id="wiz_lcl_section">
+                    <div id="wiz_lcl_rows">
+                        <!-- rows added dynamically in JS -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addWizLCLRow()">+ Add Another Item</button>
+                </div>
+
+                <!-- FCL Wiz rows -->
+                <div id="wiz_fcl_section" style="display:none;">
+                    <div id="wiz_fcl_rows">
+                        <!-- rows added dynamically in JS -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addWizFCLRow()">+ Add Container</button>
+                </div>
+            </div>
+
+            <!-- Panel 3: Services selections -->
+            <div class="wiz-panel" id="wizPanelServices">
+                <h6 class="fw-bold mb-3" style="font-size:0.875rem;">Step 3: Value Added Logistics Services</h6>
+                
+                <div class="terms-section mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label mb-1 fw-bold text-muted" style="font-size:0.65rem;">Incoterm <span class="text-danger">*</span></label>
+                            <select class="form-select" id="wizIncoterm" name="freight_terms" onchange="updateWizChargeInclusions()">
+                                <option value="">Select incoterm</option>
+                                <option value="FCA">FCA - Free Carrier</option>
+                                <option value="FOB">FOB - Free On Board</option>
+                                <option value="CFR">CFR - Cost and Freight</option>
+                                <option value="EXW">EXW - Ex Works</option>
+                                <option value="DAP">DAP - Delivered At Place</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label mb-1 fw-bold text-muted" style="font-size:0.65rem;">Freight Terms <span class="text-danger">*</span></label>
+                            <select class="form-select" id="wizFreightTerms" name="freight_term_detail">
+                                <option value="">Select terms</option>
+                                <option value="prepaid">Prepaid</option>
+                                <option value="collect">Collect</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label mb-1 fw-bold text-muted" style="font-size:0.65rem;">Cargo Ready Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="wizCargoReadyDate" name="cargo_ready_date">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Included indicators inside wizard -->
+                <div class="charges-section mb-4">
+                    <div class="charges-inline">
+                        <div class="charge-item-inline">
+                            <input type="checkbox" id="wizIncludeFreight" checked disabled>
+                            <label for="wizIncludeFreight">Freight Charge</label>
+                            <span class="charge-badge included" id="wizFreightBadge">Included</span>
+                        </div>
+                        <div class="charge-item-inline">
+                            <input type="checkbox" id="wizIncludeOriginCharges" checked onchange="updateWizChargeStatus('origin')">
+                            <label for="wizIncludeOriginCharges">Origin Charges</label>
+                            <span class="charge-badge included" id="wizOriginBadge">Included</span>
+                        </div>
+                        <div class="charge-item-inline">
+                            <input type="checkbox" id="wizIncludeDestCharges" onchange="updateWizChargeStatus('dest')">
+                            <label for="wizIncludeDestCharges">Destination Charges</label>
+                            <span class="charge-badge excluded" id="wizDestBadge">Excluded</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Value additions inside wizard -->
+                <div class="additional-services-section">
+                    <div class="services-grid">
+                        <div class="service-card" onclick="toggleWizService(this)">
+                            <input type="checkbox" id="wizService1" name="service_customs">
+                            <div class="service-name">Customs Clearance</div>
+                            <div class="service-description">We handle customs documentation & clearance procedures at ports</div>
+                        </div>
+                        <div class="service-card" onclick="toggleWizService(this)" id="wizServiceInsuranceCard">
+                            <input type="checkbox" id="wizService2" name="service_insurance" onchange="toggleWizInsuranceValue()">
+                            <div class="service-name">Insurance</div>
+                            <div class="service-description">Full cargo protection and coverage during international transit</div>
+                            <div class="service-extra" id="wizInsuranceValue" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-8">
+                                        <label class="form-label mb-0" style="font-size:0.65rem;">Value of Goods</label>
+                                        <input type="number" class="form-control form-control-sm" placeholder="0.00" step="0.01" id="wizInsuranceAmount" name="insurance_value">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-0" style="font-size:0.65rem;">Currency</label>
+                                        <select class="form-select form-select-sm" name="insurance_currency">
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer actions inside popup modal -->
+            <div class="wiz-actions-footer">
+                <button type="button" class="btn btn-glass" id="wizBackBtn" onclick="wizStepBack()" style="display:none;">Back</button>
+                <div style="flex-grow: 1;"></div>
+                <button type="button" class="btn btn-primary px-4" id="wizNextBtn" onclick="wizStepContinue()">Continue</button>
+                <button type="button" class="btn btn-success px-4" id="wizSubmitBtn" onclick="submitWizForm()" style="display:none;">Search Available Rates</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Custom Alerts overlays -->
+<div class="custom-alert-overlay" id="customAlertOverlay" onclick="closeCustomAlert()">
+    <div class="custom-alert-box" onclick="event.stopPropagation()">
+        <div class="custom-alert-message" id="customAlertMessage"></div>
+        <button class="custom-alert-button" onclick="closeCustomAlert()">OK</button>
+    </div>
+</div>
+
+<script>
+    let lclItemCounter = 0;
+    let fclItemCounter = 0;
+    let wizLCLCounter = 0;
+    let wizFCLCounter = 0;
+    let dimensionCounters = {};
+    let activeWizStep = 'route';
+
+    // Injected Database locations from rates table
+    const databaseOrigins = {{ origins|tojson }};
+    const databaseDestinations = {{ destinations|tojson }};
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize dynamic templates
+        addWizLCLRow();
+        addWizFCLRow();
+        setDefaultCargoReadyDate();
+        renderQueryHistory();
+    });
+
+    function setDefaultCargoReadyDate() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayString = `${yyyy}-${mm}-${dd}`;
+
+        const input = document.getElementById('wizCargoReadyDate');
+        if (input) {
+            input.value = todayString;
+            input.min = todayString;
+        }
+    }
+
+    // ============================================================
+    // WIZARD CONTROLS & MULTI-STEP NAVIGATION
+    // ============================================================
+    function openWizard() {
+        document.getElementById('wizardModalOverlay').classList.add('show');
+        navigateWizTo('route');
+    }
+
+    function closeWizard() {
+        document.getElementById('wizardModalOverlay').classList.remove('show');
+    }
+
+    function navigateWizTo(stepName) {
+        activeWizStep = stepName;
+        const steps = ['route', 'cargo', 'services'];
+        
+        steps.forEach(s => {
+            const stepTab = document.getElementById('wizStep' + s.charAt(0).toUpperCase() + s.slice(1));
+            const panel = document.getElementById('wizPanel' + s.charAt(0).toUpperCase() + s.slice(1));
+            
+            if (s === stepName) {
+                stepTab.classList.add('active');
+                panel.classList.add('open');
+            } else {
+                stepTab.classList.remove('active');
+                panel.classList.remove('open');
+            }
+        });
+
+        document.getElementById('wizBackBtn').style.display = stepName === 'route' ? 'none' : 'block';
+        document.getElementById('wizNextBtn').style.display = stepName === 'services' ? 'none' : 'block';
+        document.getElementById('wizSubmitBtn').style.display = stepName === 'services' ? 'block' : 'none';
+    }
+
+    function wizStepContinue() {
+        if (activeWizStep === 'route') {
+            const originVal = document.getElementById('wiz_hidden_origin').value;
+            const destVal = document.getElementById('wiz_hidden_destination').value;
+
+            if (!originVal || !destVal) {
+                alert('Please search and select both origin and destination before continuing.');
+                return;
+            }
+
+            document.getElementById('wizRouteValue').textContent = `${originVal} → ${destVal}`;
+            document.getElementById('wizStepRoute').classList.add('completed');
+            navigateWizTo('cargo');
+        } else if (activeWizStep === 'cargo') {
+            const isLCL = document.getElementById('wiz_tab_lcl').classList.contains('active');
+            let hasValidCargo = true;
+
+            if (isLCL) {
+                const volumes = document.querySelectorAll('#wiz_lcl_rows input[name="item_volume[]"]');
+                volumes.forEach(vol => {
+                    if (!vol.value || parseFloat(vol.value) <= 0) hasValidCargo = false;
+                });
+            }
+
+            if (!hasValidCargo) {
+                alert('Please configure at least one cargo item with correct package dimensions.');
+                return;
+            }
+
+            document.getElementById('wizCargoValue').textContent = isLCL ? 'LCL Load Metric' : 'FCL Containers';
+            document.getElementById('wizStepCargo').classList.add('completed');
+            navigateWizTo('services');
+        }
+    }
+
+    function wizStepBack() {
+        if (activeWizStep === 'services') {
+            navigateWizTo('cargo');
+        } else if (activeWizStep === 'cargo') {
+            navigateWizTo('route');
+        }
+    }
+
+    function setWizService(type) {
+        document.getElementById('wiz_hidden_service_type').value = type;
+        document.getElementById('wiz_lcl_section').style.display = type === 'LCL' ? 'block' : 'none';
+        document.getElementById('wiz_fcl_section').style.display = type === 'FCL' ? 'block' : 'none';
+    }
+
+    function handleWizTypeChange(locationType) {
+        const type = document.getElementById('wiz' + locationType.charAt(0).toUpperCase() + locationType.slice(1) + 'Type').value;
+        const label = document.getElementById('wiz' + locationType.charAt(0).toUpperCase() + locationType.slice(1) + 'Label');
+        const input = document.getElementById('wiz' + locationType.charAt(0).toUpperCase() + locationType.slice(1) + 'Location');
+        const addressGroup = document.getElementById('wiz' + locationType.charAt(0).toUpperCase() + locationType.slice(1) + 'AddressGroup');
+
+        if (type === 'door') {
+            label.innerHTML = `${locationType.charAt(0).toUpperCase() + locationType.slice(1)} City <span class="text-danger">*</span>`;
+            input.placeholder = "Search available cities...";
+            addressGroup.style.display = 'block';
+        } else {
+            label.innerHTML = `${locationType.charAt(0).toUpperCase() + locationType.slice(1)} Port <span class="text-danger">*</span>`;
+            input.placeholder = "Search available ports...";
+            addressGroup.style.display = 'none';
+            
+            // Clear address details when switching back to port
+            if (locationType === 'origin') {
+                const pickupInput = document.getElementById('wizPickupAddress');
+                if (pickupInput) pickupInput.value = '';
+            } else {
+                const deliveryInput = document.getElementById('wizDeliveryPlace');
+                if (deliveryInput) deliveryInput.value = '';
+            }
+        }
+
+        document.getElementById('wiz_hidden_' + locationType).value = '';
+        input.value = '';
+    }
+
+    // ============================================================
+    // SEARCH DIALOG AUTOCOMPLETE ENGINE
+    // ============================================================
+    function showWizDropdown(locationType) {
+        filterWizLocations(locationType);
+    }
+
+    function filterWizLocations(locationType) {
+        const titleCase = locationType.charAt(0).toUpperCase() + locationType.slice(1);
+        const input = document.getElementById('wiz' + titleCase + 'Location');
+        const searchTerm = input.value.toLowerCase();
+        const dropdown = document.getElementById('wiz' + titleCase + 'Dropdown');
+
+        const locations = locationType === 'origin' ? databaseOrigins : databaseDestinations;
+        const filtered = locations.filter(loc => loc.toLowerCase().includes(searchTerm));
+
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div class="dropdown-no-results">No matches found in database</div>';
+        } else {
+            dropdown.innerHTML = filtered.map(loc => `
+                <div class="dropdown-item" onclick="selectWizLocation('${locationType}', '${loc}')">
+                    <div class="dropdown-item-name">${loc}</div>
+                </div>
+            `).join('');
+        }
+        dropdown.classList.add('show');
+    }
+
+    function selectWizLocation(locationType, value) {
+        const titleCase = locationType.charAt(0).toUpperCase() + locationType.slice(1);
+        document.getElementById('wiz' + titleCase + 'Location').value = value;
+        document.getElementById('wiz_hidden_' + locationType).value = value;
+        document.getElementById('wiz' + titleCase + 'Dropdown').classList.remove('show');
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.searchable-select')) {
+            document.querySelectorAll('.searchable-dropdown').forEach(d => d.classList.remove('show'));
+        }
+    });
+
+
+    // ============================================================
+    // WIZARD DYNAMIC CARGO MATRIX & CALCULATORS
+    // ============================================================
+    function addWizLCLRow() {
+        wizLCLCounter++;
+        const itemId = `wiz-lcl-row-${wizLCLCounter}`;
+        dimensionCounters[itemId] = 0;
+
+        const container = document.getElementById('wiz_lcl_rows');
+        const row = document.createElement('div');
+        row.className = 'cargo-row';
+        row.id = itemId;
+        row.innerHTML = `
+            <div class="cargo-row-header">
+                <span class="cargo-row-title">LCL Cargo Item #${wizLCLCounter}</span>
+                ${wizLCLCounter > 1 ? `<button type="button" class="remove-btn" onclick="removeWizLCLRow('${itemId}')">Remove</button>` : ''}
+            </div>
+            
+            <div class="row g-2 mb-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small fw-bold text-muted">Quantity</label>
+                    <input type="number" name="item_qty[]" class="form-control text-center fw-bold" value="1" min="1" id="${itemId}-pieces" oninput="updateTotals('${itemId}')">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small fw-bold text-muted">Pack Type</label>
+                    <select name="item_type[]" class="form-select">
+                        <option value="Pallet">Pallet</option><option value="Box">Box</option><option value="Carton">Carton</option><option value="Crate">Crate</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small fw-bold text-muted">Weight</label>
+                    <div class="input-group">
+                        <input type="number" name="item_weight[]" class="form-control text-end" placeholder="0.0" step="0.01" min="0" id="${itemId}-weight">
+                        <span class="input-group-text lcl-weight-unit">kg</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label mb-1 small fw-bold text-muted">Volume</label>
+                    <div class="input-group">
+                        <input type="number" name="item_volume[]" class="form-control text-end" placeholder="0.00" step="0.01" min="0" id="${itemId}-volume" required>
+                        <span class="input-group-text lcl-volume-unit">cbm</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-4 mt-2">
+                <div class="unit-toggle">
+                    <button type="button" class="unit-option active" onclick="setUnit('${itemId}', 'metric')">Metric (kg/m³/cm)</button>
+                    <button type="button" class="unit-option" onclick="setUnit('${itemId}', 'imperial')">Imperial (lbs/ft³/in)</button>
+                </div>
+                <div class="form-check form-check-inline mt-1">
+                    <input class="form-check-input" type="checkbox" id="${itemId}-imo-check" onchange="toggleHazardous('${itemId}')">
+                    <label class="form-check-label small fw-bold" for="${itemId}-imo-check">Classified HAZMAT</label>
+                    <input type="hidden" name="item_is_imo[]" id="${itemId}-imo-hidden" value="no">
+                </div>
+            </div>
+
+            <!-- IMO HAZMAT subform -->
+            <div id="${itemId}-hazardousFields" style="display:none; margin-top:0.75rem; padding:0.75rem; border:1px solid #fda4af; background:#fff1f2; border-radius:4px;">
+                <h6 class="text-danger small fw-bold mb-2">IMO Class & UN Specifications</h6>
+                <div class="row g-2">
+                    <div class="col-4"><input type="text" name="item_un[]" class="form-control form-control-sm" placeholder="UN Number"></div>
+                    <div class="col-4"><input type="text" name="item_class[]" class="form-control form-control-sm" placeholder="IMO Class"></div>
+                    <div class="col-4"><input type="text" name="item_pg[]" class="form-control form-control-sm" placeholder="Packing Group"></div>
+                </div>
+            </div>
+
+            <!-- Package Dimensions calculator grid -->
+            <div class="dimensions-section">
+                <div class="dimensions-header">
+                    <span class="dimensions-label">Package Dimensions</span>
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 fw-bold" onclick="addDimension('${itemId}')">+ Add Dimension Block</button>
+                </div>
+                <div id="${itemId}-dimensions"></div>
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function removeWizLCLRow(itemId) {
+        document.getElementById(itemId).remove();
+        delete dimensionCounters[itemId];
+    }
+
+    function addWizFCLRow() {
+        wizFCLCounter++;
+        const itemId = `wiz-fcl-row-${wizFCLCounter}`;
+        const container = document.getElementById('wiz_fcl_rows');
+        const row = document.createElement('div');
+        row.className = 'cargo-row';
+        row.id = itemId;
+        row.innerHTML = `
+            <div class="cargo-row-header">
+                <span class="cargo-row-title">Container Unit #${wizFCLCounter}</span>
+                ${wizFCLCounter > 1 ? `<button type="button" class="remove-btn" onclick="removeWizFCLRow('${itemId}')">Remove</button>` : ''}
+            </div>
+            <div class="row g-2 mb-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small fw-bold text-muted">Quantity</label>
+                    <input type="number" name="cont_qty[]" class="form-control text-center fw-bold" value="1" min="1">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label mb-1 small fw-bold text-muted">Container Type</label>
+                    <select name="cont_type[]" class="form-select">
+                        <option value="20' ST">20' Standard</option>
+                        <option value="40' ST">40' Standard</option>
+                        <option value="40' HC">40' High Cube</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label mb-1 small fw-bold text-muted">Est. Volume</label>
+                    <div class="input-group">
+                        <input type="number" name="cont_volume[]" class="form-control text-end" placeholder="0.00" step="0.01" min="0">
+                        <span class="input-group-text">cbm</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function removeWizFCLRow(itemId) {
+        document.getElementById(itemId).remove();
+    }
+
+    // LCL dimensional units helper
+    function setUnit(cargoItemId, unitSystem) {
+        const buttons = document.querySelectorAll(`#${cargoItemId} .unit-option`);
+        buttons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        const weightUnit = document.querySelector(`#${cargoItemId} .lcl-weight-unit`);
+        const volumeUnit = document.querySelector(`#${cargoItemId} .lcl-volume-unit`);
+
+        weightUnit.textContent = unitSystem === 'metric' ? 'kg' : 'lbs';
+        volumeUnit.textContent = unitSystem === 'metric' ? 'cbm' : 'ft³';
+
+        const lengthUnit = unitSystem === 'metric' ? 'cm' : 'in';
+        document.querySelectorAll(`#${cargoItemId}-dimensions .dimension-item`).forEach(item => {
+            item.querySelectorAll('.dimension-input-small label').forEach((label, idx) => {
+                if (idx === 1) label.textContent = `Length (${lengthUnit})`;
+                if (idx === 2) label.textContent = `Width (${lengthUnit})`;
+                if (idx === 3) label.textContent = `Height (${lengthUnit})`;
+            });
+        });
+
+        updateTotals(cargoItemId);
+    }
+
+    function addDimension(cargoItemId) {
+        dimensionCounters[cargoItemId]++;
+        const dimId = `${cargoItemId}-dim-${dimensionCounters[cargoItemId]}`;
+        const container = document.getElementById(`${cargoItemId}-dimensions`);
+
+        const activeOption = document.querySelector(`#${cargoItemId} .unit-option.active`).textContent;
+        const isMetric = activeOption.includes('Metric');
+        const lengthUnit = isMetric ? 'cm' : 'in';
+        const weightUnit = isMetric ? 'kg' : 'lbs';
+
+        const row = document.createElement('div');
+        row.className = 'dimension-item';
+        row.id = dimId;
+        row.innerHTML = `
+            <div class="dimension-input-small">
+                <label>Pieces</label>
+                <input type="number" placeholder="1" value="1" min="1" class="dim-pcs" oninput="updateTotals('${cargoItemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Length (${lengthUnit})</label>
+                <input type="number" placeholder="0" class="dim-l" oninput="updateTotals('${cargoItemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Width (${lengthUnit})</label>
+                <input type="number" placeholder="0" class="dim-w" oninput="updateTotals('${cargoItemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Height (${lengthUnit})</label>
+                <input type="number" placeholder="0" class="dim-h" oninput="updateTotals('${cargoItemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Weight (${weightUnit})</label>
+                <input type="number" placeholder="0.0" class="dim-wt" oninput="updateTotals('${cargoItemId}')">
+            </div>
+            <button type="button" class="remove-dim-btn mb-1" onclick="removeDimension('${dimId}', '${cargoItemId}')">✕</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function removeDimension(dimId, cargoItemId) {
+        document.getElementById(dimId).remove();
+        updateTotals(cargoItemId);
+    }
+
+    function updateTotals(cargoItemId) {
+        const container = document.getElementById(`${cargoItemId}-dimensions`);
+        const rows = container.querySelectorAll('.dimension-item');
+
+        if (rows.length === 0) return;
+
+        const activeOption = document.querySelector(`#${cargoItemId} .unit-option.active`).textContent;
+        const isMetric = activeOption.includes('Metric');
+
+        let totalVolume = 0;
+        let totalWeight = 0;
+        let totalPieces = 0;
+
+        rows.forEach(row => {
+            const pcs = parseFloat(row.querySelector('.dim-pcs').value) || 0;
+            const l = parseFloat(row.querySelector('.dim-l').value) || 0;
+            const w = parseFloat(row.querySelector('.dim-w').value) || 0;
+            const h = parseFloat(row.querySelector('.dim-h').value) || 0;
+            const wt = parseFloat(row.querySelector('.dim-wt').value) || 0;
+
+            totalPieces += pcs;
+
+            if (l && w && h) {
+                let lineVol = 0;
+                if (isMetric) {
+                    lineVol = (l * w * h * pcs) / 1000000;
+                } else {
+                    lineVol = (l * w * h * pcs) / 1728;
+                }
+                totalVolume += lineVol;
+            }
+
+            if (wt) {
+                totalWeight += wt * pcs;
+            }
+        });
+
+        if (totalPieces > 0) document.getElementById(`${cargoItemId}-pieces`).value = totalPieces;
+        if (totalWeight > 0) document.getElementById(`${cargoItemId}-weight`).value = totalWeight.toFixed(2);
+        if (totalVolume > 0) document.getElementById(`${cargoItemId}-volume`).value = totalVolume.toFixed(3);
+    }
+
+    function toggleHazardous(itemId) {
+        const checked = document.getElementById(`${itemId}-imo-check`).checked;
+        document.getElementById(`${itemId}-hazardousFields`).style.display = checked ? 'block' : 'none';
+        document.getElementById(`${itemId}-imo-hidden`).value = checked ? 'yes' : 'no';
+    }
+
+
+    // ============================================================
+    // SERVICES & CHARGE CODES
+    // ============================================================
+    function toggleWizService(card) {
+        if (event.target.closest('.service-extra')) return;
+
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        if (checkbox.id === 'wizService2') return;
+
+        checkbox.checked = !checkbox.checked;
+        card.classList.toggle('selected', checkbox.checked);
+    }
+
+    function toggleWizInsuranceValue() {
+        const checkbox = document.getElementById('wizService2');
+        const extraDiv = document.getElementById('wizInsuranceValue');
+        const card = document.getElementById('wizServiceInsuranceCard');
+
+        extraDiv.style.display = checkbox.checked ? 'block' : 'none';
+        card.classList.toggle('selected', checkbox.checked);
+    }
+
+    function updateWizChargeInclusions() {
+        const incoterm = document.getElementById('wizIncoterm').value;
+        if (!incoterm) return;
+
+        const originCheckbox = document.getElementById('wizIncludeOriginCharges');
+        const destCheckbox = document.getElementById('wizIncludeDestCharges');
+
+        if (incoterm === 'EXW') {
+            originCheckbox.checked = false;
+            destCheckbox.checked = false;
+        } else if (incoterm === 'FOB' || incoterm === 'FCA') {
+            originCheckbox.checked = true;
+            destCheckbox.checked = false;
+        } else if (incoterm === 'CFR' || incoterm === 'CIF' || incoterm === 'DAP') {
+            originCheckbox.checked = true;
+            destCheckbox.checked = true;
+        }
+
+        updateWizChargeStatus('origin');
+        updateWizChargeStatus('dest');
+    }
+
+    function updateWizChargeStatus(chargeType) {
+        const checkbox = document.getElementById(chargeType === 'origin' ? 'wizIncludeOriginCharges' : 'wizIncludeDestCharges');
+        const badge = document.getElementById(chargeType === 'origin' ? 'wizOriginBadge' : 'wizDestBadge');
+
+        if (checkbox.checked) {
+            badge.textContent = 'Included';
+            badge.className = 'charge-badge included';
+        } else {
+            badge.textContent = 'Excluded';
+            badge.className = 'charge-badge excluded';
+        }
+    }
+
+
+    // ============================================================
+    // QUERY RECORD PERSISTENCE & HISTORY LISTS
+    // ============================================================
+    function submitWizForm() {
+        const originVal = document.getElementById('wiz_hidden_origin').value;
+        const destVal = document.getElementById('wiz_hidden_destination').value;
+        const incoterm = document.getElementById('wizIncoterm').value;
+        const cargoReadyDate = document.getElementById('wizCargoReadyDate').value;
+        const isLCL = document.getElementById('wiz_tab_lcl').classList.contains('active');
+
+        if (!originVal || !destVal || !incoterm || !cargoReadyDate) {
+            alert('Please configure all required wizard steps fully before fetching live quotes.');
+            return;
+        }
+
+        // Save Shipment details into localStorage search history
+        let cargoSummary = '';
+        if (isLCL) {
+            let totalVolume = 0;
+            document.querySelectorAll('#wiz_lcl_rows input[name="item_volume[]"]').forEach(v => {
+                totalVolume += parseFloat(v.value) || 0;
+            });
+            cargoSummary = `${totalVolume.toFixed(2)} CBM LCL`;
+        } else {
+            let contCount = 0;
+            document.querySelectorAll('#wiz_fcl_rows input[name="cont_qty[]"]').forEach(q => {
+                contCount += parseInt(q.value) || 1;
+            });
+            cargoSummary = `${contCount} × Container FCL`;
+        }
+
+        const newRecord = {
+            date: new Date().toLocaleString(),
+            origin: originVal,
+            destination: destVal,
+            service: isLCL ? 'LCL' : 'FCL',
+            details: cargoSummary
+        };
+
+        let history = JSON.parse(localStorage.getItem('ftl_search_history') || '[]');
+        history.unshift(newRecord);
+        localStorage.setItem('ftl_search_history', JSON.stringify(history.slice(0, 10))); // Cap at 10
+
+        // Submit form
+        document.getElementById('wizardSearchForm').submit();
+    }
+
+    function renderQueryHistory() {
+        const container = document.getElementById('historyTableBody');
+        let history = JSON.parse(localStorage.getItem('ftl_search_history') || '[]');
+
+        // Fallback default history records for awesome initial look
+        if (history.length === 0) {
+            history = [
+                { date: '2026-05-20 09:30 AM', origin: 'Shanghai (CNSHA)', destination: 'Hamburg (DEHAM)', service: 'LCL', details: '2.50 CBM LCL' },
+                { date: '2026-05-22 04:15 PM', origin: 'Singapore (SGPIN)', destination: 'Rotterdam (NLRTM)', service: 'FCL', details: '1 × Container FCL' },
+                { date: '2026-05-24 11:05 AM', origin: 'Shanghai (CNSHA)', destination: 'Los Angeles (USLAX)', service: 'LCL', details: '5.20 CBM LCL' }
+            ];
+            localStorage.setItem('ftl_search_history', JSON.stringify(history));
+        }
+
+        container.innerHTML = history.map((record, idx) => `
+            <tr class="shipments-row border-bottom">
+                <td class="ps-4 py-3">
+                    <div class="font-monospace fw-bold text-dark" style="font-size: 0.85rem;">#QRY-${100 + idx}</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">${record.date}</div>
+                </td>
+                <td class="py-3">
+                    <div class="d-flex align-items-center">
+                        <span class="vector-node">${record.origin}</span>
+                        <i class="bi bi-arrow-right mx-2 text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="vector-node" style="border-color: #bfdbfe; color: #1d4ed8;">${record.destination}</span>
+                    </div>
+                </td>
+                <td class="py-3 text-secondary" style="font-size: 0.8rem; font-weight: 600;">
+                    <i class="bi bi-box-seam me-1"></i> ${record.details}
+                </td>
+                <td class="py-3">
+                    <span class="badge table-badge ${record.service === 'LCL' ? 'table-badge-primary' : 'table-badge-success'}">${record.service}</span>
+                </td>
+                <td class="pe-4 py-3 text-end">
+                    <button type="button" class="btn btn-sm btn-light border fw-bold" onclick="reRunHistorySearch(${idx})" style="font-size: 0.75rem; padding: 0.25rem 0.75rem;">Re-run Query</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function reRunHistorySearch(idx) {
+        const history = JSON.parse(localStorage.getItem('ftl_search_history') || '[]');
+        const record = history[idx];
+        if (!record) return;
+
+        // Auto pre-populate Route details inside wizard
+        document.getElementById('wizOriginLocation').value = record.origin;
+        document.getElementById('wiz_hidden_origin').value = record.origin;
+        document.getElementById('wizDestLocation').value = record.destination;
+        document.getElementById('wiz_hidden_destination').value = record.destination;
+
+        // Open wizard and jump directly to Step 2
+        openWizard();
+        document.getElementById('wizRouteValue').textContent = `${record.origin} → ${record.destination}`;
+        document.getElementById('wizStepRoute').classList.add('completed');
+        
+        // Set corresponding radio selector checked status
+        if (record.service === 'LCL') {
+            document.getElementById('wiz_tab_lcl').checked = true;
+        } else {
+            document.getElementById('wiz_tab_fcl').checked = true;
+        }
+        
+        setWizService(record.service);
+        navigateWizTo('cargo');
+    }
+
+    function clearQueryHistory() {
+        localStorage.removeItem('ftl_search_history');
+        renderQueryHistory();
+    }
+</script>
+{% endblock %}

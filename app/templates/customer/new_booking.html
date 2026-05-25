@@ -5,10 +5,10 @@
 <!-- Leaflet Engine Integration for Dynamic Visual Inputs -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-    body { background-color: #F8FAFC; }
+    body { background-color: var(--midnight-bg); }
     .main-booking-card {
-        background: #ffffff;
-        border: 1px solid #E2E8F0;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         min-height: 80vh;
@@ -16,7 +16,7 @@
     .section-header {
         font-size: 1rem;
         font-weight: 700;
-        color: #1E293B;
+        color: var(--text-primary);
         margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
@@ -31,24 +31,24 @@
         font-size: 0.8rem;
         margin-right: 8px;
     }
-    
+
     /* Mini Map Containers */
     .mini-map {
         height: 130px;
         border-radius: 6px;
-        background-color: #f1f5f9;
-        border: 1px solid #E2E8F0;
+        background-color: var(--midnight-bg);
+        border: 1px solid var(--glass-border);
         margin-top: 0.5rem;
         margin-bottom: 1rem;
         z-index: 1;
     }
-    
+
     /* Freightos Style Load Matrix */
     .load-unit-container {
-        border: 1px solid #E2E8F0;
+        border: 1px solid var(--glass-border);
         border-radius: 6px;
         overflow: hidden;
-        background-color: #FFFFFF;
+        background-color: var(--glass-bg);
         margin-bottom: 1rem;
     }
     .load-unit-header {
@@ -63,8 +63,8 @@
         justify-content: space-between;
         align-items: center;
     }
-    .load-unit-body { padding: 1rem; background-color: #F8FAFC; }
-    
+    .load-unit-body { padding: 1rem; background-color: var(--midnight-bg); }
+
     /* Subtitle Labels */
     .input-group-text-clean {
         background-color: transparent;
@@ -76,17 +76,17 @@
     .form-control-clean {
         border-left: none;
     }
-    
+
     /* Left side sticky execution console */
     .execution-console {
         position: sticky;
         top: 100px;
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
+        background: var(--midnight-bg);
+        border: 1px solid var(--glass-border);
         border-radius: 8px;
         padding: 1.5rem;
     }
-    
+
     .btn-execute {
         font-weight: 700;
         letter-spacing: 0.02em;
@@ -95,8 +95,56 @@
         font-size: 0.85rem;
         padding: 0.75rem;
     }
-    
+
     .required-dot { color: #EF4444; margin-left: 2px; }
+    .booking-mid-col { background-color: var(--glass-bg); }
+    .booking-right-col { background-color: var(--midnight-bg); }
+    .booking-file-area { background-color: var(--midnight-bg); border-style: dashed !important; }
+
+    /* Segment Switcher Cargo Mode (Unified Design) */
+    .booking-mode-switcher {
+        background: color-mix(in srgb, var(--primary-color) 6%, var(--midnight-bg)) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 30px !important;
+        padding: 2px !important;
+        display: inline-flex !important;
+        align-items: center;
+        gap: 2px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        height: auto !important;
+    }
+
+    .booking-mode-switcher .btn-light-mode {
+        border: none !important;
+        background: transparent !important;
+        padding: 0.35rem 1.1rem !important;
+        font-size: 0.725rem !important;
+        font-weight: 700 !important;
+        color: #64748B !important;
+        border-radius: 20px !important;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    .booking-mode-switcher .btn-check:checked + .btn-light-mode {
+        background: var(--primary-color) !important;
+        color: white !important;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;
+    }
+
+    /* Dark mode extras for new_booking */
+    html[data-color-scheme='dark'] .main-booking-card .input-group-text { background: #263348 !important; border-color: #334155 !important; color: #64748B !important; }
+    html[data-color-scheme='dark'] .btn-light-mode { color: #94A3B8 !important; }
+    html[data-color-scheme='dark'] .btn-check:checked + .btn-light-mode { background: #263348 !important; color: var(--primary-color) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+    html[data-color-scheme='dark'] .btn-white { background: #263348 !important; border-color: #334155 !important; color: #CBD5E1 !important; }
+    html[data-color-scheme='dark'] .booking-mode-switcher { background: #263348 !important; border-color: #334155 !important; }
+    html[data-color-scheme='dark'] #file-list.text-success { color: #86EFAC !important; }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
@@ -144,17 +192,17 @@
             </div>
 
             <!-- COLUMN 2: CARGO / LOAD MATRIX -->
-            <div class="col-lg-5 border-end p-4" style="background-color: #FFFFFF;">
+            <div class="col-lg-5 border-end p-4 booking-mid-col">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div class="section-header mb-0"><div class="num">3</div> Load Metric</div>
                     
                     <!-- Mode Selector Switcher -->
-                    <div class="bg-light rounded border d-flex p-1" style="height: 30px;">
+                    <div class="booking-mode-switcher">
                         <input type="radio" class="btn-check" name="manual_service_toggle" id="btn_lcl" value="LCL" checked>
-                        <label class="btn btn-xs btn-light-mode d-flex align-items-center px-3 fw-bold" for="btn_lcl" style="font-size: 0.7rem;">LCL</label>
+                        <label class="btn btn-light-mode" for="btn_lcl">LCL</label>
                         
                         <input type="radio" class="btn-check" name="manual_service_toggle" id="btn_fcl" value="FCL">
-                        <label class="btn btn-xs btn-light-mode d-flex align-items-center px-3 fw-bold" for="btn_fcl" style="font-size: 0.7rem;">FCL</label>
+                        <label class="btn btn-light-mode" for="btn_fcl">FCL</label>
                     </div>
                 </div>
 
@@ -297,7 +345,7 @@
                 </div>
 
                 <!-- Advanced File Attachments Container -->
-                <div class="border rounded mt-4 p-3" style="background-color: #F8FAFC; border-style: dashed !important;">
+                <div class="booking-file-area border rounded mt-4 p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small fw-bold text-dark"><i class="bi bi-paperclip"></i> Supporting Docs</span>
                         <button type="button" class="btn btn-xs btn-white border text-dark fw-bold" onclick="document.getElementById('file-input').click()" style="font-size: 0.65rem;">Browse Files</button>
@@ -309,7 +357,7 @@
             </div>
 
             <!-- COLUMN 3: EXECUTION WRAPPER -->
-            <div class="col-lg-3 p-4" style="background-color: #F8FAFC;">
+            <div class="col-lg-3 p-4 booking-right-col">
                 <div class="execution-console shadow-sm">
                     <h6 class="fw-bold text-dark mb-3 text-center border-bottom pb-2">Console Activation</h6>
                     
@@ -321,11 +369,11 @@
                     
                     <div class="text-center text-muted small fw-bold my-2">OR</div>
                     
-                    <button type="submit" class="btn btn-outline-dark w-100 btn-execute bg-white d-flex align-items-center justify-content-center">
+                    <button type="submit" class="btn btn-outline-dark w-100 btn-execute d-flex align-items-center justify-content-center">
                         <i class="bi bi-pencil-square me-2"></i> Manual quote request
                     </button>
                     
-                    <div class="alert alert-info p-2 mt-4 mb-0 rounded border-0 d-flex align-items-start" style="font-size: 0.65rem; background-color: #E0F2FE; color: #0369A1;">
+                    <div class="alert p-2 mt-4 mb-0 rounded border-0 d-flex align-items-start bg-accent-light text-accent" style="font-size: 0.65rem;">
                         <i class="bi bi-info-circle-fill me-2 mt-1"></i>
                         <span>Routing analytics optimize your search query instantly upon execution triggers.</span>
                     </div>
@@ -492,13 +540,13 @@ document.addEventListener('DOMContentLoaded', function() {
         transition: 0.15s ease;
     }
     .btn-check:checked + .btn-light-mode {
-        background: #FFFFFF;
+        background: var(--glass-bg);
         color: var(--primary-color);
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         border-radius: 4px;
     }
     .btn-xs { padding: 0.2rem 0.5rem; font-size: 0.7rem; }
-    .btn-white { background: #FFFFFF; color: #1E293B; }
+    .btn-white { background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--glass-border); }
 </style>
 
 {% endblock %}

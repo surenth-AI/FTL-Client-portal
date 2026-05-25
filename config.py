@@ -60,9 +60,12 @@ class Config:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'axeglobal.db')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'connect_args': {'use_setinputsizes': False}
-    }
+    if azure_conn_str or db_server:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'connect_args': {'use_setinputsizes': False}
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {}
     WTF_CSRF_ENABLED = True
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')

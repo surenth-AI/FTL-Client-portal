@@ -391,6 +391,7 @@ class SystemSetting(db.Model):
     logo_path = db.Column(db.String(255), default='img/logo.png')
     login_banner_path = db.Column(db.String(255), default='img/login_hero.png')
     default_layout = db.Column(db.String(50), default='sidebar') # sidebar, topbar
+    typography = db.Column(db.String(100), default='Inter')
 
     # SMTP Configuration
     smtp_server = db.Column(db.String(255), nullable=True)
@@ -398,3 +399,19 @@ class SystemSetting(db.Model):
     smtp_user = db.Column(db.String(255), nullable=True)
     smtp_password = db.Column(db.String(255), nullable=True)
     receiver_email = db.Column(db.String(255), nullable=True)
+
+class Registration(db.Model):
+    """Pending company registration request."""
+    id = db.Column(db.Integer, primary_key=True)
+    registration_id = db.Column(db.String(36), unique=True, nullable=False)  # UUID4
+    email = db.Column(db.String(120), nullable=False)
+    full_name = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(30), nullable=True)
+    company_name = db.Column(db.String(200), nullable=False)
+    country_code = db.Column(db.String(5), nullable=False)
+    vat = db.Column(db.String(50), nullable=True)
+    created_on = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='pending')  # pending / approved / rejected / info_requested
+    reject_reason = db.Column(db.String(500), nullable=True)
+    info_message = db.Column(db.Text, nullable=True)
+

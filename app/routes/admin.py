@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from app.models.models import Rate, Booking, TrackingEvent, User, Company
 from app.services.excel_importer import ExcelImporter
+from app.utils import validate_password_strength
 from app import db
 import csv
 import io
@@ -262,8 +263,13 @@ def create_user():
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
             return redirect(request.url)
+        password = request.form.get('password', '')
+        ok, msg = validate_password_strength(password)
+        if not ok:
+            flash(msg, 'danger')
+            return redirect(request.url)
         role = request.form.get('role', 'customer')
-        new_user = User(name=request.form.get('name'), email=email, password_hash=generate_password_hash(request.form.get('password')), role=role, department=request.form.get('department') if role == 'operation_executive' else None, status='active')
+        new_user = User(name=request.form.get('name'), email=email, password_hash=generate_password_hash(password), role=role, department=request.form.get('department') if role == 'operation_executive' else None, status='active')
         db.session.add(new_user)
         db.session.commit()
         flash(f'User created successfully.', 'success')
@@ -271,54 +277,56 @@ def create_user():
     return render_template('admin/create_user.html')
 
 @admin.route('/settings', methods=['GET', 'POST'])
-@admin_required
+@login_required
 def settings():
-    if current_user.role not in ['super_admin', 'admin']:
-        flash('Access denied. Administrator role required.', 'danger')
-        return redirect(url_for('admin.dashboard'))
-        
     from app.models.models import SystemSetting
     import os
     from werkzeug.utils import secure_filename
     
     sys_settings = SystemSetting.query.first()
     if not sys_settings:
-        sys_settings = SystemSetting(theme_color='blue', logo_path='img/logo.png')
+        sys_settings = SystemSetting(theme_color='blue', logo_path='img/logo.png', default_layout='sidebar', typography='Inter')
         db.session.add(sys_settings)
         db.session.commit()
         
     if request.method == 'POST':
         theme_color = request.form.get('theme_color')
-        logo_file = request.files.get('logo_file')
-        banner_file = request.files.get('banner_file')
+        typography = request.form.get('typography')
         default_layout = request.form.get('default_layout')
         
         if theme_color:
             sys_settings.theme_color = theme_color
             
+        if typography:
+            sys_settings.typography = typography
+            
         if default_layout:
             sys_settings.default_layout = default_layout
             
-        static_img_dir = os.path.join(current_app.root_path, 'static', 'img')
-        if not os.path.exists(static_img_dir):
-            os.makedirs(static_img_dir)
+        # Only allow admin & super_admin to edit branding and SMTP settings
+        if current_user.role in ['super_admin', 'admin']:
+            logo_file = request.files.get('logo_file')
+            banner_file = request.files.get('banner_file')
+                
+            static_img_dir = os.path.join(current_app.root_path, 'static', 'img')
+            if not os.path.exists(static_img_dir):
+                os.makedirs(static_img_dir)
 
-        # Handle Organization Logo Upload
-        if logo_file and logo_file.filename != '':
-            filename = secure_filename(logo_file.filename)
-            save_path = os.path.join(static_img_dir, filename)
-            logo_file.save(save_path)
-            sys_settings.logo_path = 'img/' + filename
-            
-        # Handle Login Panel Banner Upload
-        if banner_file and banner_file.filename != '':
-            filename = secure_filename(banner_file.filename)
-            save_path = os.path.join(static_img_dir, filename)
-            banner_file.save(save_path)
-            sys_settings.login_banner_path = 'img/' + filename
-            
-        # Handle SMTP Settings (Only allowed for super_admin / Platform Admin)
-        if current_user.role == 'super_admin':
+            # Handle Organization Logo Upload
+            if logo_file and logo_file.filename != '':
+                filename = secure_filename(logo_file.filename)
+                save_path = os.path.join(static_img_dir, filename)
+                logo_file.save(save_path)
+                sys_settings.logo_path = 'img/' + filename
+                
+            # Handle Login Panel Banner Upload
+            if banner_file and banner_file.filename != '':
+                filename = secure_filename(banner_file.filename)
+                save_path = os.path.join(static_img_dir, filename)
+                banner_file.save(save_path)
+                sys_settings.login_banner_path = 'img/' + filename
+                
+            # Handle SMTP Settings
             sys_settings.smtp_server = request.form.get('smtp_server') or None
             
             smtp_port = request.form.get('smtp_port')
@@ -334,7 +342,7 @@ def settings():
             sys_settings.receiver_email = request.form.get('receiver_email') or None
 
         db.session.commit()
-        flash('System settings updated successfully.', 'success')
+        flash('Settings updated successfully.', 'success')
         return redirect(url_for('admin.settings'))
         
     return render_template('admin/settings.html', settings=sys_settings)

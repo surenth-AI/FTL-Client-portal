@@ -171,9 +171,19 @@
                                     <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Password</label>
                                     <div class="input-group input-group-custom">
                                         <span class="input-group-text bg-transparent"><i class="bi bi-lock-fill text-muted icon-animate"></i></span>
-                                        {{ user_form.password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
+                                        {{ user_form.password(class="form-control border-start-0 ps-0", placeholder="••••••••", id="reg-pw") }}
                                     </div>
                                     {% for error in user_form.password.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
+                                    <div id="pw-rules-reg" class="mt-2 px-3 py-2 rounded-3 smaller" style="display:none; background:#f8fafc; border:1.5px solid #e2e8f0;">
+                                        <div class="fw-semibold text-muted mb-1" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:.05em;">Password requirements</div>
+                                        <ul class="list-unstyled mb-0">
+                                            <li id="rg-len"   class="text-muted py-1 border-bottom"><i class="bi bi-circle me-2"></i>At least 12 characters</li>
+                                            <li id="rg-upper" class="text-muted py-1 border-bottom"><i class="bi bi-circle me-2"></i>One uppercase letter (A-Z)</li>
+                                            <li id="rg-lower" class="text-muted py-1 border-bottom"><i class="bi bi-circle me-2"></i>One lowercase letter (a-z)</li>
+                                            <li id="rg-num"   class="text-muted py-1 border-bottom"><i class="bi bi-circle me-2"></i>One number (0-9)</li>
+                                            <li id="rg-spl"   class="text-muted py-1"               ><i class="bi bi-circle me-2"></i>One special character (!@#$% …)</li>
+                                        </ul>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Repeat Password</label>
@@ -187,7 +197,7 @@
 
                             <!-- Submit Action -->
                             <div class="d-grid mb-2 pt-2">
-                                <button type="submit" name="user-submit" class="btn btn-dark btn-lg fw-bold rounded-3 shadow premium-btn-glow position-relative overflow-hidden py-3">
+                                <button type="submit" name="user-submit" class="btn btn-primary btn-lg fw-bold rounded-3 shadow premium-btn-glow position-relative overflow-hidden py-3">
                                     <div class="shine-effect" style="background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);"></div>
                                     <span class="position-relative z-2">Request Team Access <i class="bi bi-arrow-right ms-1 translate-right-hover"></i></span>
                                 </button>
@@ -521,6 +531,39 @@ document.addEventListener('DOMContentLoaded', function() {
     if (serverActiveTab && serverActiveTab !== 'login' && serverActiveTab !== 'selection') {
         setView(serverActiveTab);
     }
+
+    // Real-time password strength for registration form
+    (function() {
+        var rules = [
+            { id: 'rg-len',   test: function(p){ return p.length >= 12; } },
+            { id: 'rg-upper', test: function(p){ return /[A-Z]/.test(p); } },
+            { id: 'rg-lower', test: function(p){ return /[a-z]/.test(p); } },
+            { id: 'rg-num',   test: function(p){ return /\d/.test(p); } },
+            { id: 'rg-spl',   test: function(p){ return /[!@#$%^&*()\-_=+\[\]{}|;:'",.<>?\/`~\\]/.test(p); } }
+        ];
+        var input = document.getElementById('reg-pw');
+        var box   = document.getElementById('pw-rules-reg');
+        if (!input || !box) return;
+
+        function evaluate(val) {
+            rules.forEach(function(r) {
+                var el = document.getElementById(r.id);
+                if (!el) return;
+                var pass = r.test(val);
+                var isLast = (r.id === 'rg-spl');
+                el.className = pass
+                    ? ('text-success py-1' + (isLast ? '' : ' border-bottom'))
+                    : ('text-muted py-1'   + (isLast ? '' : ' border-bottom'));
+                el.querySelector('i').className = pass
+                    ? 'bi bi-check-circle-fill me-2'
+                    : 'bi bi-circle me-2';
+            });
+        }
+
+        input.addEventListener('focus', function() { box.style.display = 'block'; evaluate(input.value); });
+        input.addEventListener('input', function() { evaluate(input.value); });
+        input.addEventListener('blur',  function() { if (!input.value) box.style.display = 'none'; });
+    })();
 
     // Zip code mock loader
     const zInput = document.getElementById('c_zip');
