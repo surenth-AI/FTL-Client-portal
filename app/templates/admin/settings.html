@@ -714,7 +714,7 @@ html[data-color-scheme='dark'] .settings-option-card:hover,
 html[data-color-scheme='dark'] .settings-theme-card:hover { background: #2D3D54; }
 html[data-color-scheme='dark'] .option-icon { background: #334155; color: #94A3B8; }
 html[data-color-scheme='dark'] .settings-preview-bar { background: #263348; border-color: #334155; }
-html[data-color-scheme='dark'] .settings-input-group .input-group-text { background: #263348; border-color: #334155; }
+html[data-color-scheme='dark'] .settings-input-group .input-group-text { background: #263348; border-color: #334155; color: #64748B; }
 html[data-color-scheme='dark'] .smtp-status-bar         { background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.2); }
 html[data-color-scheme='dark'] .smtp-status-bar.warning { background: rgba(245,158,11,0.07); border-color: rgba(245,158,11,0.2); }
 
@@ -736,6 +736,80 @@ html[data-color-scheme='dark'] .mockup-header,
 html[data-color-scheme='dark'] .mockup-line-sm,
 html[data-color-scheme='dark'] .mockup-line-lg {
     background: #334155;
+}
+
+/* ── Mockup preview card (the white "Portal Dashboard" box) ── */
+html[data-color-scheme='dark'] .mockup-ui-card {
+    background: #1E293B !important;
+    border-color: #334155 !important;
+}
+html[data-color-scheme='dark'] .mockup-ui-card .mockup-line {
+    background: #334155 !important;
+}
+html[data-color-scheme='dark'] .mockup-ui-card .mockup-text-title {
+    color: #F1F5F9 !important;
+}
+html[data-color-scheme='dark'] .mockup-ui-card .mockup-btn-secondary {
+    border-color: #475569 !important;
+    color: #94A3B8 !important;
+}
+
+/* ── Form controls in settings ── */
+html[data-color-scheme='dark'] .settings-input-group .form-control {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+    color: #CBD5E1 !important;
+}
+html[data-color-scheme='dark'] .settings-input-group .form-control::placeholder {
+    color: #475569 !important;
+}
+html[data-color-scheme='dark'] .settings-input-group .form-control:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
+}
+
+/* ── Form labels and helper text ── */
+html[data-color-scheme='dark'] .form-label {
+    color: #94A3B8 !important;
+}
+html[data-color-scheme='dark'] .form-text {
+    color: #475569 !important;
+}
+
+/* ── Section header borders ── */
+html[data-color-scheme='dark'] .border-bottom {
+    border-color: #334155 !important;
+}
+html[data-color-scheme='dark'] .border-top {
+    border-color: #334155 !important;
+}
+
+/* ── File input ── */
+html[data-color-scheme='dark'] .form-control-sm[type="file"] {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+    color: #94A3B8 !important;
+}
+
+/* ── Settings page heading overrides ── */
+html[data-color-scheme='dark'] .fw-bold.mb-2.small,
+html[data-color-scheme='dark'] .fw-bold.small {
+    color: #CBD5E1 !important;
+}
+html[data-color-scheme='dark'] .fw-semibold.small {
+    color: #CBD5E1 !important;
+}
+
+/* ── Selected color ring glow in dark mode ── */
+html[data-color-scheme='dark'] .settings-layout-option input:checked + .settings-option-card,
+html[data-color-scheme='dark'] .settings-theme-option input:checked + .settings-theme-card {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+
+/* ── Active layout mockup in dark mode ── */
+html[data-color-scheme='dark'] .settings-layout-option input:checked + .settings-option-card .layout-preview-mockup {
+    border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+    background: color-mix(in srgb, var(--primary-color) 8%, #1E293B);
 }
 </style>
 
