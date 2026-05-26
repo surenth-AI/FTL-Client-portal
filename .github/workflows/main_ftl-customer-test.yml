@@ -26,7 +26,7 @@ jobs:
           rm -f /etc/apt/sources.list.d/yarn.list
           apt-get update
           apt-get install -y libcairo2-dev pkg-config
-          
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
@@ -37,12 +37,14 @@ jobs:
         with:
           name: python-app
           path: .
+          retention-days: 1
+          overwrite: true
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write # Required for requesting the JWT
+      id-token: write  # Required for requesting the JWT
       contents: read
 
     steps:
@@ -50,7 +52,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -58,9 +60,25 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_88A86EE5D15E4EF18D79812693AAD45B }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B3A58AC24DF8447BB007F69E848FE828 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Stop App Service to clear deployment lock (fixes 409 Conflict)
+        run: |
+          RG=$(az webapp show --name FTL-customer-test --query resourceGroup -o tsv)
+          echo "Resource group: $RG"
+          az webapp stop --name FTL-customer-test --resource-group "$RG"
+          echo "App stopped. Waiting for lock release..."
+          sleep 15
+
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'FTL-customer-test'
           slot-name: 'Production'
+          clean: true
+
+      - name: Start App Service after deployment
+        if: always()
+        run: |
+          RG=$(az webapp show --name FTL-customer-test --query resourceGroup -o tsv)
+          az webapp start --name FTL-customer-test --resource-group "$RG"
+          echo "App started successfully."
