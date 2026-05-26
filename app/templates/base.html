@@ -113,6 +113,9 @@
         .sidebar-active .topbar-logo {
             display: none !important;
         }
+        .sidebar-active .topbar-controls-container {
+            display: none !important;
+        }
 
         /* TOPBAR MODE: High-Performance Horizontal View */
         .app-container:not(.sidebar-active) .sidebar {
@@ -286,7 +289,38 @@
                 {% endif %}
             </ul>
 
-            <div class="mt-auto ps-2">
+            <div class="mt-auto ps-2 sidebar-controls-container border-top pt-3">
+                <!-- User Profile -->
+                <div class="sidebar-user-profile mb-3">
+                    <span class="text-dark fw-bold small d-flex align-items-center">
+                        <i class="bi bi-person-circle me-2 text-accent fs-5"></i>
+                        <span class="text-truncate" style="max-width: 170px;">{{ current_user.name }}</span>
+                    </span>
+                </div>
+                
+                <!-- Controls: Theme Toggle & Language Switcher -->
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <!-- THEME TOGGLE -->
+                    <button id="sidebarThemeToggle" onclick="toggleColorScheme()"
+                            class="btn btn-sm d-flex align-items-center justify-content-center"
+                            style="width:34px;height:34px;border-radius:8px;padding:0;border:1px solid #E2E8F0;background:transparent;"
+                            aria-label="Toggle dark / light mode">
+                        <i class="bi bi-moon" style="font-size:0.95rem;"></i>
+                    </button>
+                    <!-- LANGUAGE SWITCHER -->
+                    <div class="dropdown flex-grow-1">
+                        <button class="btn btn-sm btn-white border w-100 d-flex align-items-center justify-content-between dropdown-toggle fw-bold" type="button" id="sidebarLangSwitch" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.75rem; border-radius:6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 0.35rem 0.5rem;">
+                            <span><i class="bi bi-translate me-1 text-muted"></i> <span class="active-lang-display">EN</span></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="sidebarLangSwitch" style="font-size: 0.8rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
+                            <li><a class="dropdown-item fw-medium py-2" href="javascript:void(0);" onclick="setLanguage('en')"><span class="me-2">🇬🇧</span> English</a></li>
+                            <li><a class="dropdown-item fw-medium py-2" href="javascript:void(0);" onclick="setLanguage('nl')"><span class="me-2">🇳🇱</span> Dutch</a></li>
+                            <li><a class="dropdown-item fw-medium py-2" href="javascript:void(0);" onclick="setLanguage('it')"><span class="me-2">🇮🇹</span> Italian</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- LOGOUT BUTTON -->
                 <a class="btn btn-logout w-100 rounded-pill" href="{{ url_for('auth.logout') }}">
                     <i class="bi bi-box-arrow-right me-2"></i> Logout
                 </a>
@@ -338,7 +372,7 @@
                     {% endif %}
                 </div>
 
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center topbar-controls-container">
                     <!-- THEME TOGGLE -->
                     <button id="themeToggle" onclick="toggleColorScheme()"
                             class="btn btn-sm me-2 d-flex align-items-center justify-content-center"
@@ -359,15 +393,18 @@
                     </div>
 
                     {% if current_user.is_authenticated %}
-                        <div class="topbar-logout-container me-3">
-                            <a class="btn btn-logout btn-sm rounded-pill px-3 py-1" href="{{ url_for('auth.logout') }}">
-                                <i class="bi bi-box-arrow-right me-1"></i> Logout
-                            </a>
-                        </div>
-                        <div class="user-profile-section me-3 border-start ps-3">
-                            <span class="text-dark fw-bold small">
+                        <!-- User profile dropdown for Topbar mode -->
+                        <div class="dropdown me-3 topbar-user-dropdown">
+                            <button class="btn btn-sm btn-white border d-flex align-items-center dropdown-toggle fw-bold" type="button" id="topbarUserDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.8rem; border-radius:6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                 <i class="bi bi-person-circle me-2 text-accent"></i>{{ current_user.name }}
-                            </span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="topbarUserDropdown" style="font-size: 0.8rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
+                                <li>
+                                    <a class="dropdown-item text-danger fw-medium py-2" href="{{ url_for('auth.logout') }}">
+                                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                     {% else %}
                         <a class="btn btn-glass btn-sm me-2 px-4 shadow-sm" href="{{ url_for('auth.login') }}">Login</a>
@@ -406,20 +443,28 @@
         }
 
         function _syncThemeUI(scheme) {
-            var icon = document.getElementById('themeIcon');
-            var btn  = document.getElementById('themeToggle');
-            if (!icon || !btn) return;
-            if (scheme === 'dark') {
-                icon.className      = 'bi bi-sun-fill';
-                icon.style.color    = '#F59E0B';
-                btn.style.borderColor  = '#334155';
-                btn.style.background   = '#263348';
-            } else {
-                icon.className      = 'bi bi-moon';
-                icon.style.color    = '';
-                btn.style.borderColor  = '#E2E8F0';
-                btn.style.background   = 'transparent';
-            }
+            var icons = document.querySelectorAll('#themeIcon, #sidebarThemeToggle i');
+            var btns  = document.querySelectorAll('#themeToggle, #sidebarThemeToggle');
+            
+            icons.forEach(function(icon) {
+                if (scheme === 'dark') {
+                    icon.className      = 'bi bi-sun-fill';
+                    icon.style.color    = '#F59E0B';
+                } else {
+                    icon.className      = 'bi bi-moon';
+                    icon.style.color    = '';
+                }
+            });
+            
+            btns.forEach(function(btn) {
+                if (scheme === 'dark') {
+                    btn.style.borderColor  = '#334155';
+                    btn.style.background   = '#263348';
+                } else {
+                    btn.style.borderColor  = '#E2E8F0';
+                    btn.style.background   = 'transparent';
+                }
+            });
         }
         // ---- /Theme toggle ----
 
@@ -531,10 +576,10 @@
             // Force standard attribute for search/accessibility/engine engines
             document.documentElement.lang = savedLang;
 
-            const indicator = document.getElementById('activeLangDisplay');
-            if(indicator) {
+            const indicators = document.querySelectorAll('#activeLangDisplay, .active-lang-display');
+            indicators.forEach(function(indicator) {
                 indicator.innerText = savedLang.toUpperCase();
-            }
+            });
             
             // Fire deterministic dictionary overwrite AFTER general load
             setTimeout(() => {
