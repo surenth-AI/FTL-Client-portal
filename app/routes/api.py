@@ -507,7 +507,7 @@ def approve_registration(reg_id):
     try:
         conn   = _get_conn()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, status, company_name, vat FROM registration WHERE id = ?", reg_id)
+        cursor.execute("SELECT id, status, company_name, vat, country_code FROM registration WHERE id = ?", reg_id)
         row = cursor.fetchone()
         if not row:
             conn.close()
@@ -516,9 +516,22 @@ def approve_registration(reg_id):
             conn.close()
             return jsonify({'error': 'Registration is not pending'}), 400
 
+        # Generate a unique ftl_code based on the country code
+        cc = (row[4] or 'XX').upper()
+        ftl_code = None
+        for i in range(1, 1000):
+            candidate = f"FTL-{cc}-{i:03d}"
+            cursor.execute("SELECT COUNT(*) FROM company WHERE ftl_code = ?", candidate)
+            if cursor.fetchone()[0] == 0:
+                ftl_code = candidate
+                break
+        if not ftl_code:
+            import random
+            ftl_code = f"FTL-{cc}-{random.randint(1000, 9999)}"
+
         cursor.execute(
-            "INSERT INTO company (name, vat_number, status) OUTPUT INSERTED.id VALUES (?, ?, 'active')",
-            row[2], row[3] or ''
+            "INSERT INTO company (name, vat_number, ftl_code, status) OUTPUT INSERTED.id VALUES (?, ?, ?, 'active')",
+            row[2], row[3] or '', ftl_code
         )
         company_id = cursor.fetchone()[0]
         cursor.execute("UPDATE registration SET status = 'approved' WHERE id = ?", reg_id)
