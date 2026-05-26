@@ -105,7 +105,7 @@
             display: flex !important;
         }
         .sidebar-active .main-content {
-            margin-left: 260px !important; /* var(--sidebar-width) */
+            margin-left: 230px !important; /* var(--sidebar-width) */
         }
         .sidebar-active .topbar-nav {
             display: none !important;
@@ -114,6 +114,10 @@
             display: none !important;
         }
         .sidebar-active .topbar-controls-container {
+            display: none !important;
+        }
+        /* Hide the entire top-bar in sidebar mode — reclaim vertical space for content */
+        .sidebar-active .top-bar {
             display: none !important;
         }
 
@@ -164,9 +168,10 @@
         /* Initialization anti-flicker */
         .sidebar-active-init .app-container { display: flex; }
         .sidebar-active-init .sidebar { transform: translateX(0) !important; }
-        .sidebar-active-init .main-content { margin-left: 260px !important; }
+        .sidebar-active-init .main-content { margin-left: 230px !important; }
         .sidebar-active-init .topbar-nav { display: none !important; }
         .sidebar-active-init .topbar-logo { display: none !important; }
+        .sidebar-active-init .top-bar { display: none !important; }
         
         .navbar-toggler-icon {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='rgba(0, 0, 0, 0.5)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important;
