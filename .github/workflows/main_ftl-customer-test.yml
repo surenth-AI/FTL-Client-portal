@@ -60,12 +60,14 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_88A86EE5D15E4EF18D79812693AAD45B }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B3A58AC24DF8447BB007F69E848FE828 }}
 
-      - name: Stop App Service to clear deployment lock (fixes 409 Conflict)
+      - name: Resolve resource group and clear deployment lock
         run: |
-          RG=$(az webapp show --name FTL-customer-test --query resourceGroup -o tsv)
-          echo "Resource group: $RG"
+          # Use webapp list to find resource group without needing --resource-group flag
+          RG=$(az webapp list --query "[?name=='FTL-customer-test'].resourceGroup | [0]" -o tsv)
+          echo "Resource group resolved: $RG"
+          echo "RESOURCE_GROUP=$RG" >> $GITHUB_ENV
           az webapp stop --name FTL-customer-test --resource-group "$RG"
-          echo "App stopped. Waiting for lock release..."
+          echo "App stopped. Waiting for lock to release..."
           sleep 15
 
       - name: Deploy to Azure Web App
@@ -79,6 +81,5 @@ jobs:
       - name: Start App Service after deployment
         if: always()
         run: |
-          RG=$(az webapp show --name FTL-customer-test --query resourceGroup -o tsv)
-          az webapp start --name FTL-customer-test --resource-group "$RG"
+          az webapp start --name FTL-customer-test --resource-group "$RESOURCE_GROUP"
           echo "App started successfully."
