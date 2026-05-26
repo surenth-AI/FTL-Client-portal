@@ -191,7 +191,6 @@
                                         <span class="input-group-text bg-transparent"><i class="bi bi-shield-check text-muted icon-animate" id="confirm-pw-icon"></i></span>
                                         {{ user_form.confirm_password(class="form-control border-start-0 ps-0", placeholder="••••••••", id="reg-confirm-pw") }}
                                     </div>
-                                    <div id="pw-match-error" class="text-danger smaller mt-1 d-flex align-items-center" style="display:none !important;"><i class="bi bi-exclamation-circle me-1"></i> Passwords do not match</div>
                                     {% for error in user_form.confirm_password.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
                                 </div>
                             </div>
@@ -598,61 +597,53 @@ document.addEventListener('DOMContentLoaded', function() {
         window._pwInput    = input;
     })();
 
-    // ── Repeat Password: live mismatch error + submit guard ──
+    // ── Repeat Password: live mismatch indicator + submit guard ──
     (function() {
         var pwInput      = document.getElementById('reg-pw');
         var confirmInput = document.getElementById('reg-confirm-pw');
         var icon         = document.getElementById('confirm-pw-icon');
-        var errorEl      = document.getElementById('pw-match-error');
         var group        = document.getElementById('confirm-pw-group');
-        if (!pwInput || !confirmInput || !icon || !errorEl) return;
+        if (!pwInput || !confirmInput || !icon) return;
 
         function checkMatch() {
             var pw  = pwInput.value;
             var cpw = confirmInput.value;
             if (!cpw) {
-                // Nothing typed yet — reset
+                // Nothing typed yet — reset to neutral
                 icon.className = 'bi bi-shield-check text-muted icon-animate';
-                errorEl.style.display = 'none';
-                group.style.borderColor = '';
+                if (group) group.style.borderColor = '';
                 return;
             }
             if (pw === cpw) {
-                icon.className       = 'bi bi-check-circle-fill text-success icon-animate';
-                errorEl.style.display = 'none';
-                group.style.borderColor = '#16a34a';
+                icon.className = 'bi bi-check-circle-fill text-success icon-animate';
+                if (group) group.style.borderColor = '#16a34a';
             } else {
-                icon.className       = 'bi bi-x-circle-fill text-danger icon-animate';
-                errorEl.style.display = 'flex';
-                group.style.borderColor = '#ef4444';
+                icon.className = 'bi bi-x-circle-fill text-danger icon-animate';
+                if (group) group.style.borderColor = '#ef4444';
             }
         }
 
         pwInput.addEventListener('input', checkMatch);
         confirmInput.addEventListener('input', checkMatch);
 
-        // Block form submission if validation fails
+        // Block form submission if passwords don't match or strength rules fail
         var form = confirmInput.closest('form');
         if (form) {
             form.addEventListener('submit', function(e) {
                 var pw  = pwInput.value;
                 var cpw = confirmInput.value;
-                // Check mismatch
                 if (pw !== cpw) {
                     e.preventDefault();
-                    errorEl.style.display = 'flex';
-                    group.style.borderColor = '#ef4444';
                     icon.className = 'bi bi-x-circle-fill text-danger icon-animate';
+                    if (group) group.style.borderColor = '#ef4444';
                     confirmInput.focus();
                     return;
                 }
-                // Check strength rules
                 if (window._pwAllValid && !window._pwAllValid()) {
                     e.preventDefault();
                     var box = document.getElementById('pw-rules-reg');
                     if (box) box.style.display = 'block';
                     if (window._pwInput) window._pwInput.focus();
-                    return;
                 }
             });
         }

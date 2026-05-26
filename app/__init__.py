@@ -178,6 +178,17 @@ def create_app(config_class=Config):
     def inject_company_details():
         return dict(company=app.config.get('COMPANY_DETAILS'))
 
+    # Prevent browser from caching authenticated pages.
+    # After logout, pressing Back will NOT show the old page.
+    @app.after_request
+    def no_cache_for_auth_pages(response):
+        from flask_login import current_user
+        if current_user.is_authenticated:
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
+
     return app
 
 def seed_admin():
