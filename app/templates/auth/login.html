@@ -155,7 +155,7 @@
                                     {% for error in user_form.email.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Mobile / Telephone</label>
+                                    <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Mobile / Telephone <span class="text-muted fw-normal lowercase font-monospace text-none" style="font-size: 0.75rem;">(Optional)</span></label>
                                     <div class="input-group input-group-custom">
                                         <span class="input-group-text bg-transparent"><i class="bi bi-telephone-fill text-muted icon-animate"></i></span>
                                         {{ user_form.mobile(class="form-control border-start-0 ps-0", placeholder="+1 555-0199") }}
@@ -188,8 +188,8 @@
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Repeat Password</label>
                                     <div class="input-group input-group-custom">
-                                        <span class="input-group-text bg-transparent"><i class="bi bi-shield-check text-muted icon-animate"></i></span>
-                                        {{ user_form.confirm_password(class="form-control border-start-0 ps-0", placeholder="••••••••") }}
+                                        <span class="input-group-text bg-transparent"><i class="bi bi-shield-check text-muted icon-animate" id="confirm-pw-icon"></i></span>
+                                        {{ user_form.confirm_password(class="form-control border-start-0 ps-0", placeholder="••••••••", id="reg-confirm-pw") }}
                                     </div>
                                     {% for error in user_form.confirm_password.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
                                 </div>
@@ -563,6 +563,27 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('focus', function() { box.style.display = 'block'; evaluate(input.value); });
         input.addEventListener('input', function() { evaluate(input.value); });
         input.addEventListener('blur',  function() { if (!input.value) box.style.display = 'none'; });
+    })();
+
+    // Real-time password confirmation match check
+    (function() {
+        var pwInput = document.getElementById('reg-pw');
+        var confirmPwInput = document.getElementById('reg-confirm-pw');
+        var confirmPwIcon = document.getElementById('confirm-pw-icon');
+        if (!pwInput || !confirmPwInput || !confirmPwIcon) return;
+
+        function checkMatch() {
+            var pw = pwInput.value;
+            var cpw = confirmPwInput.value;
+            if (cpw && pw === cpw) {
+                confirmPwIcon.className = 'bi bi-check-circle-fill text-success icon-animate';
+            } else {
+                confirmPwIcon.className = 'bi bi-shield-check text-muted icon-animate';
+            }
+        }
+
+        pwInput.addEventListener('input', checkMatch);
+        confirmPwInput.addEventListener('input', checkMatch);
     })();
 
     // Zip code mock loader

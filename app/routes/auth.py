@@ -25,7 +25,7 @@ class JoinCompanyForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
     email = StringField('Corporate Email', validators=[DataRequired(), Email()])
-    mobile = StringField('Mobile/Telephone Number', validators=[DataRequired()])
+    mobile = StringField('Mobile/Telephone Number', validators=[])
     password = PasswordField('Password', validators=[DataRequired(), _password_strength_validator])
     confirm_password = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
     
