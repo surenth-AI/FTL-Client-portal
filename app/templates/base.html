@@ -224,13 +224,11 @@
                             <i class="bi bi-bar-chart-line"></i> Shipment Intelligence
                         </a>
                     </li>
-                    {% if current_user.role == 'super_admin' %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" href="{{ url_for('admin.manage_users') }}">
                             <i class="bi bi-shield-lock"></i> User Management
                         </a>
                     </li>
-                    {% endif %}
 
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">
@@ -355,9 +353,7 @@
                         {% if current_user.role in ['super_admin', 'admin', 'operation_executive'] %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.shipment_intelligence' %}active{% endif %}" href="{{ url_for('admin.shipment_intelligence') }}">Shipment Intelligence</a></li>
-                            {% if current_user.role == 'super_admin' %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" href="{{ url_for('admin.manage_users') }}">Users</a></li>
-                            {% endif %}
 
                             <li><a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">Rates</a></li>
 

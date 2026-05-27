@@ -105,11 +105,23 @@ def dashboard():
 
 @admin.route('/users')
 @admin_required
-@super_admin_required
 def manage_users():
-    staff = User.query.filter(User.role != 'customer').all()
-    customers = User.query.filter_by(role='customer').all()
-    return render_template('admin/manage_users.html', staff=staff, customers=customers)
+    page = request.args.get('page', 1, type=int)
+    q = request.args.get('q', '', type=str)
+    
+    query = User.query.filter_by(role='customer')
+    if q:
+        search = f"%{q}%"
+        query = query.filter((User.name.ilike(search)) | (User.email.ilike(search)))
+        
+    pagination = query.order_by(User.id.desc()).paginate(page=page, per_page=25, error_out=False)
+    
+    if current_user.role == 'super_admin':
+        staff = User.query.filter(User.role != 'customer').all()
+    else:
+        staff = []
+        
+    return render_template('admin/manage_users.html', staff=staff, customers=pagination.items, pagination=pagination, q=q)
 
 @admin.route('/user/edit/<int:user_id>', methods=['GET', 'POST'])
 @admin_required
@@ -255,26 +267,6 @@ def clear_rates():
     flash('All rates cleared.', 'success')
     return redirect(url_for('admin.view_rates'))
 
-@admin.route('/create-user', methods=['GET', 'POST'])
-@admin_required
-def create_user():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        if User.query.filter_by(email=email).first():
-            flash('Email already registered.', 'danger')
-            return redirect(request.url)
-        password = request.form.get('password', '')
-        ok, msg = validate_password_strength(password)
-        if not ok:
-            flash(msg, 'danger')
-            return redirect(request.url)
-        role = request.form.get('role', 'customer')
-        new_user = User(name=request.form.get('name'), email=email, password_hash=generate_password_hash(password), role=role, department=request.form.get('department') if role == 'operation_executive' else None, status='active')
-        db.session.add(new_user)
-        db.session.commit()
-        flash(f'User created successfully.', 'success')
-        return redirect(url_for('admin.dashboard'))
-    return render_template('admin/create_user.html')
 
 @admin.route('/settings', methods=['GET', 'POST'])
 @login_required

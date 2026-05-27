@@ -6,12 +6,11 @@
         <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">Organization Registry</h3>
         <p class="text-muted small mb-0">Authoritative management of directory roles, access, and department mappings.</p>
     </div>
-    <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary border-0 rounded-1 px-3 py-2 d-flex align-items-center">
-        <i class="bi bi-person-plus me-2"></i> Provision User
-    </a>
+
 </div>
 
 <div class="row g-4 intel-fade-in" style="animation-delay: 0.1s;">
+    {% if current_user.role == 'super_admin' %}
     <!-- Staff Matrix -->
     <div class="col-12">
         <div class="bg-white border" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
@@ -81,34 +80,41 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Customer Grid -->
     <div class="col-12">
         <div class="bg-white border" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: #FDFDFD;">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
                 <div class="d-flex align-items-center">
                     <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
                         <i class="bi bi-people" style="font-size: 0.85rem;"></i>
                     </div>
                     <h6 class="fw-bold text-dark mb-0" style="font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">Subscriber Index</h6>
                 </div>
-                <span class="badge bg-light text-secondary border rounded-pill fw-bold" style="font-size: 0.65rem; letter-spacing: 0.02em;">COUNT: {{ customers|length }}</span>
+                <div class="d-flex align-items-center">
+                    <form action="{{ url_for('admin.manage_users') }}" method="GET" class="d-flex align-items-center mb-0 me-3">
+                        <div class="input-group input-group-sm shadow-sm" style="width: 250px;">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" name="q" value="{{ q }}" class="form-control border-start-0 ps-0 bg-white text-dark" placeholder="Search subscribers...">
+                        </div>
+                    </form>
+                    <span class="badge bg-white text-secondary border rounded-pill fw-bold" style="font-size: 0.65rem; letter-spacing: 0.02em;">COUNT: {{ pagination.total }}</span>
+                </div>
             </div>
             
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
-                    <thead style="background-color: #F8FAFC;">
+                    <thead>
                         <tr>
                             <th class="ps-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Identity</th>
-                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Entity Correlation</th>
                             <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Vector</th>
                             <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Validation</th>
-                            <th class="text-end pe-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in customers %}
-                        <tr style="border-bottom: 1px solid #F1F5F9;">
+                        <tr class="border-bottom">
                             <td class="ps-4 py-3">
                                 <div class="d-flex align-items-center">
                                     <div class="bg-light text-secondary border d-flex align-items-center justify-content-center fw-bold rounded-circle me-3" style="width: 32px; height: 32px; font-size: 0.75rem;">
@@ -116,14 +122,6 @@
                                     </div>
                                     <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ user.name }}</div>
                                 </div>
-                            </td>
-                            <td class="py-3">
-                                {% if user.company %}
-                                    <div class="fw-bold text-dark" style="font-size: 0.8rem;">{{ user.company.name }}</div>
-                                    <div class="text-muted" style="font-size: 0.65rem; font-family: 'JetBrains Mono', monospace;">{{ user.company.ftl_code }}</div>
-                                {% else %}
-                                    <span class="badge bg-warning bg-opacity-10 text-warning border rounded-pill px-2 fw-bold" style="font-size: 0.6rem; filter: brightness(0.9);">UNLINKED</span>
-                                {% endif %}
                             </td>
                             <td class="text-secondary py-3" style="font-size: 0.75rem;">{{ user.email }}</td>
                             <td class="py-3">
@@ -133,16 +131,35 @@
                                     <span class="badge bg-warning bg-opacity-10 text-warning border rounded-pill px-2 py-1 fw-bold" style="font-size: 0.6rem; filter: brightness(0.9);">{{ user.status.upper() }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end pe-4 py-3">
-                                <button class="btn btn-light btn-sm border rounded-circle" style="width: 28px; height: 28px; padding: 0; line-height: 1;">
-                                    <i class="bi bi-gear-fill text-muted" style="font-size: 0.7rem;"></i>
-                                </button>
-                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            
+            {% if pagination.pages > 1 %}
+            <div class="p-3 border-top d-flex justify-content-center bg-light rounded-bottom">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 shadow-sm">
+                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                            <a class="page-link bg-white text-dark border" href="{{ url_for('admin.manage_users', page=pagination.prev_num, q=q) if pagination.has_prev else '#' }}">&laquo;</a>
+                        </li>
+                        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if p %}
+                                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                                    <a class="page-link {% if p == pagination.page %}bg-primary text-white border-primary{% else %}bg-white text-dark border{% endif %}" href="{{ url_for('admin.manage_users', page=p, q=q) }}">{{ p }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link bg-white text-muted border">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                            <a class="page-link bg-white text-dark border" href="{{ url_for('admin.manage_users', page=pagination.next_num, q=q) if pagination.has_next else '#' }}">&raquo;</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
