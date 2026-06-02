@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-Content 'd:\\\\FTL-DEV\\\\app\\\\templates\\\\customer\\\\shipments.html' | Select-String 'glass-card|shipments-container|bg-white-5|thead class'\")"
+    ]
+  }
+}

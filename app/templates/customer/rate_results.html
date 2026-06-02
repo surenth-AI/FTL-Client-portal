@@ -1,90 +1,471 @@
 {% extends 'base.html' %}
 {% block title %}Compare Rates{% endblock %}
+
 {% block content %}
 <style>
-    html[data-color-scheme='dark'] .dragover { border-color: var(--primary-color) !important; background: color-mix(in srgb, var(--primary-color) 5%, #1E293B) !important; }
+    /* Custom Styling for Quotes Redesign */
+    .quote-header-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .view-toggle-btn {
+        background: var(--bg-gray);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .view-toggle-btn.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    .view-toggle-btn:first-child { border-radius: 6px 0 0 6px; }
+    .view-toggle-btn:last-child { border-radius: 0 6px 6px 0; }
+
+    /* Table View Styles */
+    .quote-table {
+        width: 100%;
+        background: var(--glass-bg);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+    .quote-table th {
+        background: var(--bg-gray);
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        padding: 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+    .quote-master-row {
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+    .quote-master-row:hover {
+        background: var(--bg-gray);
+    }
+    .quote-master-row td {
+        padding: 1.25rem 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .carrier-logo-placeholder {
+        font-size: 1.5rem;
+        color: var(--primary-color);
+        margin-right: 0.75rem;
+    }
+    .price-col {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    /* Breakdown Shutter/Accordion */
+    .quote-breakdown-row {
+        display: none;
+        background: var(--bg-gray);
+    }
+    .quote-breakdown-row.active {
+        display: table-row;
+    }
+    .breakdown-container {
+        padding: 1.5rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+    
+    /* Breakdown Detailed Table */
+    .detail-table {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    .detail-table th {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .detail-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    /* Summary Bar */
+    .summary-bar {
+        background: var(--bg-gray);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        padding: 1.25rem 1.5rem;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    /* Card View Styles */
+    .card-view-container { display: none; }
+    .quote-card {
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .quote-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    
+    /* Modal Override */
+    .modal-content { border-radius: 16px; border: none; }
+    .modal-header { border-radius: 16px 16px 0 0; }
+    .modal.show { backdrop-filter: blur(4px); } /* Optional subtle blur if backdrop is false */
 </style>
-<div class="mb-4">
-    <a href="{{ url_for('customer.new_booking') }}" class="text-decoration-none">
-        <i class="bi bi-arrow-left"></i> Change search
+
+<div class="mb-3">
+    <a href="{{ url_for('customer.new_booking') }}" class="text-decoration-none small fw-bold">
+        <i class="bi bi-arrow-left"></i> Modify Search
     </a>
-    <h3 class="mt-2">Available Rates</h3>
-    <div class="glass-card p-3 mb-4">
-        <p class="mb-0">
-            Route: <span class="route-highlight fs-5">{{ query.origin }}</span> 
-            <i class="bi bi-arrow-right mx-2 text-muted"></i> 
-            <span class="route-highlight fs-5">{{ query.destination }}</span>
-            <span class="mx-3 text-muted">|</span>
-            Volume: <span class="fw-bold text-accent">{{ query.volume }} CBM</span>
-            <span class="mx-3 text-muted">|</span>
-            Service: <span class="badge bg-primary rounded-pill">{{ query.service_type }}</span>
-        </p>
+</div>
+
+<!-- Premium Header -->
+<div class="quote-header-card mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+        <h4 class="mb-1 fw-bold text-body">Quotations Available ({{ results|length }})</h4>
+        <div class="text-secondary small d-flex align-items-center gap-3">
+            <span><i class="bi bi-geo-alt text-primary"></i> <strong class="text-body">{{ query.origin }}</strong></span>
+            <i class="bi bi-arrow-right"></i>
+            <span><i class="bi bi-geo text-danger"></i> <strong class="text-body">{{ query.destination }}</strong></span>
+            <span class="border-start border-secondary ps-3"><i class="bi bi-box-seam"></i> Vol: <strong>{{ query.volume }} CBM</strong></span>
+            <span class="border-start border-secondary ps-3"><i class="bi bi-ship"></i> Service: <strong>{{ query.service_type }}</strong></span>
+            <span class="border-start border-secondary ps-3"><i class="bi bi-calendar-check"></i> Valid Until: <strong>{{ (results[0].rate.validity_end if results else None) or '30 Days' }}</strong></span>
+        </div>
+    </div>
+    
+    <div class="text-end">
+        <div class="d-flex justify-content-end">
+            <button class="view-toggle-btn active" id="btnTableView" onclick="toggleView('table')"><i class="bi bi-list-task"></i> Table View</button>
+            <button class="view-toggle-btn" id="btnCardView" onclick="toggleView('card')"><i class="bi bi-grid"></i> Card View</button>
+        </div>
     </div>
 </div>
 
-<div class="row">
+<div class="mb-4 d-flex justify-content-center">
+    <div class="rounded d-flex align-items-center" id="viewHintText" style="background: var(--glass-bg); color: var(--text-primary); padding: 0.4rem 1rem; box-shadow: 0 0 12px rgba(0,0,0,0.12); font-size: 0.875rem; font-weight: 500; min-width: 700px;">
+        <div style="display: flex; width: 1.75em; height: 1.75em; margin-right: 0.75rem; border: 0.2em solid rgba(165,220,134,0.3); border-radius: 50%; color: #a5dc86; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; font-family: sans-serif;">i</div>
+        <span>Click on a row to expand detailed breakdown</span>
+    </div>
+</div>
+
+{% if not results %}
+<div class="alert alert-warning text-center my-5 py-5 shadow-sm rounded-3">
+    <i class="bi bi-exclamation-triangle display-4 d-block mb-3"></i>
+    <h5 class="fw-bold text-body">No Rates Found</h5>
+    <p class="text-body">We couldn't find any rates matching your exact route. Please try modifying your search.</p>
+</div>
+{% else %}
+
+<!-- ================= TABLE VIEW ================= -->
+<div id="tableViewContainer">
+    <!-- Headers -->
+    <div class="d-none d-md-flex text-muted small fw-bold text-uppercase px-4 mb-2">
+        <div style="width: 35%">Carrier / Routing</div>
+        <div style="width: 20%">Service & Frequency</div>
+        <div style="width: 15%">Transit Time</div>
+        <div style="width: 15%">Validity</div>
+        <div style="width: 15%" class="text-end">Total Price</div>
+    </div>
+
+    {% for res in results %}
+    <div class="mb-4 quote-list-card shadow-sm rounded-3 border" style="background: var(--glass-bg); border-color: var(--border-color) !important; overflow: hidden;">
+        
+        <!-- Master Row -->
+        <div class="d-flex align-items-center px-4 py-3 quote-master-row" onclick="toggleAccordion('breakdown-{{ loop.index }}')" style="cursor: pointer; transition: background 0.2s ease;">
+            <div style="width: 35%" class="d-flex align-items-center">
+                <i class="bi bi-building fs-2 text-primary me-3"></i>
+                <div>
+                    <div class="fw-bold text-body fs-5">{{ res.rate.nvocc_name }}</div>
+                    <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
+                    {% if res.ui_tag %}
+                    <span class="badge bg-primary text-white ms-2" style="font-size: 0.65rem;">{{ res.ui_tag }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="width: 20%">
+                <div class="fw-bold text-body">{{ query.service_type }}</div>
+                <small class="text-muted">{{ res.frequency or 'Weekly' }}</small>
+            </div>
+            
+            <div style="width: 15%">
+                <div class="fw-bold text-primary"><i class="bi bi-clock"></i> {{ res.transit_days }} Days</div>
+            </div>
+            
+            <div style="width: 15%">
+                <div class="text-muted small">Valid thru<br><strong class="text-body">{{ res.rate.validity_end }}</strong></div>
+            </div>
+            
+            <div style="width: 15%" class="text-end">
+                <div class="fs-4 fw-bold text-body">${{ "%.2f"|format(res.total_cost) }}</div>
+                <small class="text-muted">USD</small>
+            </div>
+        </div>
+        
+        <!-- Breakdown Accordion Row -->
+        <div id="breakdown-{{ loop.index }}" class="quote-breakdown-row p-4 border-top" style="display: none; background: var(--bg-gray); border-color: var(--border-color) !important;">
+            
+            <!-- Origin Charges -->
+            <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-box-arrow-in-right"></i> Origin Charges</h6>
+            <table class="detail-table">
+                <thead>
+                    <tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>THC</td><td>Terminal Handling Charge</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.2) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.2 * query.volume) }}</td></tr>
+                    <tr><td>DOC</td><td>Documentation Fee</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
+                </tbody>
+            </table>
+            
+            <!-- Freight Charges -->
+            <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-ship"></i> Freight Charges</h6>
+            <table class="detail-table">
+                <thead>
+                    <tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>OFR</td><td>Ocean Freight Cost</td><td>Base Rate</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.base_rate) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.base_rate * query.volume) }}</td></tr>
+                    <tr><td>BAF</td><td>Bunker Adjustment</td><td>Surcharge</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td></tr>
+                </tbody>
+            </table>
+            
+            <!-- Destination Charges -->
+            <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-box-arrow-right"></i> Destination Charges</h6>
+            <table class="detail-table">
+                <thead>
+                    <tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>DTHC</td><td>Dest. Terminal Handling</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3 * query.volume) }}</td></tr>
+                    <tr><td>ISF</td><td>Security Filing</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
+                </tbody>
+            </table>
+            
+            <!-- Summary Bar -->
+            <div class="summary-bar mt-4">
+                <div>
+                    <span class="d-block small text-muted text-uppercase fw-bold mb-1"><i class="bi bi-calculator"></i> Summary</span>
+                    <span class="text-body" style="font-size: 0.85rem;">Includes all requested Value Added Services</span>
+                </div>
+                <div class="text-end">
+                    <span class="me-3 text-muted" style="font-size: 0.9rem;">Total Price</span>
+                    <span class="fs-4 text-primary fw-bold">USD {{ "%.2f"|format(res.total_cost) }}</span>
+                </div>
+            </div>
+            
+            <!-- Action -->
+            <div class="mt-3 text-end">
+                <form action="{{ url_for('customer.finalize_booking') }}" method="POST">
+                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                    <input type="hidden" name="volume" value="{{ query.volume }}">
+                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                    <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                    <button type="submit" class="btn btn-primary fw-bold px-4 text-white">Proceed to Booking <i class="bi bi-chevron-right"></i></button>
+                </form>
+            </div>
+            
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ================= CARD VIEW ================= -->
+<div id="cardViewContainer" class="card-view-container row">
     {% for res in results %}
     <div class="col-md-4 mb-4">
-        <div class="card h-100 glass-card {% if res.ui_tag == 'Recommended' %}highlight-recommended{% elif res.ui_tag == 'Cheapest' %}highlight-cheapest{% elif res.ui_tag == 'Fastest' %}highlight-fastest{% endif %}">
+        <div class="card h-100 glass-card quote-card" onclick="openModal('modal-{{ loop.index }}')">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="card-title fw-bold">{{ res.rate.nvocc_name }}</h5>
+                    <div>
+                        <h5 class="card-title fw-bold text-body mb-0">{{ res.rate.nvocc_name }}</h5>
+                        <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
+                    </div>
                     {% if res.ui_tag %}
-                        <span class="badge badge-{{ res.ui_tag|lower }} rounded-pill">{{ res.ui_tag }}</span>
+                        <span class="badge bg-primary rounded-pill">{{ res.ui_tag }}</span>
                     {% endif %}
                 </div>
                 
-                <div class="display-6 mb-1">${{ "%.2f"|format(res.total_cost) }}</div>
+                <div class="display-6 mb-1 text-primary fw-bold">${{ "%.2f"|format(res.total_cost) }}</div>
                 <div class="text-muted small mb-3">
                     (${{ "%.2f"|format(res.base_rate) }} Base + ${{ "%.2f"|format(res.surcharges) }} Surcharges)
                 </div>
                 
                 <hr>
 
-                <div class="mb-3">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <small class="text-uppercase text-muted d-block" style="font-size: 0.7rem;">Transit Time</small>
-                            <span class="fw-bold"><i class="bi bi-clock"></i> {{ res.transit_days }} Days</span>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-uppercase text-muted d-block" style="font-size: 0.7rem;">Frequency</small>
-                            <span class="fw-bold"><i class="bi bi-calendar-event"></i> {{ res.frequency or 'Weekly' }}</span>
-                        </div>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Transit Time</span>
+                        <span class="fw-bold text-body">{{ res.transit_days }} Days</span>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <small class="text-uppercase text-muted d-block" style="font-size: 0.7rem;">Carrier/Routing</small>
-                            <span class="text-truncate d-block"><i class="bi bi-ship-wheel"></i> {{ res.carrier or 'Standard' }}</span>
-                        </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Frequency</span>
+                        <span class="fw-bold text-body">{{ res.frequency or 'Weekly' }}</span>
                     </div>
-                    {% if res.remarks %}
-                    <div class="mt-2 p-2 bg-white-5 rounded small border border-white-10">
-                         <i class="bi bi-info-circle"></i> {{ res.remarks }}
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Valid Until</span>
+                        <span class="fw-bold text-body">{{ res.rate.validity_end }}</span>
                     </div>
-                    {% endif %}
                 </div>
-
-                {% if current_user.role == 'customer' %}
-                <form action="{{ url_for('customer.finalize_booking') }}" method="POST">
-                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                    <input type="hidden" name="volume" value="{{ query.volume }}">
-                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                    <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                    <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm py-2">Book This Shipment</button>
-                </form>
-                {% else %}
-                <div class="alert alert-info small py-2 mb-0 text-center">
-                    <i class="bi bi-info-circle"></i> View only mode
+                
+                <div class="text-center">
+                    <span class="text-primary small fw-bold"><i class="bi bi-arrows-angle-expand"></i> Click card for detailed breakdown</span>
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
-    {% else %}
-    <div class="col-12 text-center my-5">
-        <div class="alert alert-warning">No rates found for this route. Please try another combination.</div>
+    
+    <!-- Modal for Card View -->
+    <div class="modal fade" id="modal-{{ loop.index }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow-lg border-0" style="background: var(--glass-bg); border-radius: 16px;">
+                <div class="modal-header border-bottom-0 rounded-top-3" style="background: rgba(0,0,0,0.03);">
+                    <div>
+                        <h5 class="modal-title fw-bold text-body mb-0">{{ res.rate.nvocc_name }} Detailed Quote</h5>
+                        <small class="text-muted">{{ query.origin }} to {{ query.destination }}</small>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    
+                    <!-- Quote Metadata inside Modal -->
+                    <div class="row g-3 mb-4 bg-gray p-3 rounded-3" style="background: var(--bg-gray);">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Route Particulars</small>
+                            <span class="fw-bold text-body d-block">{{ query.origin }}</span>
+                            <span class="fw-bold text-body d-block">{{ query.destination }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Cargo & Service</small>
+                            <span class="fw-bold text-body d-block">Vol: {{ query.volume }} CBM</span>
+                            <span class="fw-bold text-body d-block">Service: {{ query.service_type }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Transit & Validity</small>
+                            <span class="fw-bold text-primary d-block">{{ res.transit_days }} Days ({{ res.frequency or 'Weekly' }})</span>
+                            <span class="fw-bold text-body d-block">Valid: {{ res.rate.validity_end }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Origin Charges -->
+                    <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-box-arrow-in-right"></i> Origin Charges</h6>
+                    <table class="detail-table">
+                        <thead><tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr></thead>
+                        <tbody>
+                            <tr><td>THC</td><td>Terminal Handling Charge</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.2) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.2 * query.volume) }}</td></tr>
+                            <tr><td>DOC</td><td>Documentation Fee</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Freight Charges -->
+                    <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-ship"></i> Freight Charges</h6>
+                    <table class="detail-table">
+                        <thead><tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr></thead>
+                        <tbody>
+                            <tr><td>OFR</td><td>Ocean Freight Cost</td><td>Base Rate</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.base_rate) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.base_rate * query.volume) }}</td></tr>
+                            <tr><td>BAF</td><td>Bunker Adjustment</td><td>Surcharge</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td></tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Destination Charges -->
+                    <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-box-arrow-right"></i> Destination Charges</h6>
+                    <table class="detail-table">
+                        <thead><tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr></thead>
+                        <tbody>
+                            <tr><td>DTHC</td><td>Dest. Terminal Handling</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3 * query.volume) }}</td></tr>
+                            <tr><td>ISF</td><td>Security Filing</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="summary-bar mt-4">
+                        <div>
+                            <span class="d-block small text-muted text-uppercase fw-bold mb-1"><i class="bi bi-calculator"></i> Summary</span>
+                            <span class="text-body" style="font-size: 0.85rem;">Includes all requested Value Added Services</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="me-3 text-muted" style="font-size: 0.9rem;">Total Price</span>
+                            <span class="fs-4 text-primary fw-bold">USD {{ "%.2f"|format(res.total_cost) }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 rounded-bottom-3" style="background: rgba(0,0,0,0.03);">
+                    <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="w-100 m-0">
+                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                        <input type="hidden" name="volume" value="{{ query.volume }}">
+                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                        <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 text-white">Proceed to Booking <i class="bi bi-chevron-right"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
     {% endfor %}
 </div>
+
+{% endif %}
+
+<script>
+    function toggleView(view) {
+        // Update Buttons
+        document.getElementById('btnTableView').classList.toggle('active', view === 'table');
+        document.getElementById('btnCardView').classList.toggle('active', view === 'card');
+        
+        // Update Containers
+        document.getElementById('tableViewContainer').style.display = (view === 'table') ? 'block' : 'none';
+        document.getElementById('cardViewContainer').style.display = (view === 'card') ? 'flex' : 'none';
+        
+        // Update Hint Text
+        const hintSpan = document.querySelector('#viewHintText span');
+        hintSpan.innerHTML = (view === 'table') 
+            ? 'Click on a row to expand detailed breakdown' 
+            : 'Click on a card for detailed breakdown';
+    }
+    
+    function toggleAccordion(rowId) {
+        const row = document.getElementById(rowId);
+        // Optional: Close others
+        document.querySelectorAll('.quote-breakdown-row').forEach(r => {
+            if(r.id !== rowId) {
+                r.style.display = 'none';
+                r.classList.remove('active');
+            }
+        });
+        
+        if (row.classList.contains('active')) {
+            row.style.display = 'none';
+            row.classList.remove('active');
+        } else {
+            row.style.display = 'block';
+            row.classList.add('active');
+        }
+    }
+    
+    function openModal(modalId) {
+        const modalElement = document.getElementById(modalId);
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+</script>
+
 {% endblock %}

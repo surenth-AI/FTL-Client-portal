@@ -389,6 +389,9 @@ def create_registration():
     missing  = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({'error': f'Missing fields: {missing}'}), 400
+        
+    if len(data.get('countryCode', '')) != 2:
+        return jsonify({'error': 'countryCode must be exactly 2 letters (e.g. BE, NL)'}), 400
 
     reg_id  = str(uuid.uuid4())
     now     = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
@@ -401,12 +404,12 @@ def create_registration():
         cursor.execute(
             """
             INSERT INTO registration
-                (registration_id, email, full_name, phone, company_name,
+                (registration_id, email, full_name, phone, company_name, city,
                  country_code, vat, created_on, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
             """,
             reg_id, data['email'], data['fullName'], phone,
-            data['companyName'], data['countryCode'], vat, now
+            data['companyName'], data.get('city'), data['countryCode'], vat, now
         )
         conn.commit()
         cursor.close()
@@ -443,7 +446,7 @@ def list_registrations():
 
         cursor.execute(
             f"""
-            SELECT id, registration_id, email, full_name, company_name, status, created_on
+            SELECT id, registration_id, email, full_name, company_name, city, status, created_on
             FROM registration {where_sql}
             ORDER BY created_on DESC
             OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
@@ -456,8 +459,9 @@ def list_registrations():
             'email':          r[2],
             'fullName':       r[3],
             'companyName':    r[4],
-            'status':         r[5],
-            'createdOn':      _fmt_date(r[6]),
+            'city':           r[5],
+            'status':         r[6],
+            'createdOn':      _fmt_date(r[7]),
         } for r in cursor.fetchall()]
         cursor.close()
         conn.close()
@@ -473,7 +477,7 @@ def get_registration(reg_id):
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT id, registration_id, email, full_name, phone, company_name,
+            SELECT id, registration_id, email, full_name, phone, company_name, city,
                    country_code, vat, status, created_on, reject_reason, info_message
             FROM registration WHERE id = ?
             """,
@@ -491,12 +495,13 @@ def get_registration(reg_id):
             'fullName':       row[3],
             'phone':          row[4],
             'companyName':    row[5],
-            'countryCode':    row[6],
-            'vat':            row[7],
-            'status':         row[8],
-            'createdOn':      _fmt_date(row[9]),
-            'rejectReason':   row[10],
-            'infoMessage':    row[11],
+            'city':           row[6],
+            'countryCode':    row[7],
+            'vat':            row[8],
+            'status':         row[9],
+            'createdOn':      _fmt_date(row[10]),
+            'rejectReason':   row[11],
+            'infoMessage':    row[12],
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -507,7 +512,7 @@ def approve_registration(reg_id):
     try:
         conn   = _get_conn()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, status, company_name, vat, country_code FROM registration WHERE id = ?", reg_id)
+        cursor.execute("SELECT id, status, company_name, city, vat, country_code FROM registration WHERE id = ?", reg_id)
         row = cursor.fetchone()
         if not row:
             conn.close()
@@ -516,8 +521,8 @@ def approve_registration(reg_id):
             conn.close()
             return jsonify({'error': 'Registration is not pending'}), 400
 
-        # Generate a unique ftl_code based on the country code
-        cc = (row[4] or 'XX').upper()
+        # row[5] is country_code, row[4] is vat, row[2] is company_name, row[3] is city
+        cc = (row[5] or 'XX').upper()
         ftl_code = None
         for i in range(1, 1000):
             candidate = f"FTL-{cc}-{i:03d}"
@@ -530,8 +535,8 @@ def approve_registration(reg_id):
             ftl_code = f"FTL-{cc}-{random.randint(1000, 9999)}"
 
         cursor.execute(
-            "INSERT INTO company (name, vat_number, ftl_code, status) OUTPUT INSERTED.id VALUES (?, ?, ?, 'active')",
-            row[2], row[3] or '', ftl_code
+            "INSERT INTO company (name, city, country, vat_number, ftl_code, status) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 'active')",
+            row[2], row[3] or '', row[5] or '', row[4] or '', ftl_code
         )
         company_id = cursor.fetchone()[0]
         cursor.execute("UPDATE registration SET status = 'approved' WHERE id = ?", reg_id)
