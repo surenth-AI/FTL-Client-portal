@@ -166,11 +166,54 @@ def rates():
             'place_of_delivery': request.form.get('place_of_delivery')
         }
         return redirect(url_for('customer.rate_results'))
-    origins = db.session.query(Rate.origin).distinct().all()
-    destinations = db.session.query(Rate.destination).distinct().all()
+    # Fetch origins and destinations from Realnexus API
+    origins = []
+    destinations = []
+    try:
+        import requests
+        headers = {'accept': '*/*', 'x-api-key': '1'}
+        # Fetch from TransportLanes as requested
+        tl_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/TransportLanes', headers=headers, timeout=5)
+        if tl_resp.status_code == 200:
+            lanes = tl_resp.json()
+            for lane in lanes:
+                # Handle Port schema if it returns ports
+                if 'code' in lane and 'name' in lane:
+                    val = f"{lane['name']} ({lane['code']})" if lane['code'] else lane['name']
+                    if val:
+                        origins.append(val)
+                        destinations.append(val)
+                # Handle lane schema
+                else:
+                    if lane.get('fromUNLocode'): origins.append(lane.get('fromUNLocode'))
+                    if lane.get('toUNLocode'): destinations.append(lane.get('toUNLocode'))
+            
+            # De-duplicate
+            origins = list(set(origins))
+            destinations = list(set(destinations))
+            
+            # If TransportLanes didn't give us good data, fallback to OriginPorts / DestinationPorts
+            if not origins:
+                op_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/OriginPorts', headers=headers, timeout=5)
+                if op_resp.status_code == 200:
+                    for p in op_resp.json():
+                        if p.get('isActive') and p.get('name'):
+                            origins.append(f"{p['name']} ({p.get('code', '')})")
+            if not destinations:
+                dp_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/DestinationPorts', headers=headers, timeout=5)
+                if dp_resp.status_code == 200:
+                    for p in dp_resp.json():
+                        if p.get('isActive') and p.get('name'):
+                            destinations.append(f"{p['name']} ({p.get('code', '')})")
+    except Exception as e:
+        print("Error fetching ports from API:", e)
+        # Fallback to local DB if API fails
+        origins = [o[0] for o in db.session.query(Rate.origin).distinct().all() if o[0]]
+        destinations = [d[0] for d in db.session.query(Rate.destination).distinct().all() if d[0]]
+
     return render_template('customer/rates.html',
-                         origins=[o[0] for o in origins if o],
-                         destinations=[d[0] for d in destinations if d])
+                         origins=origins,
+                         destinations=destinations)
 
 
 @customer.route('/new-booking', methods=['GET', 'POST'])
@@ -239,13 +282,48 @@ def new_booking():
         
         return redirect(url_for('customer.rate_results'))
         
-    # Get unique origins and destinations for the search form
-    origins = db.session.query(Rate.origin).distinct().all()
-    destinations = db.session.query(Rate.destination).distinct().all()
+    # Fetch origins and destinations from Realnexus API
+    origins = []
+    destinations = []
+    try:
+        import requests
+        headers = {'accept': '*/*', 'x-api-key': '1'}
+        tl_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/TransportLanes', headers=headers, timeout=5)
+        if tl_resp.status_code == 200:
+            lanes = tl_resp.json()
+            for lane in lanes:
+                if 'code' in lane and 'name' in lane:
+                    val = f"{lane['name']} ({lane['code']})" if lane['code'] else lane['name']
+                    if val:
+                        origins.append(val)
+                        destinations.append(val)
+                else:
+                    if lane.get('fromUNLocode'): origins.append(lane.get('fromUNLocode'))
+                    if lane.get('toUNLocode'): destinations.append(lane.get('toUNLocode'))
+            
+            origins = list(set(origins))
+            destinations = list(set(destinations))
+            
+            if not origins:
+                op_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/OriginPorts', headers=headers, timeout=5)
+                if op_resp.status_code == 200:
+                    for p in op_resp.json():
+                        if p.get('isActive') and p.get('name'):
+                            origins.append(f"{p['name']} ({p.get('code', '')})")
+            if not destinations:
+                dp_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/DestinationPorts', headers=headers, timeout=5)
+                if dp_resp.status_code == 200:
+                    for p in dp_resp.json():
+                        if p.get('isActive') and p.get('name'):
+                            destinations.append(f"{p['name']} ({p.get('code', '')})")
+    except Exception as e:
+        print("Error fetching ports from API:", e)
+        origins = [o[0] for o in db.session.query(Rate.origin).distinct().all() if o[0]]
+        destinations = [d[0] for d in db.session.query(Rate.destination).distinct().all() if d[0]]
     
     return render_template('customer/new_booking.html', 
-                         origins=[o[0] for o in origins], 
-                         destinations=[d[0] for d in destinations],
+                         origins=origins, 
+                         destinations=destinations,
                          query=session.get('search_query', {}))
 
 @customer.route('/rate-results')
