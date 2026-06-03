@@ -140,6 +140,27 @@ def register_user():
         db.session.add(user)
         db.session.commit()
         
+        # Post to realnexus system
+        import requests
+        import uuid
+        from datetime import datetime, timezone
+        try:
+            rn_data = {
+                "registrationId": str(uuid.uuid4()),
+                "email": form.email.data,
+                "fullName": f"{form.first_name.data} {form.last_name.data}",
+                "phone": form.mobile.data or "",
+                "companyName": company.name if company else form.company_name.data,
+                "countryCode": form.country.data,
+                "vat": "",
+                "createdOn": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+            }
+            requests.post('http://realnexus.comit.cloud:5000/api/Registrations', 
+                          headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
+                          json=rn_data, timeout=10)
+        except Exception as e:
+            print(f"Error posting to Realnexus: {e}")
+        
         flash('Join request submitted! Awaiting Operations approval.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('auth/register_user.html', form=form)
@@ -211,6 +232,27 @@ def login():
         )
         db.session.add(user)
         db.session.commit()
+        
+        # Post to realnexus system
+        import requests
+        import uuid
+        from datetime import datetime, timezone
+        try:
+            rn_data = {
+                "registrationId": str(uuid.uuid4()),
+                "email": user_form.email.data,
+                "fullName": f"{user_form.first_name.data} {user_form.last_name.data}",
+                "phone": user_form.mobile.data or "",
+                "companyName": company.name if company else user_form.company_name.data,
+                "countryCode": user_form.country.data,
+                "vat": "",
+                "createdOn": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+            }
+            requests.post('http://realnexus.comit.cloud:5000/api/Registrations', 
+                          headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
+                          json=rn_data, timeout=10)
+        except Exception as e:
+            print(f"Error posting to Realnexus: {e}")
         
         company_display = company.name if company else f"{user_form.company_name.data or 'N/A'} ({user_form.city.data or 'N/A'}, {user_form.country.data or 'N/A'})"
         SystemMailer.send_approval_request(user.name, user.email, company_display)
