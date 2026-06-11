@@ -1,35 +1,279 @@
 {% extends "base.html" %}
 {% block title %}Live Tracking{% endblock %}
+
 {% block content %}
-<div class="row mb-4 align-items-center">
-    <div class="col-md-8">
-        <h2 class="text-white fw-bold mb-0">Freight Tracker Matrix</h2>
-        <p class="text-muted mb-0">Initiate deep terminal reconnaissance.</p>
+<style>
+    .tracking-hero {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
+        border-radius: 20px;
+        padding: 4rem 2rem;
+        text-align: center;
+        border: 1px solid var(--glass-border, rgba(0,0,0,0.05));
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    html[data-color-scheme="dark"] {
+        --bg-white: #1e293b;
+        --text-primary: #f8fafc;
+        --text-muted: #94a3b8;
+        --glass-border: rgba(255,255,255,0.1);
+        --bg-gray: rgba(255,255,255,0.05);
+    }
+    
+    html[data-color-scheme="dark"] .tracking-hero {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(30, 64, 175, 0.1) 100%);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .tracking-status-primary {
+        background-color: rgba(37, 99, 235, 0.1) !important;
+        color: #2563eb !important;
+        border: 1px solid rgba(37, 99, 235, 0.3) !important;
+    }
+    .tracking-status-success {
+        background-color: rgba(16, 185, 129, 0.1) !important;
+        color: #10b981 !important;
+        border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    }
+
+    html[data-color-scheme='dark'] .tracking-status-primary {
+        background-color: rgba(59,130,246,0.15) !important;
+        color: #93C5FD !important;
+        border-color: rgba(59,130,246,0.3) !important;
+    }
+    html[data-color-scheme='dark'] .tracking-status-success {
+        background-color: rgba(34,197,94,0.15) !important;
+        color: #86EFAC !important;
+        border-color: rgba(34,197,94,0.3) !important;
+    }
+
+    .tracking-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 60%);
+        animation: rotate 20s linear infinite;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    @keyframes rotate {
+        100% { transform: rotate(360deg); }
+    }
+
+    .tracking-icon-wrapper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--primary-color, #2563eb);
+        border-radius: 50%;
+        margin-bottom: 1.5rem;
+        position: relative;
+        z-index: 1;
+        box-shadow: 0 8px 32px rgba(37, 99, 235, 0.15);
+    }
+    
+    .tracking-icon-wrapper i {
+        font-size: 2.5rem;
+    }
+
+    .tracking-search-box {
+        max-width: 600px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+    }
+
+    .search-input-group {
+        display: flex;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--glass-border, rgba(0,0,0,0.1));
+        background: var(--bg-white, #fff);
+        transition: all 0.3s ease;
+    }
+    
+    .search-input-group:focus-within {
+        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.15);
+        border-color: var(--primary-color, #2563eb);
+    }
+
+    .search-input-group input {
+        border: none;
+        padding: 1.25rem 1.5rem;
+        font-size: 1.1rem;
+        background: transparent;
+        color: var(--text-primary, #1e293b);
+        flex-grow: 1;
+    }
+    
+    .search-input-group input:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .search-input-group button {
+        border: none;
+        padding: 0 2rem;
+        font-weight: 600;
+        font-size: 1.05rem;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .loader-overlay {
+        display: none;
+        margin-top: 1.5rem;
+        font-weight: 500;
+        color: var(--text-muted, #64748b);
+        z-index: 1;
+        position: relative;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .feature-card {
+        padding: 1.5rem;
+        border-radius: 16px;
+        background: var(--bg-white, #fff);
+        border: 1px solid var(--glass-border, rgba(0,0,0,0.05));
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .feature-icon {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--primary-color, #2563eb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+</style>
+
+<div class="intel-fade-in">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--text-primary);">Live Shipment Tracking</h2>
+            <p class="mb-0" style="color: var(--text-muted);">Monitor your cargo's journey in real-time with precise location updates.</p>
+        </div>
+    </div>
+
+    <div class="tracking-hero">
+        <div class="tracking-icon-wrapper">
+            <i class="bi bi-radar"></i>
+        </div>
+        <h3 class="fw-bold mb-3" style="color: var(--text-primary);">Track Your Cargo</h3>
+        <p class="mb-4" style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">Enter your Container Number, Bill of Lading, or Booking Reference to view the current status and location.</p>
+        
+        <form method="POST" action="{{ url_for('tracking.index') }}" id="trackingForm" class="tracking-search-box">
+            <div class="search-input-group">
+                <input type="text" name="container_no" placeholder="e.g. CRLU1206147" required autocomplete="off">
+                <button class="btn btn-primary" type="submit" id="trackBtn">
+                    <span>Track</span>
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+            <div id="loader" class="loader-overlay">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                <span>Retrieving live tracking data...</span>
+            </div>
+        </form>
+    </div>
+
+    <div class="recent-trackings-section mt-5">
+        <h5 class="fw-bold mb-4" style="color: var(--text-primary);">Recent Trackings</h5>
+        <div class="card glass-card" style="border-radius: 16px; overflow: hidden; border: 1px solid var(--glass-border);">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap">
+                    <thead style="background: rgba(0,0,0,0.02);">
+                        <tr>
+                            <th class="ps-4 text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.75rem; text-transform: uppercase;">Tracking Number</th>
+                            <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.75rem; text-transform: uppercase;">Route</th>
+                            <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.75rem; text-transform: uppercase;">Status</th>
+                            <th class="text-muted fw-bold border-bottom-0 py-3" style="font-size: 0.75rem; text-transform: uppercase;">Last Update</th>
+                            <th class="pe-4 border-bottom-0 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-bottom" style="cursor: pointer;" onclick="document.querySelector('input[name=container_no]').value='CRLU1206147'; document.getElementById('trackingForm').submit();">
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded p-2" style="font-size: 0.8rem;"><i class="bi bi-box-seam"></i></div>
+                                    <span class="fw-bold" style="color: var(--text-primary); font-family: monospace;">CRLU1206147</span>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div class="d-flex align-items-center gap-2" style="color: var(--text-muted); font-size: 0.85rem;">
+                                    <span>Shanghai</span>
+                                    <i class="bi bi-arrow-right"></i>
+                                    <span>Rotterdam</span>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <span class="badge tracking-status-primary px-3 py-1 rounded-pill" style="font-size: 0.75rem;">In Transit</span>
+                            </td>
+                            <td class="py-3" style="color: var(--text-muted); font-size: 0.85rem;">Today, 10:45 AM</td>
+                            <td class="pe-4 py-3 text-end">
+                                <i class="bi bi-chevron-right text-muted"></i>
+                            </td>
+                        </tr>
+                        <tr class="border-bottom" style="cursor: pointer;" onclick="document.querySelector('input[name=container_no]').value='MEDU8934120'; document.getElementById('trackingForm').submit();">
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-success bg-opacity-10 text-success rounded p-2" style="font-size: 0.8rem;"><i class="bi bi-check-circle"></i></div>
+                                    <span class="fw-bold" style="color: var(--text-primary); font-family: monospace;">MEDU8934120</span>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div class="d-flex align-items-center gap-2" style="color: var(--text-muted); font-size: 0.85rem;">
+                                    <span>Singapore</span>
+                                    <i class="bi bi-arrow-right"></i>
+                                    <span>Los Angeles</span>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <span class="badge tracking-status-success px-3 py-1 rounded-pill" style="font-size: 0.75rem;">Delivered</span>
+                            </td>
+                            <td class="py-3" style="color: var(--text-muted); font-size: 0.85rem;">Yesterday, 14:20 PM</td>
+                            <td class="pe-4 py-3 text-end">
+                                <i class="bi bi-chevron-right text-muted"></i>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="card glass-card p-5 text-center" style="max-width: 800px; margin: 0 auto;">
-    <div class="mb-4">
-        <div class="d-inline-flex align-items-center justify-content-center bg-accent-light p-4 rounded-circle mb-3">
-            <i class="bi bi-geo-alt fs-1 text-accent"></i>
-        </div>
-        <h4 class="text-white fw-bold">Live Target Locator</h4>
-    </div>
-
-    <form method="POST" action="{{ url_for('tracking.index') }}" id="trackingForm">
-        <div class="input-group input-group-lg mb-4" style="border: 1px solid rgba(255,255,255,0.1); border-radius: 0.5rem; overflow: hidden;">
-            <input type="text" name="container_no" class="form-control bg-dark text-white border-0" placeholder="Enter Container Number (e.g. CRLU1206147)" required>
-            <button class="btn btn-primary px-4 fw-bold" type="submit" id="trackBtn">Locate</button>
-        </div>
-        <div id="loader" style="display:none;" class="mt-3">
-            <div class="spinner-border text-primary me-2" role="status"></div>
-            <span class="text-white fw-bold">Establishing Terminal Bridge...</span>
-        </div>
-    </form>
-</div>
 <script>
     document.getElementById('trackingForm').onsubmit = function() {
-        document.getElementById('trackBtn').disabled = true;
+        const btn = document.getElementById('trackBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
         document.getElementById('loader').style.display = 'block';
     }
 </script>

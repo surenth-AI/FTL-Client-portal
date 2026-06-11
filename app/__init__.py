@@ -144,6 +144,7 @@ def create_app(config_class=Config):
             app.logger.warning(f"Skipping second auto-table creation: {e}")
         try:
             seed_admin()
+            seed_lookups()
         except Exception as e:
             print(f"Seeding skipped or failed: {e}")
     from flask import redirect, url_for
@@ -220,6 +221,87 @@ def seed_admin():
         db.session.add(demo_customer)
         db.session.commit()
         print("Demo customer created: customer@demo.com / Customer@123456!")
+
+
+def seed_lookups():
+    from app.models.models import Lookup
+    
+    # Check if empty
+    try:
+        if Lookup.query.first():
+            return
+    except Exception as e:
+        print("Lookup table check failed, will try after tables created:", e)
+        return
+        
+    initial_lookups = [
+        # Currency
+        ('currency', 'USD', 'US Dollar', None),
+        ('currency', 'EUR', 'Euro', None),
+        ('currency', 'GBP', 'British Pound', None),
+        ('currency', 'AED', 'UAE Dirham', None),
+        ('currency', 'INR', 'Indian Rupee', None),
+        ('currency', 'CNY', 'Chinese Yuan', None),
+        ('currency', 'SGD', 'Singapore Dollar', None),
+        ('currency', 'JPY', 'Japanese Yen', None),
+        
+        # Weight UOM
+        ('weight_uom', 'KG', 'Kilograms', None),
+        ('weight_uom', 'LB', 'Pounds', None),
+        ('weight_uom', 'MT', 'Metric Ton', None),
+        ('weight_uom', 'TON', 'Short Ton', None),
+        
+        # Volume UOM
+        ('volume_uom', 'CBM', 'Cubic Metre', None),
+        ('volume_uom', 'CFT', 'Cubic Feet', None),
+        ('volume_uom', 'LTR', 'Litres', None),
+        
+        # Freight Terms
+        ('freight_terms', 'prepaid', 'Prepaid', None),
+        ('freight_terms', 'collect', 'Collect', None),
+        ('freight_terms', 'third_party', 'Third Party', None),
+        
+        # Incoterms
+        ('incoterm', 'FCA', 'FCA - Free Carrier', None),
+        ('incoterm', 'FOB', 'FOB - Free On Board', None),
+        ('incoterm', 'CFR', 'CFR - Cost and Freight', None),
+        ('incoterm', 'CIF', 'CIF - Cost, Insurance & Freight', None),
+        ('incoterm', 'DAP', 'DAP - Delivered At Place', None),
+        ('incoterm', 'DDP', 'DDP - Delivered Duty Paid', None),
+        
+        # Package Types
+        ('package_type', 'pallets', 'Pallets', None),
+        ('package_type', 'boxes', 'Boxes/Crates', None),
+        ('package_type', 'drums', 'Drums', None),
+        ('package_type', 'bags', 'Bags', None),
+        ('package_type', 'other', 'Other', None),
+        
+        # Container Types
+        ('container_type', '20ST', '20\' Standard', None),
+        ('container_type', '40ST', '40\' Standard', None),
+        ('container_type', '40HC', '40\' High Cube', None),
+        ('container_type', '20RF', '20\' Reefer', None),
+        ('container_type', '40RF', '40\' Reefer', None),
+        
+        # Carriers
+        ('carrier', 'MAERSK', 'MAERSK', None),
+        ('carrier', 'MSC', 'MSC', None),
+        ('carrier', 'CMA_CGM', 'CMA CGM', None),
+        ('carrier', 'COSCO', 'COSCO', None),
+        ('carrier', 'ONE', 'Ocean Network Express', None),
+        ('carrier', 'HAPAG', 'Hapag-Lloyd', None),
+        
+        # NVOCCs
+        ('nvocc', 'OceanLink', 'OceanLink Express', None),
+        ('nvocc', 'GlobalFreight', 'GlobalFreight Line', None),
+        ('nvocc', 'FastTransit', 'FastTransit Cargo', None),
+    ]
+    
+    for category, code, name, extra_info in initial_lookups:
+        db.session.add(Lookup(category=category, code=code, name=name, extra_info=extra_info))
+        
+    db.session.commit()
+    print("Database lookups successfully seeded.")
 
 
 # ====================================================================

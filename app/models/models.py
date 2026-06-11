@@ -415,3 +415,15 @@ class Registration(db.Model):
     reject_reason = db.Column(db.String(500), nullable=True)
     info_message = db.Column(db.Text, nullable=True)
 
+
+class Lookup(db.Model):
+    __tablename__ = 'lookup'
+    __table_args__ = (db.UniqueConstraint('category', 'code', name='uix_category_code'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(50), nullable=False)  # 'port', 'incoterm', 'package_type', 'container_type', 'carrier', 'nvocc'
+    code = db.Column(db.String(50), nullable=False)      # e.g., 'CNSHA', 'FOB', 'pallets'
+    name = db.Column(db.String(255), nullable=False)
+    extra_info = db.Column(db.String(255), nullable=True) # e.g., Country 'CN' or Type 'port'/'door'
+
+

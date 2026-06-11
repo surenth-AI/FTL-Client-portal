@@ -138,6 +138,39 @@ def edit_user(user_id):
     return render_template('admin/edit_user.html', user=user)
 
 
+@admin.route('/user/create', methods=['GET', 'POST'])
+@admin_required
+@super_admin_required
+def create_user():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        role = request.form.get('role')
+        department = request.form.get('department') if role == 'operation_executive' else None
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Email address already registered.', 'danger')
+            return render_template('admin/create_user.html')
+
+        hashed_password = generate_password_hash(password)
+        new_user = User(
+            name=name,
+            email=email,
+            password_hash=hashed_password,
+            role=role,
+            department=department,
+            status='active'
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'User {name} created successfully.', 'success')
+        return redirect(url_for('admin.manage_users'))
+    return render_template('admin/create_user.html')
+
+
+
 @admin.route('/shipment-intelligence')
 @admin_required
 def shipment_intelligence():
@@ -338,4 +371,58 @@ def settings():
         return redirect(url_for('admin.settings'))
         
     return render_template('admin/settings.html', settings=sys_settings)
+
+
+@admin.route('/master-data', methods=['GET'])
+@admin_required
+def master_data():
+    from app.models.models import Lookup
+    category = request.args.get('category', 'currency')
+    items = Lookup.query.filter_by(category=category).order_by(Lookup.name).all()
+    return render_template('admin/master_data.html', category=category, items=items)
+
+@admin.route('/master-data/create', methods=['POST'])
+@admin_required
+def create_lookup():
+    from app.models.models import Lookup
+    category = request.form.get('category')
+    code = request.form.get('code')
+    name = request.form.get('name')
+    extra_info = request.form.get('extra_info')
+    
+    existing = Lookup.query.filter_by(category=category, code=code).first()
+    if existing:
+        flash(f"An item with code '{code}' already exists in category '{category}'.", "danger")
+        return redirect(url_for('admin.master_data', category=category))
+        
+    new_item = Lookup(category=category, code=code, name=name, extra_info=extra_info)
+    db.session.add(new_item)
+    db.session.commit()
+    flash("Lookup item added successfully.", "success")
+    return redirect(url_for('admin.master_data', category=category))
+
+@admin.route('/master-data/update/<int:item_id>', methods=['POST'])
+@admin_required
+def update_lookup(item_id):
+    from app.models.models import Lookup
+    item = Lookup.query.get_or_404(item_id)
+    item.code = request.form.get('code')
+    item.name = request.form.get('name')
+    item.extra_info = request.form.get('extra_info')
+    
+    db.session.commit()
+    flash("Lookup item updated successfully.", "success")
+    return redirect(url_for('admin.master_data', category=item.category))
+
+@admin.route('/master-data/delete/<int:item_id>', methods=['POST'])
+@admin_required
+def delete_lookup(item_id):
+    from app.models.models import Lookup
+    item = Lookup.query.get_or_404(item_id)
+    category = item.category
+    db.session.delete(item)
+    db.session.commit()
+    flash("Lookup item deleted successfully.", "success")
+    return redirect(url_for('admin.master_data', category=category))
+
 

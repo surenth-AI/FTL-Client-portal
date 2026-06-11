@@ -168,6 +168,15 @@
             border-radius: 6px;
             padding: 0.75rem 1rem;
         }
+        
+        html[data-color-scheme='dark'] .service-unavailable-banner {
+            background: rgba(234, 179, 8, 0.15);
+            border-color: rgba(234, 179, 8, 0.3);
+        }
+        
+        html[data-color-scheme='dark'] .service-unavailable-banner .banner-text {
+            color: #fde047 !important;
+        }
 
         .banner-content {
             display: flex;
@@ -1133,6 +1142,36 @@
             color: var(--text-primary);
         }
 
+        /* Input with UOM select combo */
+        .input-uom-group {
+            display: flex;
+            gap: 0;
+        }
+
+        .input-uom-group .form-input {
+            border-radius: 6px 0 0 6px;
+            border-right: none;
+            flex: 1;
+        }
+
+        .input-uom-group .uom-select {
+            border-radius: 0 6px 6px 0;
+            border: 1px solid var(--border-color);
+            background: var(--bg-gray);
+            padding: 0.5rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            min-width: 65px;
+            font-family: inherit;
+        }
+
+        .input-uom-group .uom-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
         /* Icons */
         .icon {
             width: 20px;
@@ -1422,7 +1461,7 @@
                                         <label class="form-label" id="originLocationLabel">City <span
                                                 class="required">*</span></label>
                                         <div class="searchable-select">
-                                            <input type="text" class="form-input searchable-input" id="originLocation"
+                                            <input type="text" class="form-input searchable-input" id="originLocation" name="origin"
                                                 placeholder="Search by city name or zip code"
                                                 onfocus="showDropdown('origin')" oninput="filterLocations('origin')"
                                                 autocomplete="off">
@@ -1463,7 +1502,7 @@
                                         <label class="form-label" id="destLocationLabel">City <span
                                                 class="required">*</span></label>
                                         <div class="searchable-select">
-                                            <input type="text" class="form-input searchable-input" id="destLocation"
+                                            <input type="text" class="form-input searchable-input" id="destLocation" name="destination"
                                                 placeholder="Search by city name or zip code"
                                                 onfocus="showDropdown('dest')" oninput="filterLocations('dest')"
                                                 autocomplete="off">
@@ -1472,18 +1511,8 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Recent Searches -->
-                        </div>
-                        <div class="recent-searches" id="recentSearches">
-                            <div class="recent-searches-header">
-                                <span class="recent-label">My recent searches</span>
-                                <button class="btn-text-small" onclick="clearRecentSearches()">Clear all</button>
                             </div>
-                            <div class="recent-searches-list" id="recentSearchesList">
-                                <!-- Recent searches will be populated here -->
-                            </div>
-                        </div>
+                            <!-- Recent Searches Removed -->
                     </div>
                 </div>
 
@@ -1543,7 +1572,7 @@
                     <div class="panel-content">
                         <div class="panel-header-with-action">
                             <h2 class="panel-title">Select Services</h2>
-                            <button type="button" class="btn btn-success" onclick="getQuotes()"
+                            <button type="button" class="btn btn-primary" onclick="getQuotes()"
                                 id="servicesActionBtn">🔍 Get Quotes</button>
                         </div>
 
@@ -1552,7 +1581,7 @@
                             <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
                                 <div class="form-group">
                                     <label class="form-label">Incoterm <span class="required">*</span></label>
-                                    <select class="form-select" id="incoterm" onchange="updateChargeInclusions()">
+                                    <select class="form-select" id="incoterm" name="freight_terms" onchange="updateChargeInclusions()">
                                         <option value="">Select incoterm</option>
                                         <option value="FCA">FCA - Free Carrier</option>
                                         <option value="FOB">FOB - Free On Board</option>
@@ -1561,15 +1590,20 @@
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Freight Terms <span class="required">*</span></label>
-                                    <select class="form-select" id="freightTerms">
+                                    <select class="form-select" id="freightTerms" name="payment_terms">
                                         <option value="">Select terms</option>
                                         <option value="prepaid">Prepaid</option>
                                         <option value="collect">Collect</option>
+                                        <option value="third_party">Third Party</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Cargo Ready Date <span class="required">*</span></label>
-                                    <input type="date" class="form-input" id="cargoReadyDate" required>
+                                    <input type="date" class="form-input" id="cargoReadyDate" name="cargo_ready_date" required>
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label class="form-label">Customer Reference <span class="required">*</span></label>
+                                    <input type="text" class="form-input" id="customerReference" name="customer_reference" placeholder="e.g. PO12345" required>
                                 </div>
                             </div>
                         </div>
@@ -1579,7 +1613,7 @@
                             <h3 class="section-subtitle">Included in Quote</h3>
                             <div class="charges-inline">
                                 <div class="charge-item-inline">
-                                    <input type="checkbox" id="includeFreight" checked disabled>
+                                    <input type="checkbox" id="includeFreight" checked onchange="updateChargeStatus('freight')">
                                     <label for="includeFreight">Freight & Surcharges</label>
                                     <span class="charge-badge included" id="freightBadge">Included</span>
                                 </div>
@@ -1643,7 +1677,7 @@
                                             <label class="form-label" style="font-size: 0.8rem;">Pickup Location <span
                                                     class="required">*</span></label>
                                             <div class="searchable-select">
-                                                <input type="text" class="form-input" id="pickupLocation"
+                                                <input type="text" class="form-input" id="pickupLocation" name="pickup_address"
                                                     placeholder="Search by city name or zip code"
                                                     onfocus="showServiceDropdown('pickup')"
                                                     oninput="filterServiceLocations('pickup')" autocomplete="off">
@@ -1662,7 +1696,7 @@
                                             <label class="form-label" style="font-size: 0.8rem;">Delivery Location <span
                                                     class="required">*</span></label>
                                             <div class="searchable-select">
-                                                <input type="text" class="form-input" id="deliveryLocation"
+                                                <input type="text" class="form-input" id="deliveryLocation" name="place_of_delivery"
                                                     placeholder="Search by city name or zip code"
                                                     onfocus="showServiceDropdown('delivery')"
                                                     oninput="filterServiceLocations('delivery')" autocomplete="off">
@@ -1682,6 +1716,33 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         RECENT QUOTATIONS & HISTORY
+         ============================================================ -->
+    <div class="history-card mt-4 p-4 bg-white" style="border-radius: 12px; border: 1px solid var(--border-color);">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0 text-dark" style="font-size: 1.1rem;"><i class="bi bi-clock-history me-2"></i>Recent Quotations & History</h5>
+            <button type="button" class="btn btn-sm btn-light border" onclick="clearQueryHistory()">Clear History</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-nowrap">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-3 text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Quotation Date</th>
+                        <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Route Lane</th>
+                        <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Commodities</th>
+                        <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Movement Type</th>
+                        <th class="pe-3 text-end py-3"></th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- Javascript populated -->
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -2155,23 +2216,16 @@
                     ${cargoItemCounter > 1 ? `<button class="remove-btn" onclick="removeCargoItem('${itemId}')">Remove</button>` : ''}
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label class="form-label">Unit of Measurement</label>
-                    <div class="unit-toggle">
-                        <button class="unit-option active" onclick="setUnit('${itemId}', 'metric')">Metric (kg/m³/cm)</button>
-                        <button class="unit-option" onclick="setUnit('${itemId}', 'imperial')">Imperial (lbs/ft³/in)</button>
-                    </div>
-                </div>
 
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Total Pieces <span class="required">*</span></label>
                         <input type="number" class="form-input" placeholder="0" min="1" value="1" required 
-                               id="${itemId}-pieces" oninput="updateTotals('${itemId}')">
+                               id="${itemId}-pieces" name="item_qty[]" oninput="updateTotals('${itemId}')">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Package Type <span class="required">*</span></label>
-                        <select class="form-select" required>
+                        <select class="form-select" name="item_type[]" required>
                             <option value="">Select package type</option>
                             <option value="pallets">Pallets</option>
                             <option value="boxes">Boxes/Crates</option>
@@ -2182,7 +2236,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Goods Type <span class="required">*</span></label>
-                        <select class="form-select" id="${itemId}-goods" required>
+                        <select class="form-select" id="${itemId}-goods" name="goods_type[]" required>
                             <option value="">Select goods type</option>
                             <option value="commercial">Commercial Cargo</option>
                             <option value="personal" disabled style="color: #94a3b8;">Personal Effects (Upon Request)</option>
@@ -2191,23 +2245,38 @@
                     </div>
                 </div>
                 
+                <div class="form-group" style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <label class="form-label">Cargo Description <span class="required">*</span></label>
+                    <input type="text" class="form-input" name="item_desc[]" placeholder="e.g. Electronics, Auto Parts..." required>
+                </div>
+                
                 <div class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
                     <div class="form-group">
                         <label class="form-label">Total Weight <span class="required">*</span></label>
-                        <input type="number" class="form-input" step="0.01" required 
-                               id="${itemId}-weight" oninput="updateTotals('${itemId}')"
-                               placeholder="0.00 kg">
+                        <div class="input-uom-group">
+                            <input type="number" class="form-input" step="0.01" required 
+                                   id="${itemId}-weight" name="item_weight[]" oninput="updateTotals('${itemId}')"
+                                   placeholder="0.00">
+                            <select class="uom-select" id="${itemId}-weight-uom">
+                                ${weightUomOptions.map(u => `<option value="${u.code}">${u.code}</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Total Volume <span class="required">*</span></label>
-                        <input type="number" class="form-input" step="0.01" required 
-                               id="${itemId}-volume" oninput="updateTotals('${itemId}')"
-                               placeholder="0.00 m³">
+                        <div class="input-uom-group">
+                            <input type="number" class="form-input" step="0.01" required 
+                                   id="${itemId}-volume" name="item_volume[]" oninput="updateTotals('${itemId}')"
+                                   placeholder="0.00">
+                            <select class="uom-select" id="${itemId}-volume-uom">
+                                ${volumeUomOptions.map(u => `<option value="${u.code}">${u.code}</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 <div class="checkbox-group">
-                    <input type="checkbox" id="${itemId}-stackable" checked onchange="toggleStackable('${itemId}')">
+                    <input type="checkbox" id="${itemId}-stackable" name="item_stackable[]" checked onchange="toggleStackable('${itemId}')" value="on">
                     <label for="${itemId}-stackable">Stackable</label>
                 </div>
 
@@ -2612,8 +2681,6 @@
                     freightIncluded = false;
                     originIncluded = true;
                     destIncluded = false;
-                    freightCheckbox.disabled = true;
-                    destCheckbox.disabled = true;
                     break;
                 case 'FCA':
                     // Free Carrier: origin + freight
@@ -2857,7 +2924,111 @@
                 }
             }
 
-            alert('🎉 Quote request submitted! You will be redirected to view available offers.');
+            // Submit the form
+            const form = document.getElementById('wizardSearchForm');
+            if (form) {
+                try {
+                    const orig = document.getElementById('originLocation').value || 'Unknown Origin';
+                    const dest = document.getElementById('destLocation').value || 'Unknown Destination';
+                    const movementEl = document.getElementById('movementType');
+                    const movement = movementEl ? movementEl.options[movementEl.selectedIndex].text : 'Port to Port';
+                    
+                    // selectedCargoType is globally tracked in view.html
+                    const isLcl = selectedCargoType === 'lcl';
+                    let details = '';
+                    if(isLcl) {
+                        let v = 0;
+                        document.querySelectorAll('.dim-vol').forEach(i => v += parseFloat(i.value)||0);
+                        // Fallback if no dims
+                        if(v === 0) {
+                            const firstVol = document.querySelector('input[name="item_volume[]"]');
+                            if(firstVol) v = parseFloat(firstVol.value) || 0;
+                        }
+                        details = `${parseFloat(v).toFixed(2)} CBM`;
+                    } else {
+                        let c = 0;
+                        document.querySelectorAll('input[name="cont_qty[]"]').forEach(i => c += parseInt(i.value)||0);
+                        if(c === 0) c = 1;
+                        details = `${c} × Container`;
+                    }
+                    
+                    let hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
+                    hist.unshift({ date: new Date().toLocaleString(), origin: orig, destination: dest, service: movement + ' (' + (isLcl?'LCL':'FCL') + ')', details });
+                    localStorage.setItem('ftl_search_history', JSON.stringify(hist.slice(0, 5)));
+                } catch(e) { console.error('Error saving history', e); }
+
+                // Show loader or disable button if needed
+                form.submit();
+            } else {
+                alert('🎉 Quote request submitted! You will be redirected to view available offers.');
+            }
+        }
+
+        // --- History Management ---
+        document.addEventListener('DOMContentLoaded', function () {
+            renderQueryHistory();
+        });
+
+        function renderQueryHistory() {
+            const tbody = document.getElementById('historyTableBody');
+            if (!tbody) return;
+            
+            let hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
+            if(hist.length === 0) {
+                hist = [
+                    { date: new Date().toLocaleString(), origin: 'Shanghai (CNSHA)', destination: 'Hamburg (DEHAM)', service: 'Port to Port (LCL)', details: '0.00 CBM' },
+                    { date: new Date().toLocaleString(), origin: 'Singapore (SGPIN)', destination: 'Rotterdam (NLRTM)', service: 'Door to Door (FCL)', details: '1 × Container' }
+                ];
+                localStorage.setItem('ftl_search_history', JSON.stringify(hist));
+            }
+            tbody.innerHTML = hist.map((h, i) => `
+                <tr>
+                    <td class="ps-3 py-3 font-monospace text-muted" style="font-size:0.75rem;">${h.date}</td>
+                    <td class="py-3">
+                        <div class="fw-bold text-dark" style="font-size:0.8rem;">${h.origin} <i class="bi bi-arrow-right mx-1 text-primary"></i> ${h.destination}</div>
+                    </td>
+                    <td class="py-3 text-secondary" style="font-size:0.8rem;"><i class="bi bi-box-seam me-1"></i> ${h.details}</td>
+                    <td class="py-3"><span class="badge table-badge table-badge-primary" style="background-color: var(--bg-gray); color: var(--primary-color); border-radius: 20px; padding: 4px 12px; font-weight: 600;">${h.service}</span></td>
+                    <td class="pe-3 py-3 text-end">
+                        <button class="btn btn-sm btn-outline-primary" style="font-size:0.7rem; font-weight:700;" onclick="loadHistory(${i})">Re-run</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function clearQueryHistory() {
+            localStorage.removeItem('ftl_search_history');
+            renderQueryHistory();
+        }
+
+        function loadHistory(idx) {
+            const hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
+            const r = hist[idx];
+            if(!r) return;
+            
+            // Set Origin
+            document.getElementById('originLocation').value = r.origin;
+            document.getElementById('hidden_origin').value = r.origin;
+            
+            // Set Destination
+            document.getElementById('destLocation').value = r.destination;
+            document.getElementById('hidden_destination').value = r.destination;
+            
+            // Set Cargo Type based on service string
+            if (r.service && r.service.includes('FCL')) {
+                selectCargoType('fcl');
+            } else {
+                selectCargoType('lcl');
+            }
+            
+            // Open Route Panel
+            togglePanel('route');
+            
+            // Validate Route
+            document.getElementById('routeSection').classList.add('completed');
+            document.getElementById('cargoSection').classList.remove('completed');
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
 </body>

@@ -186,6 +186,7 @@
         <div style="width: 15%">Transit Time</div>
         <div style="width: 15%">Validity</div>
         <div style="width: 15%" class="text-end">Total Price</div>
+        <div style="width: 15%" class="text-center">Actions</div>
     </div>
 
     {% for res in results %}
@@ -197,7 +198,11 @@
                 <i class="bi bi-building fs-2 text-primary me-3"></i>
                 <div>
                     <div class="fw-bold text-body fs-5">{{ res.rate.nvocc_name }}</div>
-                    <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
+                    {% if query.service_type == 'Less than a container load' %}
+                        <small class="text-muted fw-bold text-primary">FTL Consolidated Service</small>
+                    {% else %}
+                        <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
+                    {% endif %}
                     {% if res.ui_tag %}
                     <span class="badge bg-primary text-white ms-2" style="font-size: 0.65rem;">{{ res.ui_tag }}</span>
                     {% endif %}
@@ -211,6 +216,13 @@
             
             <div style="width: 15%">
                 <div class="fw-bold text-primary"><i class="bi bi-clock"></i> {{ res.transit_days }} Days</div>
+                <div class="small mt-1 text-muted">
+                    {% if loop.index % 2 == 0 %}
+                        <span class="badge bg-light text-dark border"><i class="bi bi-arrow-left-right"></i> Via SG SIN</span>
+                    {% else %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="bi bi-lightning-fill"></i> Direct Routing</span>
+                    {% endif %}
+                </div>
             </div>
             
             <div style="width: 15%">
@@ -220,6 +232,16 @@
             <div style="width: 15%" class="text-end">
                 <div class="fs-4 fw-bold text-body">${{ "%.2f"|format(res.total_cost) }}</div>
                 <small class="text-muted">USD</small>
+            </div>
+            <div style="width: 15%" class="text-center d-flex flex-column gap-2 px-2" onclick="event.stopPropagation();">
+                <button class="btn btn-sm btn-outline-secondary fw-bold"><i class="bi bi-bookmark"></i> Save</button>
+                <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0">
+                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                    <input type="hidden" name="volume" value="{{ query.volume }}">
+                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                    <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                    <button type="submit" class="btn btn-sm btn-primary w-100 fw-bold">Book</button>
+                </form>
             </div>
         </div>
         
@@ -299,7 +321,11 @@
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
                         <h5 class="card-title fw-bold text-body mb-0">{{ res.rate.nvocc_name }}</h5>
+                        {% if query.service_type == 'Less than a container load' %}
+                        <small class="text-muted fw-bold text-primary">FTL Consolidated Service</small>
+                    {% else %}
                         <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
+                    {% endif %}
                     </div>
                     {% if res.ui_tag %}
                         <span class="badge bg-primary rounded-pill">{{ res.ui_tag }}</span>
@@ -316,7 +342,13 @@
                 <div class="mb-4">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">Transit Time</span>
-                        <span class="fw-bold text-body">{{ res.transit_days }} Days</span>
+                        <span class="fw-bold text-body">{{ res.transit_days }} Days
+                            {% if loop.index % 2 == 0 %}
+                                <br><small class="text-muted">(Via SG SIN)</small>
+                            {% else %}
+                                <br><small class="text-success">(Direct Routing)</small>
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">Frequency</span>
@@ -328,8 +360,18 @@
                     </div>
                 </div>
                 
-                <div class="text-center">
+                <div class="text-center mb-3">
                     <span class="text-primary small fw-bold"><i class="bi bi-arrows-angle-expand"></i> Click card for detailed breakdown</span>
+                </div>
+                <div class="d-flex gap-2" onclick="event.stopPropagation();">
+                    <button class="btn btn-outline-secondary flex-grow-1 fw-bold"><i class="bi bi-bookmark"></i> Save</button>
+                    <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0 flex-grow-1">
+                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                        <input type="hidden" name="volume" value="{{ query.volume }}">
+                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                        <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Book</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -466,6 +508,24 @@
         const modal = new bootstrap.Modal(modalElement);
         modal.show();
     }
+
+    // Autosave cheapest quote if user leaves without booking
+    let isBooking = false;
+    document.querySelectorAll('form').forEach(f => f.addEventListener('submit', () => isBooking = true));
+    
+    window.addEventListener('beforeunload', function (e) {
+        if (isBooking) return;
+        let history = JSON.parse(localStorage.getItem('ftl_search_history') || '[]');
+        history.unshift({
+            date: new Date().toLocaleString(),
+            origin: "{{ query.origin }}",
+            destination: "{{ query.destination }}",
+            service: "{{ query.service_type }}",
+            details: "Auto-saved (Cheapest Quote)"
+        });
+        localStorage.setItem('ftl_search_history', JSON.stringify(history.slice(0, 15)));
+    });
 </script>
+
 
 {% endblock %}

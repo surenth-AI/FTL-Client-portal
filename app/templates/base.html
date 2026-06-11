@@ -198,6 +198,7 @@
             opacity: 0.015 !important; /* Extremely soft, high-end opacity for dark theme */
         }
     </style>
+    {% block head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100" data-theme="{{ system_theme }}">
     <div class="bg-wrapper"></div>
@@ -237,6 +238,12 @@
                     </li>
 
                     <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.master_data' %}active{% endif %}" href="{{ url_for('admin.master_data') }}">
+                            <i class="bi bi-database-fill-gear"></i> Master Data
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
                             <i class="bi bi-gear"></i> {% if current_user.role in ['super_admin', 'admin'] %}System Settings{% else %}Settings{% endif %}
                         </a>
@@ -252,11 +259,7 @@
                             <i class="bi bi-search"></i> Search Rates
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">
-                            <i class="bi bi-plus-circle"></i> New Booking
-                        </a>
-                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">
                             <i class="bi bi-box-seam"></i> My Shipments
@@ -357,11 +360,12 @@
 
                             <li><a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">Rates</a></li>
 
+                             <li><a class="nav-link {% if request.endpoint == 'admin.master_data' %}active{% endif %}" href="{{ url_for('admin.master_data') }}">Master Data</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% elif current_user.role == 'customer' %}
                             <li><a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">Dashboard</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'customer.rates' %}active{% endif %}" href="{{ url_for('customer.rates') }}">Search Rates</a></li>
-                            <li><a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">New Booking</a></li>
+
                             <li><a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">Shipments</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% elif current_user.role == 'agent' %}
@@ -589,6 +593,6 @@
         });
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
+    {% block scripts %}{% endblock %}
 </body>
 </html>
