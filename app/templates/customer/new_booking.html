@@ -151,7 +151,7 @@
     <h4 class="fw-bold text-dark mb-0" style="letter-spacing: -0.01em;">New quote request <span class="text-muted fw-normal small" style="font-size: 0.85rem;">on behalf of organization</span></h4>
 </div>
 
-<form action="{{ url_for('customer.booking_request') }}" method="POST" enctype="multipart/form-data">
+<form id="bookingForm" action="{{ url_for('customer.booking_request') }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
     <input type="hidden" name="service_type" id="hidden_service_type" value="LCL">
     
     <div class="main-booking-card p-0 overflow-hidden">
@@ -326,6 +326,20 @@
                 <div class="border-top mt-3 pt-3">
                     <h6 class="fw-bold text-muted small mb-3 text-uppercase" style="font-size:0.7rem;">Auxiliary Settings</h6>
                     <div class="row g-3">
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold mb-1">Customer Reference <span class="text-danger">*</span></label>
+                            <input type="text" name="customer_reference" class="form-control form-control-sm bg-light" style="font-size:0.8rem;" placeholder="e.g. PO-12345" required>
+                            <div class="invalid-feedback">Please provide a customer reference.</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold mb-1">Traffic Type <span class="text-danger">*</span></label>
+                            <select name="traffic_type" class="form-select form-select-sm bg-light" style="font-size:0.8rem;" required>
+                                <option value="">Select Traffic Type</option>
+                                <option value="EX">Export (EX)</option>
+                                <option value="IM">Import (IM)</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a traffic type.</div>
+                        </div>
                         <div class="col-6">
                             <label class="small text-muted fw-bold mb-1">Incoterms</label>
                             <select name="freight_terms" class="form-select form-select-sm bg-light" style="font-size:0.8rem;">
@@ -520,16 +534,263 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 5. File Upload Visuals
+    // 5. File Upload Visuals with Deletion Support
     const fileInput = document.getElementById('file-input');
     const fileList = document.getElementById('file-list');
+    let selectedFiles = new DataTransfer();
+
     fileInput.addEventListener('change', (e) => {
-        if(e.target.files.length > 0) {
-            fileList.innerHTML = `<strong>${e.target.files.length}</strong> file(s) queued for secure transfer.`;
-            fileList.classList.add('text-success');
+        // Append newly selected files to our tracking DataTransfer
+        for(let file of e.target.files) {
+            selectedFiles.items.add(file);
+        }
+        // Update the actual input so the form submits correctly
+        fileInput.files = selectedFiles.files;
+        renderFileList();
+    });
+
+    window.removeFile = function(index) {
+        let dt = new DataTransfer();
+        // Rebuild DataTransfer without the deleted file
+        for(let i=0; i < selectedFiles.files.length; i++) {
+            if(i !== index) {
+                dt.items.add(selectedFiles.files[i]);
+            }
+        }
+        selectedFiles = dt;
+        fileInput.files = selectedFiles.files;
+        renderFileList();
+    }
+
+    function renderFileList() {
+        if(selectedFiles.files.length > 0) {
+            let html = '<ul class="list-group list-group-flush mt-2 mb-0" style="border-radius: 4px; overflow: hidden; border: 1px solid var(--glass-border);">';
+            for(let i=0; i < selectedFiles.files.length; i++) {
+                html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-2" style="background: color-mix(in srgb, var(--primary-color) 5%, transparent); border-bottom: 1px solid var(--glass-border);">
+                    <span class="text-truncate text-dark fw-medium" style="font-size: 0.75rem; max-width: 85%;">
+                        <i class="bi bi-file-earmark-text me-2 text-primary"></i>${selectedFiles.files[i].name}
+                    </span>
+                    <button type="button" class="btn btn-sm text-danger p-0 m-0" onclick="removeFile(${i})" title="Remove file">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </li>`;
+            }
+            html += '</ul>';
+            fileList.innerHTML = html;
+        } else {
+            fileList.innerHTML = 'No files currently attached';
+        }
+    }
+});
+</script>
+
+<style>
+    .btn-light-mode {
+        background: transparent;
+        border: none;
+        color: #64748B;
+        transition: 0.15s ease;
+    }
+    .btn-check:checked + .btn-light-mode {
+<!-- TEMPLATE INJECTION FOR DYNAMIC ROWS (HIDDEN) -->
+<template id="lcl_row_template">
+    <div class="load-unit-container cargo-item-row mt-3">
+        <div class="load-unit-header">
+            <span>Package Block</span>
+            <span class="text-white-50 cursor-pointer remove-row-btn" onclick="removeRow(this)"><i class="bi bi-x-lg"></i></span>
+        </div>
+        <div class="load-unit-body">
+            <div class="row g-2 mb-3">
+                <div class="col-4"><label class="small fw-bold text-muted">Qty</label><input type="number" name="item_qty[]" class="form-control form-control-sm text-center" value="1" required></div>
+                <div class="col-8">
+                    <label class="small fw-bold text-muted">Load Type</label>
+                    <select name="item_type[]" class="form-select form-select-sm"><option value="Pallet">Pallet</option><option value="Box">Box</option><option value="Carton">Carton</option></select>
+                </div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-8">
+                    <label class="small fw-bold text-muted">Dimensions</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="item_l[]" class="form-control text-center" placeholder="L">
+                        <input type="text" name="item_w[]" class="form-control text-center" placeholder="W">
+                        <input type="text" name="item_h[]" class="form-control text-center" placeholder="H">
+                        <select name="item_uom[]" class="form-select" style="max-width:60px;"><option value="cm">cm</option></select>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <label class="small fw-bold text-muted">Weight</label>
+                    <div class="input-group input-group-sm"><input type="number" name="item_weight[]" class="form-control text-end" step="0.01"><span class="input-group-text">kg</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="fcl_row_template">
+    <div class="load-unit-container cargo-item-row mt-3">
+        <div class="load-unit-header">
+            <span>Container Block</span>
+            <span class="text-white-50 cursor-pointer remove-row-btn" onclick="removeRow(this)"><i class="bi bi-x-lg"></i></span>
+        </div>
+        <div class="load-unit-body">
+            <div class="row g-2 mb-3">
+                <div class="col-4"><label class="small fw-bold text-muted">Qty</label><input type="number" name="cont_qty[]" class="form-control form-control-sm text-center" value="1" required></div>
+                <div class="col-8">
+                    <label class="small fw-bold text-muted">Type</label>
+                    <select name="cont_type[]" class="form-select form-select-sm"><option value="20' ST">20' Standard</option><option value="40' ST">40' Standard</option></select>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-6"><label class="small fw-bold text-muted">Gross Wt</label><div class="input-group input-group-sm"><input type="number" name="cont_weight[]" class="form-control text-end"><span class="input-group-text">kg</span></div></div>
+                <div class="col-6"><label class="small fw-bold text-muted">Vol</label><div class="input-group input-group-sm"><input type="number" name="cont_volume[]" class="form-control text-end"><span class="input-group-text">cbm</span></div></div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- SCRIPTS FOR DYNAMIC MAPPING & FORM INTERACTION -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Setup Micro Leaflet Maps for visual context mirroring reference
+    const mapOptions = {
+        center: [20.0, 0.0], zoom: 1, attributionControl: false, zoomControl: false,
+        dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false
+    };
+    
+    const mapOrigin = L.map('mapOrigin', mapOptions);
+    const mapDest = L.map('mapDestination', mapOptions);
+    
+    const tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    
+    L.tileLayer(tileUrl).addTo(mapOrigin);
+    L.tileLayer(tileUrl).addTo(mapDest);
+
+    // 2. Wire Input events to dummy-update the maps to give a high-end interactive feel
+    const originInput = document.getElementById('origin_input');
+    const destInput = document.getElementById('dest_input');
+
+    originInput.addEventListener('blur', function() {
+        if(this.value.length > 2) {
+            // Simulate map refocus on location change
+            mapOrigin.setView([Math.random()*60, Math.random()*100], 4, {animate:true});
+            L.circleMarker(mapOrigin.getCenter(), {radius:5, color:getComputedStyle(document.documentElement).getPropertyValue('--primary-color')}).addTo(mapOrigin);
         }
     });
+
+    destInput.addEventListener('blur', function() {
+        if(this.value.length > 2) {
+            mapDest.setView([Math.random()*60, Math.random()*100], 4, {animate:true});
+            L.circleMarker(mapDest.getCenter(), {radius:5, color:'#E11D48'}).addTo(mapDest); // Target accent
+        }
+    });
+
+    // 3. Setup the dynamic Add/Remove Row functionality preserving legacy support
+    window.addRow = function(type) {
+        const templateId = type === 'LCL' ? 'lcl_row_template' : 'fcl_row_template';
+        const containerId = type === 'LCL' ? 'lcl_items_container' : 'fcl_items_container';
+        const template = document.getElementById(templateId);
+        const container = document.getElementById(containerId);
+        
+        const clone = template.content.cloneNode(true);
+        container.appendChild(clone);
+    };
+
+    window.removeRow = function(btn) {
+        btn.closest('.cargo-item-row').remove();
+    };
+
+    window.toggleImo = function(checkbox) {
+        const row = checkbox.closest('.cargo-item-row');
+        const details = row.querySelector('.imo-details-row');
+        const hidden = checkbox.nextElementSibling;
+        if(checkbox.checked) {
+            details.style.display = 'block';
+            hidden.value = 'yes';
+        } else {
+            details.style.display = 'none';
+            hidden.value = 'no';
+        }
+    };
+
+    // 4. Mode Toggle Implementation (LCL vs FCL)
+    document.querySelectorAll('input[name="manual_service_toggle"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const type = e.target.value;
+            document.getElementById('hidden_service_type').value = type;
+            if(type === 'LCL') {
+                document.getElementById('lcl_section').style.display = 'block';
+                document.getElementById('fcl_section').style.display = 'none';
+            } else {
+                document.getElementById('lcl_section').style.display = 'none';
+                document.getElementById('fcl_section').style.display = 'block';
+            }
+        });
+    });
+
+    // 5. File Upload Visuals with Deletion Support
+    const fileInput = document.getElementById('file-input');
+    const fileList = document.getElementById('file-list');
+    let selectedFiles = new DataTransfer();
+
+    fileInput.addEventListener('change', (e) => {
+        // Append newly selected files to our tracking DataTransfer
+        for(let file of e.target.files) {
+            selectedFiles.items.add(file);
+        }
+        // Update the actual input so the form submits correctly
+        fileInput.files = selectedFiles.files;
+        renderFileList();
+    });
+
+    window.removeFile = function(index) {
+        let dt = new DataTransfer();
+        // Rebuild DataTransfer without the deleted file
+        for(let i=0; i < selectedFiles.files.length; i++) {
+            if(i !== index) {
+                dt.items.add(selectedFiles.files[i]);
+            }
+        }
+        selectedFiles = dt;
+        fileInput.files = selectedFiles.files;
+        renderFileList();
+    }
+
+    function renderFileList() {
+        if(selectedFiles.files.length > 0) {
+            let html = '<ul class="list-group list-group-flush mt-2 mb-0" style="border-radius: 4px; overflow: hidden; border: 1px solid var(--glass-border);">';
+            for(let i=0; i < selectedFiles.files.length; i++) {
+                html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-2" style="background: color-mix(in srgb, var(--primary-color) 5%, transparent); border-bottom: 1px solid var(--glass-border);">
+                    <span class="text-truncate text-dark fw-medium" style="font-size: 0.75rem; max-width: 85%;">
+                        <i class="bi bi-file-earmark-text me-2 text-primary"></i>${selectedFiles.files[i].name}
+                    </span>
+                    <button type="button" class="btn btn-sm text-danger p-0 m-0" onclick="removeFile(${i})" title="Remove file">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </li>`;
+            }
+            html += '</ul>';
+            fileList.innerHTML = html;
+        } else {
+            fileList.innerHTML = 'No files currently attached';
+        }
+    }
 });
+
+    // Form validation logic
+    var form = document.getElementById('bookingForm');
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                alert('Validation Error: Please fill in all mandatory fields before submitting.');
+            }
+            form.classList.add('was-validated');
+        }, false);
+    }
 </script>
 
 <style>

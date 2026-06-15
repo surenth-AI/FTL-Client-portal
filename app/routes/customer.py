@@ -6,6 +6,8 @@ from app import db
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
+import requests
+import re
 
 customer = Blueprint('customer', __name__)
 
@@ -52,15 +54,15 @@ def process_cargo_items(booking, form, service_type):
         for i in range(len(qty_list)):
             item = CargoItem(
                 booking_id=booking.id,
-                quantity=int(qty_list[i]) if qty_list[i] else 0,
-                package_type=type_list[i],
-                weight_kg=float(weight_list[i]) if weight_list[i] else 0.0,
-                volume_cbm=float(vol_list[i]) if vol_list[i] else 0.0,
-                length=float(l_list[i]) if l_list[i] else 0.0,
-                width=float(w_list[i]) if w_list[i] else 0.0,
-                height=float(h_list[i]) if h_list[i] else 0.0,
-                uom=uom_list[i],
-                hs_code=hs_list[i],
+                quantity=int(qty_list[i]) if i < len(qty_list) and qty_list[i] else 0,
+                package_type=type_list[i] if i < len(type_list) else '',
+                weight_kg=float(weight_list[i]) if i < len(weight_list) and weight_list[i] else 0.0,
+                volume_cbm=float(vol_list[i]) if i < len(vol_list) and vol_list[i] else 0.0,
+                length=float(l_list[i]) if i < len(l_list) and l_list[i] else 0.0,
+                width=float(w_list[i]) if i < len(w_list) and w_list[i] else 0.0,
+                height=float(h_list[i]) if i < len(h_list) and h_list[i] else 0.0,
+                uom=uom_list[i] if i < len(uom_list) else '',
+                hs_code=hs_list[i] if i < len(hs_list) else '',
                 description=desc_list[i] if i < len(desc_list) else None,
                 is_imo=True if i < len(is_imo_list) and is_imo_list[i] == 'yes' else False,
                 un_number=un_list[i] if i < len(un_list) else None,
@@ -85,13 +87,13 @@ def process_cargo_items(booking, form, service_type):
         for i in range(len(c_qty_list)):
             item = CargoItem(
                 booking_id=booking.id,
-                container_count=int(c_qty_list[i]) if c_qty_list[i] else 0,
-                container_type=c_type_list[i],
-                quantity=int(p_qty_list[i]) if p_qty_list[i] else 0,
-                package_type=p_type_list[i],
+                container_count=int(c_qty_list[i]) if i < len(c_qty_list) and c_qty_list[i] else 0,
+                container_type=c_type_list[i] if i < len(c_type_list) else '',
+                quantity=int(p_qty_list[i]) if i < len(p_qty_list) and p_qty_list[i] else 0,
+                package_type=p_type_list[i] if i < len(p_type_list) else '',
                 volume_cbm=float(vol_list[i]) if i < len(vol_list) and vol_list[i] else 0.0,
-                weight_kg=float(weight_list[i]) if weight_list[i] else 0.0,
-                hs_code=hs_list[i],
+                weight_kg=float(weight_list[i]) if i < len(weight_list) and weight_list[i] else 0.0,
+                hs_code=hs_list[i] if i < len(hs_list) else '',
                 description=desc_list[i] if i < len(desc_list) else None,
                 is_imo=True if i < len(is_imo_list) and is_imo_list[i] == 'yes' else False,
                 un_number=un_list[i] if i < len(un_list) else None,
@@ -99,6 +101,62 @@ def process_cargo_items(booking, form, service_type):
                 imo_class=class_list[i] if i < len(class_list) else None
             )
             db.session.add(item)
+
+def parse_location(loc_str):
+    if not loc_str:
+        return "", ""
+    match = re.search(r'\((.*?)\)', loc_str)
+    if match:
+        return loc_str.replace(match.group(0), '').strip(), match.group(1).strip()
+    return loc_str, ""
+
+def post_booking_to_api(booking):
+    try:
+        por_name, por_code = parse_location(booking.place_of_receipt or booking.origin)
+        pol_name, pol_code = parse_location(booking.origin)
+        pod_name, pod_code = parse_location(booking.destination)
+        del_name, del_code = parse_location(booking.place_of_delivery or booking.destination)
+        
+        is_hazmat = any(item.is_imo for item in booking.cargo_items)
+        
+        total_qty = sum([item.quantity for item in booking.cargo_items if item.quantity]) + sum([item.container_count for item in booking.cargo_items if item.container_count])
+        total_weight = sum([item.weight_kg for item in booking.cargo_items if item.weight_kg])
+        total_volume = sum([item.volume_cbm for item in booking.cargo_items if item.volume_cbm]) or booking.volume
+        
+        payload = [{
+            "bookingID": 0, 
+            "branchID": 1,
+            "bookingRef": f"BK-{booking.id:06d}",
+            "fileRef": f"FILE-{booking.id:06d}",
+            "customerRef": booking.customer_ref or "N/A",
+            "createdOn": booking.created_at.isoformat() + "Z" if booking.created_at else datetime.utcnow().isoformat() + "Z",
+            "porLocode": por_code,
+            "porLocation": por_name,
+            "polLocode": pol_code,
+            "polLocation": pol_name,
+            "podLocode": pod_code,
+            "podLocation": pod_name,
+            "delLocode": del_code,
+            "delLocation": del_name,
+            "vessel": booking.vessel_name or "",
+            "voyage": booking.voyage_number or "",
+            "trafficType": booking.traffic_type or "EX",
+            "isRoutingOrder": True,
+            "isHazmat": is_hazmat,
+            "totalColli": total_qty,
+            "totalWeight": total_weight,
+            "totalVolume": total_volume
+        }]
+        
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post('http://realnexus.comit.cloud:5000/api/Bookings', json=payload, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            booking.api_booking_ref = "SUCCESS"
+        else:
+            print(f"Failed to post booking to API: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Error posting booking {booking.id} to API: {e}")
 
 @customer.route('/dashboard')
 @login_required
@@ -582,19 +640,24 @@ def rate_results():
         today = datetime.date.today()
         future = today + datetime.timedelta(days=30)
         rates = [
-            Rate(id=9991, origin=query['origin'], destination=query['destination'], nvocc_name='OceanLink Express', base_rate=120.0, surcharges=150.0, transit_days=24, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='MAERSK', frequency='Weekly'),
-            Rate(id=9992, origin=query['origin'], destination=query['destination'], nvocc_name='GlobalFreight Line', base_rate=105.0, surcharges=200.0, transit_days=28, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='MSC', frequency='Bi-Weekly'),
-            Rate(id=9993, origin=query['origin'], destination=query['destination'], nvocc_name='FastTransit Cargo', base_rate=135.0, surcharges=100.0, transit_days=21, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='CMA CGM', frequency='Weekly')
+            Rate(origin=query['origin'], destination=query['destination'], nvocc_name='OceanLink Express', base_rate=120.0, surcharges=150.0, transit_days=24, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='MAERSK', frequency='Weekly'),
+            Rate(origin=query['origin'], destination=query['destination'], nvocc_name='GlobalFreight Line', base_rate=105.0, surcharges=200.0, transit_days=28, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='MSC', frequency='Bi-Weekly'),
+            Rate(origin=query['origin'], destination=query['destination'], nvocc_name='FastTransit Cargo', base_rate=135.0, surcharges=100.0, transit_days=21, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='CMA CGM', frequency='Weekly')
         ]
+        db.session.add_all(rates)
+        db.session.commit()
 
     vol = query.get('volume') or 1.0
     results = RateEngine.calculate_ranks(rates, vol)
     
     return render_template('customer/rate_results.html', results=results, query=query)
 
-@customer.route('/finalize-booking', methods=['POST'])
+@customer.route('/finalize-booking', methods=['GET', 'POST'])
 @login_required
 def finalize_booking():
+    if request.method == 'GET':
+        flash('Please start a rate search to place a booking.', 'info')
+        return redirect(url_for('customer.new_booking'))
     if current_user.role != 'customer':
         flash('Agents and Administrators cannot place bookings directly.', 'warning')
         return redirect(url_for('customer.rate_results'))
@@ -645,7 +708,9 @@ def confirm_booking():
         freight_terms=request.form.get('freight_terms'),
         general_description=request.form.get('description'),
         general_terms=request.form.get('terms'),
-        status='Booked'
+        status='Booked',
+        customer_ref=request.form.get('customer_reference'),
+        traffic_type=request.form.get('traffic_type')
     )
     
     db.session.add(booking)
@@ -666,6 +731,10 @@ def confirm_booking():
         location=rate.origin
     )
     db.session.add(initial_event)
+    
+    # Fire off API request
+    post_booking_to_api(booking)
+    
     db.session.commit()
     
     flash('Booking confirmed! You can track your shipment now.', 'success')
@@ -715,7 +784,9 @@ def booking_request():
         freight_terms=request.form.get('freight_terms'),
         general_description=request.form.get('description'),
         general_terms=request.form.get('terms'),
-        status='Pending Review'
+        status='Pending Review',
+        customer_ref=request.form.get('customer_reference'),
+        traffic_type=request.form.get('traffic_type')
     )
     
     db.session.add(booking)
@@ -736,9 +807,13 @@ def booking_request():
         location=origin
     )
     db.session.add(initial_event)
+    
+    # Fire off API request
+    post_booking_to_api(booking)
+    
     db.session.commit()
     
-    flash('Booking request submitted successfully! Our team will review it shortly.', 'success')
+    flash('Booking request submitted! We will review it shortly.', 'success')
     return redirect(url_for('customer.my_shipments'))
 
 @customer.route('/my-shipments')

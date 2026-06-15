@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+{% block title %}Master Data Management - FTL Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-white fw-bold"><i class="bi bi-database-fill-gear text-info me-2"></i>Master Data Management</h1>
+            <p class="text-muted small mb-0">Onboard, customize, and maintain lookup and dropdown fields globally across the tenant.</p>
+        </div>
+        <button type="button" class="btn btn-premium rounded-pill px-4 py-2" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-circle-fill me-2"></i>ADD NEW LOOKUP
+        </button>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-4">
+        <!-- Sidebar: Categories Selector -->
+        <div class="col-lg-3">
+            <div class="card glass-card p-4 border-white-10 h-100">
+                <h5 class="text-white fw-bold mb-3 pb-2 border-bottom border-white-10 text-uppercase tracking-wider small">Lookup Categories</h5>
+                <div class="list-group list-group-flush custom-list-group">
+                    <a href="{{ url_for('admin.master_data', category='currency') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'currency' %}active-category{% endif %}">
+                        <span><i class="bi bi-currency-exchange text-info me-3"></i>Currency</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">ISO Codes</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='weight_uom') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'weight_uom' %}active-category{% endif %}">
+                        <span><i class="bi bi-speedometer text-warning me-3"></i>Weight UOM</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">KG/LB</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='volume_uom') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'volume_uom' %}active-category{% endif %}">
+                        <span><i class="bi bi-box-fill text-success me-3"></i>Volume UOM</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">CBM/CFT</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='freight_terms') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'freight_terms' %}active-category{% endif %}">
+                        <span><i class="bi bi-cash-coin text-cyan me-3"></i>Freight Terms</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">Payment</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='incoterm') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'incoterm' %}active-category{% endif %}">
+                        <span><i class="bi bi-file-earmark-text-fill text-orange me-3"></i>Incoterms</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">Trade Terms</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='package_type') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'package_type' %}active-category{% endif %}">
+                        <span><i class="bi bi-box-seam-fill text-purple me-3"></i>Package Types</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">LCL Packages</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='container_type') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'container_type' %}active-category{% endif %}">
+                        <span><i class="bi bi-truck text-danger me-3"></i>Container Types</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">FCL Sizes</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='carrier') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 mb-2 d-flex align-items-center justify-content-between {% if category == 'carrier' %}active-category{% endif %}">
+                        <span><i class="bi bi-water text-primary me-3"></i>Carriers</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">Ocean Lines</span>
+                    </a>
+                    <a href="{{ url_for('admin.master_data', category='nvocc') }}" 
+                       class="list-group-item list-group-item-action bg-transparent border-0 text-white rounded-3 px-3 py-2.5 d-flex align-items-center justify-content-between {% if category == 'nvocc' %}active-category{% endif %}">
+                        <span><i class="bi bi-building-fill text-teal me-3"></i>NVOCC Partners</span>
+                        <span class="badge bg-white-10 text-muted rounded-pill">Co-Loaders</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Filterable Data Table -->
+        <div class="col-lg-9">
+            <div class="card glass-card p-4 border-white-10">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-white fw-bold mb-0">Active List: 
+                        <span class="text-accent-glow">
+                            {% if category == 'currency' %}Currency
+                            {% elif category == 'weight_uom' %}Weight UOM
+                            {% elif category == 'volume_uom' %}Volume UOM
+                            {% elif category == 'freight_terms' %}Freight Terms
+                            {% elif category == 'incoterm' %}Incoterms
+                            {% elif category == 'package_type' %}Package Types
+                            {% elif category == 'container_type' %}Container/Equipment Sizes
+                            {% elif category == 'carrier' %}Carrier Shipping Lines
+                            {% elif category == 'nvocc' %}NVOCC Partners
+                            {% endif %}
+                        </span>
+                    </h5>
+                    <div class="input-group search-input-group" style="width: 250px;">
+                        <span class="input-group-text bg-white-5 border-white-10 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" id="tableSearch" class="form-control bg-white-5 border-white-10 text-white" placeholder="Search values...">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table premium-table table-hover align-middle mb-0" id="lookupTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%;">Code / Short Value</th>
+                                <th style="width: 40%;">Display Name</th>
+                                <th style="width: 25%;">Extra Info</th>
+                                <th style="width: 15%;" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if items %}
+                                {% for item in items %}
+                                <tr>
+                                    <td class="text-white fw-bold font-monospace">{{ item.code }}</td>
+                                    <td class="text-light">{{ item.name }}</td>
+                                    <td class="text-muted small">{{ item.extra_info or 'N/A' }}</td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-info me-2 rounded-pill px-3" 
+                                                onclick="openEditModal({{ item.id }}, '{{ item.code }}', '{{ item.name|replace("'", "\\'") }}', '{{ item.extra_info|replace("'", "\\'") if item.extra_info else '' }}')">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" 
+                                                onclick="openDeleteModal({{ item.id }}, '{{ item.name|replace("'", "\\'") }}')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <i class="bi bi-info-circle fs-3 mb-2 d-block"></i>No lookup records found in this category.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================================================================
+     MODALS SECTION
+     ==================================================================== -->
+
+<!-- 1. CREATE MODAL -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-white-10 text-white">
+            <div class="modal-header border-white-10 pb-2">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle text-info me-2"></i>Add Lookup Item</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin.create_lookup') }}" method="POST">
+                <input type="hidden" name="category" value="{{ category }}">
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Lookup Category</label>
+                        <input type="text" class="form-control bg-white-5 border-white-10 text-muted" value="{{ category.upper() }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Code / System Value <span class="text-danger">*</span></label>
+                        <input type="text" name="code" class="form-control bg-white-5 border-white-10 text-white" placeholder="e.g. FOB, CNSHA, pallets" required>
+                        <div class="form-text smaller text-muted">This is the code sent to the API and stored in the database.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Display Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control bg-white-5 border-white-10 text-white" placeholder="e.g. Free On Board, Shanghai, Pallets" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Extra Parameters (Optional)</label>
+                        <input type="text" name="extra_info" class="form-control bg-white-5 border-white-10 text-white" 
+                               placeholder="e.g. notes or attributes">
+                        <div class="form-text smaller text-muted">Optional additional metadata for this lookup item.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-white-10 pt-2">
+                    <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info rounded-pill px-4 text-white fw-bold">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 2. EDIT MODAL -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-white-10 text-white">
+            <div class="modal-header border-white-10 pb-2">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-info me-2"></i>Edit Lookup Item</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editForm" method="POST">
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Lookup Category</label>
+                        <input type="text" class="form-control bg-white-5 border-white-10 text-muted" value="{{ category.upper() }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Code / System Value <span class="text-danger">*</span></label>
+                        <input type="text" name="code" id="editCode" class="form-control bg-white-5 border-white-10 text-white" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Display Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editName" class="form-control bg-white-5 border-white-10 text-white" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Extra Parameters (Optional)</label>
+                        <input type="text" name="extra_info" id="editExtraInfo" class="form-control bg-white-5 border-white-10 text-white" placeholder="Attributes">
+                        <div class="form-text smaller text-muted">Optional additional metadata for this lookup item.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-white-10 pt-2">
+                    <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info rounded-pill px-4 text-white fw-bold">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3. DELETE CONFIRMATION MODAL -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-white-10 text-white">
+            <div class="modal-header border-white-10 pb-2">
+                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Delete Confirm</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="deleteForm" method="POST">
+                <div class="modal-body py-4 text-center">
+                    <i class="bi bi-trash-fill text-danger fs-1 mb-3 d-block"></i>
+                    <p class="mb-1">Are you sure you want to delete <b id="deleteName" class="text-white"></b>?</p>
+                    <p class="text-muted small">This action cannot be undone and will immediately remove this dropdown lookup from the platform.</p>
+                </div>
+                <div class="modal-footer border-white-10 pt-2">
+                    <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">Yes, Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Page Styles & Logic -->
+<style>
+    /* Premium List Group active state overrides */
+    .custom-list-group .list-group-item {
+        transition: all 0.25s ease;
+    }
+    .custom-list-group .list-group-item:hover {
+        background: rgba(255,255,255,0.05) !important;
+        transform: translateX(3px);
+    }
+    .active-category {
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.1)) !important;
+        border-left: 3px solid var(--neon-cyan, #06b6d4) !important;
+        font-weight: 600;
+    }
+    .active-category span {
+        color: #06b6d4 !important;
+    }
+</style>
+
+<script>
+    // Live Search Functionality for the Data Table
+    document.getElementById('tableSearch').addEventListener('keyup', function() {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#lookupTable tbody tr');
+        rows.forEach(row => {
+            if (row.cells.length < 4) return; // Skip empty row
+            const code = row.cells[0].textContent.toLowerCase();
+            const name = row.cells[1].textContent.toLowerCase();
+            const extra = row.cells[2].textContent.toLowerCase();
+            if (code.includes(query) || name.includes(query) || extra.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Populate Edit Modal Fields dynamically
+    function openEditModal(id, code, name, extraInfo) {
+        document.getElementById('editForm').action = "/admin/master-data/update/" + id;
+        document.getElementById('editCode').value = code;
+        document.getElementById('editName').value = name;
+        document.getElementById('editExtraInfo').value = extraInfo;
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    }
+
+    // Populate Delete Modal fields dynamically
+    function openDeleteModal(id, name) {
+        document.getElementById('deleteForm').action = "/admin/master-data/delete/" + id;
+        document.getElementById('deleteName').textContent = name;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+</script>
+{% endblock %}

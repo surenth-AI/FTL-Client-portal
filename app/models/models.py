@@ -101,6 +101,12 @@ class Booking(db.Model):
     etd = db.Column(db.DateTime, nullable=True)
     is_si_submitted = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # External API fields
+    customer_ref = db.Column(db.String(100), nullable=True)
+    traffic_type = db.Column(db.String(50), nullable=True) # EX/IM
+    api_booking_ref = db.Column(db.String(100), nullable=True)
+    
     cargo_items = db.relationship('CargoItem', backref='booking', lazy=True, cascade="all, delete-orphan")
     attachments = db.relationship('BookingAttachment', backref='booking', lazy=True, cascade="all, delete-orphan")
     tracking_events = db.relationship('TrackingEvent', backref='booking', lazy=True, cascade="all, delete-orphan")

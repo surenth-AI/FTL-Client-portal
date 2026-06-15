@@ -196,6 +196,19 @@
                     </div>
                 </div>
 
+                <!-- Advanced File Attachments Container -->
+                <div class="card bg-white-5 border-0 rounded-4 p-4 mb-4">
+                    <h6 class="text-uppercase text-muted fw-bold small mb-3"><i class="bi bi-paperclip me-2"></i> 4. Supporting Docs</h6>
+                    <div class="booking-file-area border rounded p-3 bg-transparent" style="border-style: dashed !important; border-color: var(--glass-border) !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small fw-bold text-muted">Upload new files</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary text-white" onclick="document.getElementById('file-input').click()">Browse Files</button>
+                        </div>
+                        <input type="file" id="file-input" name="attachments[]" class="d-none" multiple>
+                        <div id="file-list" class="small text-muted mt-2">No new files currently attached</div>
+                    </div>
+                </div>
+
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-success py-3 fw-bold rounded-4 shadow-sm">Save Changes</button>
                     <a href="{{ url_for('customer.shipment_detail', booking_id=booking.id) }}" class="btn btn-link text-muted">Discard Changes</a>
@@ -335,5 +348,52 @@ function removeRow(btn) {
         alert("At least one cargo item is required.");
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('file-input');
+    const fileList = document.getElementById('file-list');
+    let selectedFiles = new DataTransfer();
+
+    fileInput.addEventListener('change', (e) => {
+        for(let file of e.target.files) {
+            selectedFiles.items.add(file);
+        }
+        fileInput.files = selectedFiles.files;
+        renderFileList();
+    });
+
+    window.removeFile = function(index) {
+        let dt = new DataTransfer();
+        for(let i=0; i < selectedFiles.files.length; i++) {
+            if(i !== index) {
+                dt.items.add(selectedFiles.files[i]);
+            }
+        }
+        selectedFiles = dt;
+        fileInput.files = selectedFiles.files;
+        renderFileList();
+    }
+
+    function renderFileList() {
+        if(selectedFiles.files.length > 0) {
+            let html = '<ul class="list-group list-group-flush mt-2 mb-0" style="border-radius: 4px; overflow: hidden; border: 1px solid var(--glass-border);">';
+            for(let i=0; i < selectedFiles.files.length; i++) {
+                html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-2" style="background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--glass-border);">
+                    <span class="text-truncate text-muted fw-medium" style="font-size: 0.75rem; max-width: 85%;">
+                        <i class="bi bi-file-earmark-text me-2 text-primary"></i>${selectedFiles.files[i].name}
+                    </span>
+                    <button type="button" class="btn btn-sm text-danger p-0 m-0" onclick="removeFile(${i})" title="Remove file">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </li>`;
+            }
+            html += '</ul>';
+            fileList.innerHTML = html;
+        } else {
+            fileList.innerHTML = 'No new files currently attached';
+        }
+    }
+});
 </script>
 {% endblock %}

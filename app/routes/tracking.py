@@ -61,3 +61,34 @@ def index():
         return render_template('tracking/results.html', parsed_data=mock_data, container_no=container_no)
             
     return render_template('tracking/index.html')
+
+@tracking_bp.route('/<int:booking_id>')
+def track_shipment(booking_id):
+    from app.models.models import Booking
+    booking = Booking.query.get_or_404(booking_id)
+    container_no = f"BK-{booking.id:06d}"
+    
+    mock_data = {
+        "container_info": {
+            "container_no": container_no,
+            "type": booking.service_type,
+            "status": booking.status,
+            "last_location": booking.origin,
+            "vessel": "TBA"
+        },
+        "journey_milestones": [
+            {
+                "date": booking.created_at.strftime("%Y-%m-%d %H:%M") if booking.created_at else "Just now",
+                "location": booking.origin,
+                "activity": "Booking Request Received",
+                "status": "Completed"
+            },
+            {
+                "date": "Pending",
+                "location": booking.destination,
+                "activity": "Expected Arrival",
+                "status": "Pending"
+            }
+        ]
+    }
+    return render_template('tracking/results.html', parsed_data=mock_data, container_no=container_no)

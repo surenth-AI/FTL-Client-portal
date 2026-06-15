@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-
-{% block title %}Request Quotes - FTL Portal{% endblock %}
+{% block title %}Search Rates - FTL{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 
         * {
@@ -27,7 +27,7 @@
         }
 
         body {
-            
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-gray);
             color: var(--text-primary);
             line-height: 1.4;
@@ -131,7 +131,7 @@
             display: flex;
             align-items: center;
             gap: 0.375rem;
-            
+            font-family: inherit;
         }
 
         .mode-option:hover .mode-text {
@@ -165,15 +165,6 @@
             border: 1px solid #fcd34d;
             border-radius: 6px;
             padding: 0.75rem 1rem;
-        }
-        
-        html[data-color-scheme='dark'] .service-unavailable-banner {
-            background: rgba(234, 179, 8, 0.15);
-            border-color: rgba(234, 179, 8, 0.3);
-        }
-        
-        html[data-color-scheme='dark'] .service-unavailable-banner .banner-text {
-            color: #fde047 !important;
         }
 
         .banner-content {
@@ -408,7 +399,7 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.8rem;
-            
+            font-family: inherit;
             transition: all 0.2s ease;
             background: var(--bg-white);
         }
@@ -417,7 +408,7 @@
         .form-select:focus {
             outline: none;
             border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 10%, transparent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         .form-input::placeholder {
@@ -598,7 +589,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            
+            font-family: inherit;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
@@ -612,7 +603,7 @@
         .btn-primary:hover {
             background: var(--primary-blue-dark);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 30%, transparent);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
 
         .btn-success {
@@ -675,12 +666,12 @@
 
         .service-card:hover {
             border-color: var(--primary-blue);
-            box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 10%, transparent);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
         }
 
         .service-card.selected {
             border-color: var(--primary-blue);
-            background: color-mix(in srgb, var(--primary-color) 5%, transparent);
+            background: rgba(37, 99, 235, 0.05);
         }
 
         .service-card input[type="checkbox"] {
@@ -1002,7 +993,7 @@
             display: flex;
             align-items: center;
             gap: 0.375rem;
-            
+            font-family: inherit;
         }
 
         .cargo-option:hover .cargo-text {
@@ -1052,7 +1043,7 @@
             flex-direction: column;
             align-items: center;
             gap: 0.5rem;
-            
+            font-family: inherit;
         }
 
         .mode-tab:hover {
@@ -1062,8 +1053,8 @@
 
         .mode-tab.active {
             border-color: var(--primary-blue);
-            background: color-mix(in srgb, var(--primary-color) 5%, transparent);
-            box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 15%, transparent);
+            background: rgba(37, 99, 235, 0.05);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
         }
 
         .mode-icon {
@@ -1138,36 +1129,6 @@
             font-size: 0.9rem;
             cursor: pointer;
             color: var(--text-primary);
-        }
-
-        /* Input with UOM select combo */
-        .input-uom-group {
-            display: flex;
-            gap: 0;
-        }
-
-        .input-uom-group .form-input {
-            border-radius: 6px 0 0 6px;
-            border-right: none;
-            flex: 1;
-        }
-
-        .input-uom-group .uom-select {
-            border-radius: 0 6px 6px 0;
-            border: 1px solid var(--border-color);
-            background: var(--bg-gray);
-            padding: 0.5rem 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            cursor: pointer;
-            min-width: 65px;
-            
-        }
-
-        .input-uom-group .uom-select:focus {
-            outline: none;
-            border-color: var(--primary-blue);
         }
 
         /* Icons */
@@ -1348,77 +1309,46 @@
         }
     
 
-/* Adjustments for integration with base.html */
-.rates-view-content {
-    padding: 0;
-    margin-left: 0; /* Override if base.html has sidebar handling */
-    background: var(--bg-white);
-    
-    /* Dynamic Theme Mapping */
-    --primary-blue: var(--primary-color, #2563eb);
-    --primary-blue-dark: var(--primary-hover, #1d4ed8);
-    --primary-blue-light: var(--primary-hover, #3b82f6);
-}
+    #map { height: 450px; width: 100%; border-radius: 8px; margin-top: 10px; z-index: 1; }
+    .searchable-select { position: relative; margin-bottom: 1rem; }
+    .searchable-dropdown {
+        position: absolute; top: 100%; left: 0; right: 0;
+        max-height: 220px; overflow-y: auto;
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 8px; margin-top: 0.5rem;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        z-index: 1000; display: none;
+    }
+    .searchable-dropdown.show { display: block; animation: slideDown 0.2s; }
+    .dropdown-item { padding: 0.75rem 1.25rem; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--border-color); }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: var(--hover-bg); }
+    .dropdown-item-name { font-size: 0.85rem; font-weight: 600; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Dark mode handling for rates view content */
-html[data-color-scheme='dark'] .rates-view-content {
-    --bg-white: #1E293B;
-    --bg-gray: #0F172A;
-    --border-color: #334155;
-    --text-primary: #F1F5F9;
-    --text-secondary: #CBD5E1;
-    --text-muted: #64748B;
-    --hover-bg: #263348;
-}
-
-.quote-card {
-    border-radius: 0;
-    box-shadow: none;
-    border: none;
-    background: transparent;
-}
-
-/* Steps ribbon active states style consistency overrides */
-.header-section.active {
-    background: var(--primary-color) !important;
-    color: #ffffff !important;
-    font-weight: 600;
-}
-
-.header-section.active .section-label,
-.header-section.active .section-value,
-.header-section.active .section-placeholder {
-    color: #ffffff !important;
-}
-
-.header-section.completed::after {
-    background: var(--success-green) !important;
-    color: #ffffff !important;
-}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="rates-view-content">
-    <div class="header-actions" style="display: none;"></div> <!-- Hide view.html header actions if any -->
-
-    <form method="POST" action="{{ url_for('customer.rates') }}" id="wizardSearchForm">
-        <!-- Hidden inputs for JS state -->
-        <input type="hidden" name="transport_mode" id="hidden_transport_mode" value="ocean">
-        <input type="hidden" name="service_type" id="hidden_service_type" value="lcl">
-        <input type="hidden" name="direction" id="hidden_direction" value="EXPORT">
-        <input type="hidden" name="movement_type" id="hidden_movement_type" value="PORT_TO_PORT">
+<form id="wizardSearchForm" action="{{ url_for('customer.rates') }}" method="POST">
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Request a Quote</h1>
+            <p class="page-subtitle">Compare rates, book, and manage your freight shipment</p>
+        </div>
 
         <div class="quote-card">
             <!-- Transport Mode Selection (Above Steps) -->
             <div class="transport-mode-header">
                 <div class="mode-selector">
+<input type="hidden" name="transport_mode" id="transportMode" value="10:SEA">
                     <button class="mode-option active" id="oceanTabHeader" onclick="selectTransportMode('ocean')">
-                        <span class="mode-icon-small"></span>
+                        <span class="mode-icon-small">🚢</span>
                         <span class="mode-text">Ocean Freight</span>
                     </button>
                     <button class="mode-option" id="airTabHeader" onclick="selectTransportMode('air')">
-                        <span class="mode-icon-small"></span>
+                        <span class="mode-icon-small">✈️</span>
                         <span class="mode-text">Air Freight</span>
                     </button>
                 </div>
@@ -1426,10 +1356,10 @@ html[data-color-scheme='dark'] .rates-view-content {
                 <!-- Air Freight Notice -->
                 <div class="service-unavailable-banner" id="airBanner" style="display: none;">
                     <div class="banner-content">
-                        <span class="banner-icon"></span>
+                        <span class="banner-icon">ℹ️</span>
                         <span class="banner-text">Air freight quotes require direct contact with our office for
                             personalized rates and service.</span>
-                        <button type="button" class="btn btn-secondary btn-small" onclick="contactOffice()"> Contact
+                        <button type="button" class="btn btn-secondary btn-small" onclick="contactOffice()">📞 Contact
                             Us</button>
                     </div>
                 </div>
@@ -1439,11 +1369,11 @@ html[data-color-scheme='dark'] .rates-view-content {
             <div class="quote-header" id="stepsRibbon">
                 <div class="header-section" id="routeSection" onclick="togglePanel('route')">
                     <div class="section-label">Route</div>
-                    <div id="routeValue" class="section-placeholder">Origin  Destination</div>
+                    <div id="routeValue" class="section-placeholder">Origin → Destination</div>
                 </div>
                 <div class="header-section" id="cargoSection" onclick="togglePanel('cargo')">
                     <div class="section-label">Cargo</div>
-                    <div id="cargoValue" class="section-placeholder">What are you shipping</div>
+                    <div id="cargoValue" class="section-placeholder">What are you shipping?</div>
                 </div>
                 <div class="header-section" id="servicesSection" onclick="togglePanel('services')">
                     <div class="section-label">Services</div>
@@ -1456,8 +1386,10 @@ html[data-color-scheme='dark'] .rates-view-content {
                 <!-- Route Panel (Origin & Destination) -->
                 <div class="expandable-panel" id="routePanel">
                     <div class="panel-content">
+<div class="row"><div class="col-md-6">
+
                         <div class="panel-header-with-action">
-                            <h2 class="panel-title">Where would you like to ship</h2>
+                            <h2 class="panel-title">Where would you like to ship?</h2>
                             <button type="button" class="btn btn-primary" onclick="saveRoute()"
                                 id="routeActionBtn">Continue</button>
                         </div>
@@ -1466,7 +1398,7 @@ html[data-color-scheme='dark'] .rates-view-content {
 
                             <!-- Origin -->
                             <div class="route-section">
-                                <h3 class="route-section-title"> Origin</h3>
+                                <h3 class="route-section-title">📍 Origin</h3>
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label class="form-label">Type <span class="required">*</span></label>
@@ -1495,7 +1427,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                         <label class="form-label" id="originLocationLabel">City <span
                                                 class="required">*</span></label>
                                         <div class="searchable-select">
-                                            <input type="text" class="form-input searchable-input" id="originLocation" name="origin"
+                                            <input type="text" class="form-input searchable-input" id="originLocation"
                                                 placeholder="Search by city name or zip code"
                                                 onfocus="showDropdown('origin')" oninput="filterLocations('origin')"
                                                 autocomplete="off">
@@ -1507,7 +1439,7 @@ html[data-color-scheme='dark'] .rates-view-content {
 
                             <!-- Destination -->
                             <div class="route-section">
-                                <h3 class="route-section-title"> Destination</h3>
+                                <h3 class="route-section-title">📍 Destination</h3>
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label class="form-label">Type <span class="required">*</span></label>
@@ -1536,7 +1468,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                         <label class="form-label" id="destLocationLabel">City <span
                                                 class="required">*</span></label>
                                         <div class="searchable-select">
-                                            <input type="text" class="form-input searchable-input" id="destLocation" name="destination"
+                                            <input type="text" class="form-input searchable-input" id="destLocation"
                                                 placeholder="Search by city name or zip code"
                                                 onfocus="showDropdown('dest')" oninput="filterLocations('dest')"
                                                 autocomplete="off">
@@ -1545,8 +1477,18 @@ html[data-color-scheme='dark'] .rates-view-content {
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Recent Searches -->
+                        </div>
+                        <div class="recent-searches" id="recentSearches">
+                            <div class="recent-searches-header">
+                                <span class="recent-label">My recent searches</span>
+                                <button class="btn-text-small" onclick="clearRecentSearches()">Clear all</button>
                             </div>
-                            <!-- Recent Searches Removed -->
+                            <div class="recent-searches-list" id="recentSearchesList">
+                                <!-- Recent searches will be populated here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1554,7 +1496,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                 <div class="expandable-panel" id="cargoPanel">
                     <div class="panel-content">
                         <div class="panel-header-with-action">
-                            <h2 class="panel-title">What are you shipping</h2>
+                            <h2 class="panel-title">What are you shipping?</h2>
                             <button type="button" class="btn btn-primary" onclick="saveCargo()"
                                 id="cargoActionBtn">Continue</button>
                         </div>
@@ -1563,18 +1505,18 @@ html[data-color-scheme='dark'] .rates-view-content {
                         <div class="cargo-type-section">
                             <div class="cargo-type-selector">
                                 <button class="cargo-option active" id="lclTab" onclick="selectCargoType('lcl')">
-                                    <span class="cargo-icon-small"></span>
+                                    <span class="cargo-icon-small">📦</span>
                                     <span class="cargo-text">Less than Container Load</span>
                                 </button>
                                 <button class="cargo-option" id="fclTab" onclick="selectCargoType('fcl')">
-                                    <span class="cargo-icon-small"></span>
+                                    <span class="cargo-icon-small">🚢</span>
                                     <span class="cargo-text">Full Container Load</span>
                                 </button>
                             </div>
 
                             <!-- FCL Notice -->
                             <div class="service-unavailable-notice" id="fclNotice" style="display: none;">
-                                <div class="notice-icon"></div>
+                                <div class="notice-icon">ℹ️</div>
                                 <div class="notice-content">
                                     <div class="notice-title">Full Container Load - Contact Our Office</div>
                                     <div class="notice-description">
@@ -1582,7 +1524,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                         container load rates and booking.
                                     </div>
                                     <div class="notice-actions">
-                                        <button type="button" class="btn btn-secondary" onclick="contactOffice()">
+                                        <button type="button" class="btn btn-secondary" onclick="contactOffice()">📞
                                             Contact Us</button>
                                     </div>
                                 </div>
@@ -1597,7 +1539,7 @@ html[data-color-scheme='dark'] .rates-view-content {
 
                         </div>
 
-                        <button class="btn btn-text" onclick="addCargoItem()"> Add Another Cargo Item</button>
+                        <button class="btn btn-text" onclick="addCargoItem()">+ Add Another Cargo Item</button>
                     </div>
                 </div>
 
@@ -1606,8 +1548,8 @@ html[data-color-scheme='dark'] .rates-view-content {
                     <div class="panel-content">
                         <div class="panel-header-with-action">
                             <h2 class="panel-title">Select Services</h2>
-                            <button type="button" class="btn btn-primary" onclick="getQuotes()"
-                                id="servicesActionBtn"> Get Quotes</button>
+                            <button type="button" class="btn btn-success" onclick="getQuotes()"
+                                id="servicesActionBtn">🔍 Get Quotes</button>
                         </div>
 
                         <!-- Terms -->
@@ -1615,36 +1557,24 @@ html[data-color-scheme='dark'] .rates-view-content {
                             <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
                                 <div class="form-group">
                                     <label class="form-label">Incoterm <span class="required">*</span></label>
-                                    <select class="form-select" id="incoterm" name="freight_terms" onchange="updateChargeInclusions()">
+                                    <select class="form-select" id="incoterm" onchange="updateChargeInclusions()">
                                         <option value="">Select incoterm</option>
-                                        {% for incoterm in incoterms %}
-                                            <option value="{{ incoterm.code }}">{{ incoterm.name }}</option>
-                                        {% endfor %}
+                                        <option value="FCA">FCA - Free Carrier</option>
+                                        <option value="FOB">FOB - Free On Board</option>
+                                        <option value="CFR">CFR - Cost and Freight</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Freight Terms <span class="required">*</span></label>
-                                    <select class="form-select" id="freightTerms" name="payment_terms" onchange="onFreightTermsChange()">
+                                    <select class="form-select" id="freightTerms">
                                         <option value="">Select terms</option>
-                                        {% for term in freight_terms %}
-                                            <option value="{{ term.code }}">{{ term.name }}</option>
-                                        {% endfor %}
+                                        <option value="prepaid">Prepaid</option>
+                                        <option value="collect">Collect</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Cargo Ready Date <span class="required">*</span></label>
-                                    <input type="date" class="form-input" id="cargoReadyDate" name="cargo_ready_date" required>
-                                </div>
-                                <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label class="form-label">Customer Reference <span class="required">*</span></label>
-                                    <input type="text" class="form-input" id="customerReference" name="customer_reference" placeholder="e.g. PO12345" required>
-                                </div>
-                                <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label class="form-label">Traffic Type <span class="required">*</span></label>
-                                    <select class="form-select" id="trafficType" name="traffic_type" onchange="updateAvailableIncoterms()" required>
-                                        <option value="EX">Export (EX)</option>
-                                        <option value="IM">Import (IM)</option>
-                                    </select>
+                                    <input type="date" class="form-input" name="cargo_ready_date" required id="cargoReadyDate" required>
                                 </div>
                             </div>
                         </div>
@@ -1654,7 +1584,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                             <h3 class="section-subtitle">Included in Quote</h3>
                             <div class="charges-inline">
                                 <div class="charge-item-inline">
-                                    <input type="checkbox" id="includeFreight" checked onchange="updateChargeStatus('freight')">
+                                    <input type="checkbox" id="includeFreight" checked disabled>
                                     <label for="includeFreight">Freight & Surcharges</label>
                                     <span class="charge-badge included" id="freightBadge">Included</span>
                                 </div>
@@ -1718,7 +1648,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                             <label class="form-label" style="font-size: 0.8rem;">Pickup Location <span
                                                     class="required">*</span></label>
                                             <div class="searchable-select">
-                                                <input type="text" class="form-input" id="pickupLocation" name="pickup_address"
+                                                <input type="text" class="form-input" id="pickupLocation"
                                                     placeholder="Search by city name or zip code"
                                                     onfocus="showServiceDropdown('pickup')"
                                                     oninput="filterServiceLocations('pickup')" autocomplete="off">
@@ -1737,7 +1667,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                             <label class="form-label" style="font-size: 0.8rem;">Delivery Location <span
                                                     class="required">*</span></label>
                                             <div class="searchable-select">
-                                                <input type="text" class="form-input" id="deliveryLocation" name="place_of_delivery"
+                                                <input type="text" class="form-input" id="deliveryLocation"
                                                     placeholder="Search by city name or zip code"
                                                     onfocus="showServiceDropdown('delivery')"
                                                     oninput="filterServiceLocations('delivery')" autocomplete="off">
@@ -1760,37 +1690,7 @@ html[data-color-scheme='dark'] .rates-view-content {
         </div>
     </div>
 
-    <!-- ============================================================
-         RECENT QUOTATIONS & HISTORY
-         ============================================================ -->
-    <div class="history-card mt-4 p-4 bg-white" style="border-radius: 12px; border: 1px solid var(--border-color);">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0 text-dark" style="font-size: 1.1rem;"><i class="bi bi-clock-history me-2"></i>Recent Quotations & History</h5>
-            <button type="button" class="btn btn-sm btn-light border" onclick="clearQueryHistory()">Clear History</button>
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-nowrap">
-                <thead class="bg-light">
-                    <tr>
-                        <th class="ps-3 text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Quotation Date</th>
-                        <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Route Lane</th>
-                        <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Commodities</th>
-                        <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Movement Type</th>
-                        <th class="pe-3 text-end py-3"></th>
-                    </tr>
-                </thead>
-                <tbody id="historyTableBody">
-                    <!-- Javascript populated -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     <!-- Custom Alert Modal -->
-    
-    </form>
-    
     <div class="custom-alert-overlay" id="customAlertOverlay" onclick="closeCustomAlert()">
         <div class="custom-alert-box" onclick="event.stopPropagation()">
             <div class="custom-alert-message" id="customAlertMessage"></div>
@@ -1799,193 +1699,12 @@ html[data-color-scheme='dark'] .rates-view-content {
     </div>
 
     
-</div>
+</form>
+{% endblock %}
 
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-
-// Dynamic ports from API passed by Flask
-const apiOrigins = {{ origins_json | safe }};
-const apiDestinations = {{ destinations_json | safe }};
-const packageTypes = {{ package_types_json | safe }};
-const containerTypes = {{ container_types_json | safe }};
-const weightUomOptions = {{ weight_uom_json | safe }};
-const volumeUomOptions = {{ volume_uom_json | safe }};
-
-const COUNTRY_NAMES = {
-    'US': 'United States',
-    'CN': 'China',
-    'GB': 'United Kingdom',
-    'DE': 'Germany',
-    'ES': 'Spain',
-    'FR': 'France',
-    'NL': 'Netherlands',
-    'BE': 'Belgium',
-    'DK': 'Denmark',
-    'IT': 'Italy',
-    'IN': 'India',
-    'AE': 'United Arab Emirates',
-    'SG': 'Singapore',
-    'HK': 'Hong Kong',
-    'JP': 'Japan',
-    'KR': 'South Korea',
-    'CA': 'Canada',
-    'MX': 'Mexico',
-    'BR': 'Brazil',
-    'AU': 'Australia',
-    'PL': 'Poland',
-    'SE': 'Sweden',
-    'NO': 'Norway',
-    'FI': 'Finland',
-    'CH': 'Switzerland',
-    'AT': 'Austria',
-    'TR': 'Turkey',
-    'VN': 'Vietnam',
-    'TH': 'Thailand',
-    'MY': 'Malaysia',
-    'ID': 'Indonesia',
-    'PH': 'Philippines',
-    'TW': 'Taiwan',
-    'ZA': 'South Africa'
-};
-
-function updateMovementType() {
-    const originTypeEl = document.getElementById('originType');
-    const destTypeEl = document.getElementById('destType');
-    if (!originTypeEl || !destTypeEl) return;
-    
-    const originType = originTypeEl.value;
-    const destType = destTypeEl.value;
-    let mType = 'PORT_TO_PORT';
-    if (originType === 'door' && destType === 'door') {
-        mType = 'DOOR_TO_DOOR';
-    } else if (originType === 'door' && destType === 'port') {
-        mType = 'DOOR_TO_PORT';
-    } else if (originType === 'port' && destType === 'door') {
-        mType = 'PORT_TO_DOOR';
-    } else if (originType === 'port' && destType === 'port') {
-        mType = 'PORT_TO_PORT';
-    }
-    const hiddenMovementType = document.getElementById('hidden_movement_type');
-    if (hiddenMovementType) {
-        hiddenMovementType.value = mType;
-    }
-}
-
-function updateDirection() {
-    const originCountryEl = document.getElementById('originCountry');
-    const destCountryEl = document.getElementById('destCountry');
-    if (!originCountryEl || !destCountryEl) return;
-    
-    const originCountry = originCountryEl.value;
-    const destCountry = destCountryEl.value;
-    let direction = 'EXPORT'; // Default
-    if (originCountry && destCountry) {
-        if (destCountry === 'US' && originCountry !== 'US') {
-            direction = 'IMPORT';
-        } else {
-            direction = 'EXPORT';
-        }
-    }
-    const hiddenDirection = document.getElementById('hidden_direction');
-    if (hiddenDirection) {
-        hiddenDirection.value = direction;
-    }
-}
-
-function handleLocationTypeChange(locationType) {
-    const type = document.getElementById(locationType + 'Type').value;
-    const label = document.getElementById(locationType + 'LocationLabel');
-    const input = document.getElementById(locationType + 'Location');
-
-    if (type === 'door') {
-        label.innerHTML = 'City <span class="required">*</span>';
-        input.placeholder = 'Search by city name or zip code';
-    } else {
-        label.innerHTML = 'Port <span class="required">*</span>';
-        input.placeholder = 'Search by port name or UN code';
-    }
-
-    // Clear selection
-    selectedLocations[locationType] = null;
-    input.value = '';
-    
-    populateCountries(locationType, type);
-    updateMovementType();
-}
-
-function populateCountries(locationType, type) {
-    const countrySelect = document.getElementById(locationType + 'Country');
-    if (!countrySelect) return;
-    const currentValue = countrySelect.value;
-    countrySelect.innerHTML = '<option value="">Select country</option>';
-    
-    let countries = new Set();
-    
-    if (type === 'door') {
-        Object.keys(COUNTRY_NAMES).forEach(c => countries.add(c));
-    } else {
-        const portsList = (locationType === 'origin') ? apiOrigins : apiDestinations;
-        portsList.forEach(p => {
-            if (p.country) {
-                countries.add(p.country.toUpperCase());
-            }
-        });
-    }
-    
-    Array.from(countries).sort().forEach(code => {
-        const name = COUNTRY_NAMES[code] || code;
-        const option = document.createElement('option');
-        option.value = code;
-        option.textContent = name;
-        countrySelect.appendChild(option);
-    });
-    
-    if (countries.has(currentValue)) {
-        countrySelect.value = currentValue;
-    }
-}
-
-function filterLocations(locationType) {
-    const country = document.getElementById(locationType + 'Country').value;
-    const type = document.getElementById(locationType + 'Type').value;
-    const searchTerm = document.getElementById(locationType + 'Location').value.toLowerCase();
-    const dropdown = document.getElementById(locationType + 'Dropdown');
-
-    if (!country) {
-        dropdown.classList.remove('show');
-        return;
-    }
-
-    let filtered = [];
-    if (type === 'door') {
-        dropdown.classList.remove('show');
-        selectedLocations[locationType] = { name: searchTerm, code: '' };
-        return;
-    } else {
-        const portsList = (locationType === 'origin') ? apiOrigins : apiDestinations;
-        const locations = portsList.filter(p => p.country && p.country.toUpperCase() === country.toUpperCase());
-        filtered = locations.filter(loc => 
-            loc.name.toLowerCase().includes(searchTerm) ||
-            loc.code.toLowerCase().includes(searchTerm)
-        ).map(loc => ({
-            name: loc.name,
-            code: loc.code
-        }));
-    }
-
-    if (filtered.length === 0) {
-        dropdown.innerHTML = '<div class="dropdown-no-results">No results found</div>';
-    } else {
-        dropdown.innerHTML = filtered.map(loc => `
-            <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\\'")}', '${loc.code}')">
-                <div class="dropdown-item-name">${loc.name}</div>
-                <div class="dropdown-item-code">${loc.code}</div>
-            </div>
-        `).join('');
-    }
-
-    dropdown.classList.add('show');
-}
 
         // Custom alert function for sandboxed environments
         function showAlert(message) {
@@ -2067,10 +1786,6 @@ function filterLocations(locationType) {
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function () {
-            populateCountries('origin', document.getElementById('originType').value);
-            populateCountries('dest', document.getElementById('destType').value);
-            updateMovementType();
-            updateDirection();
             loadRecentSearches();
             addCargoItem();
             setDefaultCargoReadyDate();
@@ -2230,22 +1945,6 @@ function filterLocations(locationType) {
 
             console.log('Loaded recent search:', search);
             console.log('Selected locations:', selectedLocations);
-            
-            // Force Open Route Panel
-            const panel = document.getElementById('routePanel');
-            const section = document.getElementById('routeSection');
-            if (panel && section) {
-                // Remove open classes from other panels
-                ['cargo', 'services'].forEach(p => {
-                    document.getElementById(p + 'Panel')?.classList.remove('open');
-                    document.getElementById(p + 'Section')?.classList.remove('active');
-                });
-                panel.classList.add('open');
-                section.classList.add('active');
-                currentPanel = 'route';
-            }
-            document.getElementById('routeSection').classList.add('completed');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function togglePanel(panelName) {
@@ -2284,7 +1983,7 @@ function filterLocations(locationType) {
             }
         }
 
-        function handleLocationTypeChange_old(locationType) {
+        function handleLocationTypeChange(locationType) {
             const type = document.getElementById(locationType + 'Type').value;
             const label = document.getElementById(locationType + 'LocationLabel');
             const input = document.getElementById(locationType + 'Location');
@@ -2303,7 +2002,6 @@ function filterLocations(locationType) {
         }
 
         function handleCountryChange(locationType) {
-            updateDirection();
             // Clear location when country changes
             selectedLocations[locationType] = null;
             document.getElementById(locationType + 'Location').value = '';
@@ -2318,7 +2016,7 @@ function filterLocations(locationType) {
             filterLocations(locationType);
         }
 
-        function filterLocations_old(locationType) {
+        function filterLocations(locationType) {
             const country = document.getElementById(locationType + 'Country').value;
             const type = document.getElementById(locationType + 'Type').value;
             const searchTerm = document.getElementById(locationType + 'Location').value.toLowerCase();
@@ -2413,69 +2111,44 @@ function filterLocations(locationType) {
         function updateAvailableIncoterms() {
             const originType = document.getElementById('originType').value;
             const destType = document.getElementById('destType').value;
-            const trafficType = document.getElementById('trafficType').value;
             const incotermSelect = document.getElementById('incoterm');
 
             // Clear existing options except the first placeholder
             incotermSelect.innerHTML = '<option value="">Select incoterm</option>';
 
-            let options = [];
-            let defaultOpt = '';
+            // Always available options
+            const alwaysAvailable = [
+                { value: 'FCA', text: 'FCA - Free Carrier' },
+                { value: 'FOB', text: 'FOB - Free On Board' },
+                { value: 'CFR', text: 'CFR - Cost and Freight' }
+            ];
 
-            if (trafficType === 'EX') {
-                if (destType === 'port') {
-                    options = [
-                        { value: 'CFR', text: 'CFR - Cost and Freight' },
-                        { value: 'DPU', text: 'DPU - Delivered at Place Unloaded (Coming Soon)', disabled: true },
-                        { value: 'FOB', text: 'FOB - Free On Board' },
-                        { value: 'DAP', text: 'DAP - Delivered At Place (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = 'CFR';
-                } else { // destType === 'door'
-                    options = [
-                        { value: 'DAP', text: 'DAP - Delivered At Place (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = '';
-                }
-            } else if (trafficType === 'IM') {
-                if (originType === 'port') {
-                    options = [
-                        { value: 'FOB', text: 'FOB - Free On Board' },
-                        { value: 'FCA', text: 'FCA - Free Carrier (Coming Soon)', disabled: true },
-                        { value: 'CFR', text: 'CFR - Cost and Freight' },
-                        { value: 'EXW', text: 'EXW - Ex Works (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = 'FOB';
-                } else { // originType === 'door'
-                    options = [
-                        { value: 'EXW', text: 'EXW - Ex Works (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = '';
-                }
-            }
-
-            options.forEach(opt => {
+            alwaysAvailable.forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt.value;
                 option.textContent = opt.text;
-                if (opt.disabled) {
-                    option.disabled = true;
-                }
                 incotermSelect.appendChild(option);
             });
 
-            if (defaultOpt) {
-                incotermSelect.value = defaultOpt;
-                incotermSelect.dispatchEvent(new Event('change'));
+            // EXW only if origin is door
+            if (originType === 'door') {
+                const option = document.createElement('option');
+                option.value = 'EXW';
+                option.textContent = 'EXW - Ex Works';
+                incotermSelect.appendChild(option);
             }
-        }
 
-        function onFreightTermsChange() {
-            // Reset incoterm if freight terms are manually changed
-            const incoterm = document.getElementById('incoterm');
-            if (incoterm && incoterm.value !== "") {
-                incoterm.value = "";
-                incoterm.dispatchEvent(new Event('change'));
+            // DAP/DPU only if destination is door
+            if (destType === 'door') {
+                const dapOption = document.createElement('option');
+                dapOption.value = 'DAP';
+                dapOption.textContent = 'DAP - Delivered At Place';
+                incotermSelect.appendChild(dapOption);
+
+                const dpuOption = document.createElement('option');
+                dpuOption.value = 'DPU';
+                dpuOption.textContent = 'DPU - Delivered at Place Unloaded';
+                incotermSelect.appendChild(dpuOption);
             }
         }
 
@@ -2489,27 +2162,28 @@ function filterLocations(locationType) {
             cargoItem.className = 'cargo-item';
             cargoItem.id = itemId;
             cargoItem.innerHTML = `
-                <div class="cargo-item-header" style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 20px;">
-                        <div class="cargo-item-title">Cargo Item #${cargoItemCounter}</div>
-                        <div class="unit-toggle">
-                            <button type="button" class="unit-option active" onclick="setUnit('${itemId}', 'metric', event)">Metric</button>
-                            <button type="button" class="unit-option" onclick="setUnit('${itemId}', 'imperial', event)">Imperial</button>
-                        </div>
-                    </div>
-                    ${cargoItemCounter > 1 ? `<button type="button" class="remove-btn" onclick="removeCargoItem('${itemId}')">Remove</button>` : ''}
+                <div class="cargo-item-header">
+                    <div class="cargo-item-title">Cargo Item #${cargoItemCounter}</div>
+                    ${cargoItemCounter > 1 ? `<button class="remove-btn" onclick="removeCargoItem('${itemId}')">Remove</button>` : ''}
                 </div>
 
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Unit of Measurement</label>
+                    <div class="unit-toggle">
+                        <button class="unit-option active" onclick="setUnit('${itemId}', 'metric')">Metric (kg/m³/cm)</button>
+                        <button class="unit-option" onclick="setUnit('${itemId}', 'imperial')">Imperial (lbs/ft³/in)</button>
+                    </div>
+                </div>
 
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Total Pieces <span class="required">*</span></label>
                         <input type="number" class="form-input" placeholder="0" min="1" value="1" required 
-                               id="${itemId}-pieces" name="item_qty[]" name="item_qty[]" oninput="updateTotals('${itemId}')">
+                               id="${itemId}-pieces" oninput="updateTotals('${itemId}')">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Package Type <span class="required">*</span></label>
-                        <select class="form-select" name="item_type[]" required>
+                        <select class="form-select" required>
                             <option value="">Select package type</option>
                             <option value="pallets">Pallets</option>
                             <option value="boxes">Boxes/Crates</option>
@@ -2520,7 +2194,7 @@ function filterLocations(locationType) {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Goods Type <span class="required">*</span></label>
-                        <select class="form-select" id="${itemId}-goods" name="goods_type[]" name="goods_type[]" required>
+                        <select class="form-select" id="${itemId}-goods" required>
                             <option value="">Select goods type</option>
                             <option value="commercial">Commercial Cargo</option>
                             <option value="personal" disabled style="color: #94a3b8;">Personal Effects (Upon Request)</option>
@@ -2529,38 +2203,23 @@ function filterLocations(locationType) {
                     </div>
                 </div>
                 
-                <div class="form-group" style="margin-top: 1rem; margin-bottom: 1rem;">
-                    <label class="form-label">Cargo Description</label>
-                    <input type="text" class="form-input" name="item_desc[]" placeholder="e.g. Electronics, Auto Parts..." value="General Cargo">
-                </div>
-                
                 <div class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
                     <div class="form-group">
                         <label class="form-label">Total Weight <span class="required">*</span></label>
-                        <div class="input-uom-group">
-                            <input type="number" class="form-input" step="0.01" required 
-                                   id="${itemId}-weight" name="item_weight[]" name="item_weight[]" oninput="updateTotals('${itemId}')"
-                                   placeholder="0.00">
-                            <select class="uom-select" id="${itemId}-weight-uom">
-                                ${weightUomOptions.map(u => `<option value="${u.code}">${u.code}</option>`).join('')}
-                            </select>
-                        </div>
+                        <input type="number" class="form-input" step="0.01" required 
+                               id="${itemId}-weight" oninput="updateTotals('${itemId}')"
+                               placeholder="0.00 kg">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Total Volume <span class="required">*</span></label>
-                        <div class="input-uom-group">
-                            <input type="number" class="form-input" step="0.01" required 
-                                   id="${itemId}-volume" name="item_volume[]" name="item_volume[]" oninput="updateTotals('${itemId}')"
-                                   placeholder="0.00">
-                            <select class="uom-select" id="${itemId}-volume-uom">
-                                ${volumeUomOptions.map(u => `<option value="${u.code}">${u.code}</option>`).join('')}
-                            </select>
-                        </div>
+                        <input type="number" class="form-input" step="0.01" required 
+                               id="${itemId}-volume" oninput="updateTotals('${itemId}')"
+                               placeholder="0.00 m³">
                     </div>
                 </div>
 
                 <div class="checkbox-group">
-                    <input type="checkbox" id="${itemId}-stackable" name="item_stackable[]" checked onchange="toggleStackable('${itemId}')" value="on">
+                    <input type="checkbox" id="${itemId}-stackable" checked onchange="toggleStackable('${itemId}')">
                     <label for="${itemId}-stackable">Stackable</label>
                 </div>
 
@@ -2585,26 +2244,10 @@ function filterLocations(locationType) {
             }
         }
 
-        function setUnit(cargoItemId, unitSystem, event) {
+        function setUnit(cargoItemId, unitSystem) {
             const buttons = document.querySelectorAll(`#${cargoItemId} .unit-option`);
             buttons.forEach(btn => btn.classList.remove('active'));
-            if (event) {
-                event.target.classList.add('active');
-            } else {
-                // Find and activate the correct button programmatically if no event
-                const targetBtn = Array.from(buttons).find(btn => btn.textContent.toLowerCase() === unitSystem);
-                if (targetBtn) targetBtn.classList.add('active');
-            }
-
-            // Update dropdowns
-            const weightUom = document.getElementById(`${cargoItemId}-weight-uom`);
-            const volumeUom = document.getElementById(`${cargoItemId}-volume-uom`);
-            if (weightUom) {
-                weightUom.value = unitSystem === 'metric' ? 'KG' : 'LB';
-            }
-            if (volumeUom) {
-                volumeUom.value = unitSystem === 'metric' ? 'CBM' : 'CBF';
-            }
+            event.target.classList.add('active');
 
             // Update main cargo field placeholders
             const weightInput = document.getElementById(`${cargoItemId}-weight`);
@@ -2751,12 +2394,10 @@ function filterLocations(locationType) {
 
             let totalVolume = 0;
             let totalWeight = 0;
-            let totalPieces = 0;
 
             dimItems.forEach(item => {
                 const inputs = item.querySelectorAll('input');
-                const pieces = parseInt(inputs[0].value) || 0;
-                totalPieces += pieces;
+                const pieces = parseFloat(inputs[0].value) || 0;
                 const length = parseFloat(inputs[1].value) || 0;
                 const width = parseFloat(inputs[2].value) || 0;
                 const height = parseFloat(inputs[3].value) || 0;
@@ -2806,14 +2447,6 @@ function filterLocations(locationType) {
                 const weightInput = document.getElementById(`${cargoItemId}-weight`);
                 weightInput.value = totalWeight.toFixed(2);
             }
-
-            // Update total pieces if calculated from dimensions
-            if (dimItems.length > 0 && totalPieces > 0) {
-                const piecesInput = document.getElementById(`${cargoItemId}-pieces`);
-                if (piecesInput) {
-                    piecesInput.value = totalPieces;
-                }
-            }
         }
 
         function saveCargo() {
@@ -2839,23 +2472,6 @@ function filterLocations(locationType) {
 
             for (let index = 0; index < cargoItems.length; index++) {
                 const item = cargoItems[index];
-
-                // Validate Package Type and Goods Type
-                const packageTypeSelect = item.querySelector('select[name="item_type[]"]');
-                const goodsTypeSelect = item.querySelector('select[name="goods_type[]"]');
-
-                if (packageTypeSelect && !packageTypeSelect.value) {
-                    valid = false;
-                    errorMessage = `Cargo Item #${index + 1}: Please select a Package Type.`;
-                    break;
-                }
-
-                if (goodsTypeSelect && !goodsTypeSelect.value) {
-                    valid = false;
-                    errorMessage = `Cargo Item #${index + 1}: Please select a Goods Type.`;
-                    break;
-                }
-
                 const stackableCheckbox = item.querySelector('input[id$="-stackable"]');
                 const isStackable = stackableCheckbox ? stackableCheckbox.checked : true;
 
@@ -2988,37 +2604,11 @@ function filterLocations(locationType) {
                 return;
             }
 
-            // Auto-select Freight terms based on Incoterm
-            const freightTerms = document.getElementById('freightTerms');
-            if (['CFR', 'DPU', 'DAP'].includes(incoterm)) {
-                freightTerms.value = 'prepaid';
-            } else if (['FOB', 'FCA', 'EXW'].includes(incoterm)) {
-                freightTerms.value = 'collect';
-            }
-
-            // Auto-trigger Door Delivery / Door Pickup services
-            if (incoterm === 'DAP') {
-                const destServices = document.getElementById('destServices');
-                if (!destServices.checked) {
-                    destServices.checked = true;
-                    // Trigger the toggle function to expand the panel
-                    toggleService(destServices);
-                }
-            } else if (incoterm === 'EXW') {
-                const originServices = document.getElementById('originServices');
-                if (!originServices.checked) {
-                    originServices.checked = true;
-                    // Trigger the toggle function to expand the panel
-                    toggleService(originServices);
-                }
-            }
-
             const freightCheckbox = document.getElementById('includeFreight');
             const originCheckbox = document.getElementById('includeOriginCharges');
             const destCheckbox = document.getElementById('includeDestCharges');
-            const trafficType = document.getElementById('trafficType').value;
 
-            // Reset to enabled state (we will disable them at the end)
+            // Reset to enabled state
             freightCheckbox.disabled = false;
             originCheckbox.disabled = false;
             destCheckbox.disabled = false;
@@ -3027,44 +2617,47 @@ function filterLocations(locationType) {
             let originIncluded = true;
             let destIncluded = false;
 
-            // Set inclusions based on trafficType and incoterm
-            if (trafficType === 'EX') {
-                switch (incoterm) {
-                    case 'CFR':
-                        freightIncluded = true; originIncluded = true; destIncluded = false;
-                        break;
-                    case 'DPU':
-                    case 'DAP':
-                        freightIncluded = true; originIncluded = true; destIncluded = true;
-                        break;
-                    case 'FOB':
-                        freightIncluded = false; originIncluded = true; destIncluded = false;
-                        break;
-                }
-            } else if (trafficType === 'IM') {
-                switch (incoterm) {
-                    case 'FOB':
-                        freightIncluded = true; originIncluded = false; destIncluded = true;
-                        break;
-                    case 'FCA':
-                    case 'EXW':
-                        freightIncluded = true; originIncluded = true; destIncluded = true;
-                        break;
-                    case 'CFR':
-                        freightIncluded = false; originIncluded = false; destIncluded = true;
-                        break;
-                }
+            // Set defaults based on incoterm
+            switch (incoterm) {
+                case 'EXW':
+                    // Ex Works: minimal - only origin
+                    freightIncluded = false;
+                    originIncluded = true;
+                    destIncluded = false;
+                    freightCheckbox.disabled = true;
+                    destCheckbox.disabled = true;
+                    break;
+                case 'FCA':
+                    // Free Carrier: origin + freight
+                    freightIncluded = true;
+                    originIncluded = true;
+                    destIncluded = false;
+                    break;
+                case 'FOB':
+                    // Free On Board: origin + freight
+                    freightIncluded = true;
+                    originIncluded = true;
+                    destIncluded = false;
+                    break;
+                case 'CFR':
+                    // Cost and Freight: origin + freight + dest
+                    freightIncluded = true;
+                    originIncluded = true;
+                    destIncluded = true;
+                    break;
+                case 'DAP':
+                case 'DPU':
+                    // Delivered: everything included
+                    freightIncluded = true;
+                    originIncluded = true;
+                    destIncluded = true;
+                    break;
             }
 
-            // Apply the logic to checkboxes
+            // Apply the settings
             freightCheckbox.checked = freightIncluded;
             originCheckbox.checked = originIncluded;
             destCheckbox.checked = destIncluded;
-
-            // Disable them so user cannot override
-            freightCheckbox.disabled = true;
-            originCheckbox.disabled = true;
-            destCheckbox.disabled = true;
 
             // Update visual status
             updateChargeStatus('freight');
@@ -3231,16 +2824,14 @@ function filterLocations(locationType) {
             const incoterm = document.getElementById('incoterm').value;
             const freightTerms = document.getElementById('freightTerms').value;
             const cargoReadyDate = document.getElementById('cargoReadyDate').value;
-            const customerReference = document.getElementById('customerReference').value;
-            const trafficType = document.getElementById('trafficType').value;
 
             if (!route || !cargo) {
-                alert('Validation Error: Please complete Route and Cargo sections');
+                alert('Please complete Route and Cargo sections');
                 return;
             }
 
-            if (!incoterm || !freightTerms || !cargoReadyDate || !customerReference || !trafficType) {
-                alert('Validation Error: Please select Incoterm, Freight Terms, Cargo Ready Date, Customer Reference, and Traffic Type in the Services section');
+            if (!incoterm || !freightTerms || !cargoReadyDate) {
+                alert('Please select Incoterm, Freight Terms, and Cargo Ready Date in the Services section');
                 togglePanel('services');
                 return;
             }
@@ -3278,294 +2869,176 @@ function filterLocations(locationType) {
                 }
             }
 
-            // Submit the form
-            const form = document.getElementById('wizardSearchForm');
-            if (form) {
-                try {
-                    const orig = document.getElementById('originLocation').value || 'Unknown Origin';
-                    const dest = document.getElementById('destLocation').value || 'Unknown Destination';
-                    const movementEl = document.getElementById('movementType');
-                    const movement = movementEl ? movementEl.options[movementEl.selectedIndex].text : 'Port to Port';
-                    
-                    // selectedCargoType is globally tracked in view.html
-                    const isLcl = selectedCargoType === 'lcl';
-                    let details = '';
-                    if(isLcl) {
-                        let v = 0;
-                        document.querySelectorAll('.dim-vol').forEach(i => v += parseFloat(i.value)||0);
-                        // Fallback if no dims
-                        if(v === 0) {
-                            const firstVol = document.querySelector('input[name="item_volume[]"]');
-                            if(firstVol) v = parseFloat(firstVol.value) || 0;
-                        }
-                        details = `${parseFloat(v).toFixed(2)} CBM`;
-                    } else {
-                        let c = 0;
-                        document.querySelectorAll('input[name="cont_qty[]"]').forEach(i => c += parseInt(i.value)||0);
-                        if(c === 0) c = 1;
-                        details = `${c} × Container`;
-                    }
-                    
-                    let hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
-                    
-                    let cargoItems = [];
-                    if (isLcl) {
-                        document.querySelectorAll('.cargo-item').forEach(item => {
-                            cargoItems.push({
-                                pieces: item.querySelector('input[name="item_qty[]"]')?.value || '',
-                                type: item.querySelector('select[name="item_type[]"]')?.value || '',
-                                length: item.querySelector('input[name="item_length[]"]')?.value || '',
-                                width: item.querySelector('input[name="item_width[]"]')?.value || '',
-                                height: item.querySelector('input[name="item_height[]"]')?.value || '',
-                                dim_unit: item.querySelector('select[name="item_dim_unit[]"]')?.value || '',
-                                weight: item.querySelector('input[name="item_weight[]"]')?.value || '',
-                                weight_unit: item.querySelector('select[name="item_weight_unit[]"]')?.value || '',
-                                volume: item.querySelector('input[name="item_volume[]"]')?.value || '',
-                                desc: item.querySelector('input[name="item_desc[]"]')?.value || 'General Cargo'
-                            });
-                        });
-                    }
-
-                    let services = {
-                        incoterm: document.getElementById('incoterm')?.value || '',
-                        freightTerms: document.getElementById('freightTerms')?.value || '',
-                        cargoReadyDate: document.getElementById('cargoReadyDate')?.value || '',
-                        customerReference: document.getElementById('customerReference')?.value || '',
-                        trafficType: document.getElementById('trafficType')?.value || '',
-                        includeFreight: document.getElementById('includeFreight')?.checked || false,
-                        includeOriginCharges: document.getElementById('includeOriginCharges')?.checked || false,
-                        includeDestCharges: document.getElementById('includeDestCharges')?.checked || false,
-                        customsClearance: document.getElementById('service1')?.checked || false,
-                        insurance: document.getElementById('service2')?.checked || false,
-                        insuranceAmount: document.getElementById('insuranceAmount')?.value || '',
-                        insuranceCurrency: document.getElementById('insuranceCurrency')?.value || 'USD',
-                        pickup: document.getElementById('service3')?.checked || false,
-                        pickupLocation: document.getElementById('pickupLocation')?.value || '',
-                        delivery: document.getElementById('service4')?.checked || false,
-                        deliveryLocation: document.getElementById('deliveryLocation')?.value || ''
-                    };
-
-                    hist.unshift({ 
-                        date: new Date().toLocaleString(), 
-                        origin: orig, 
-                        destination: dest, 
-                        service: movement + ' (' + (isLcl?'LCL':'FCL') + ')', 
-                        details,
-                        originType: document.getElementById('originType') ? document.getElementById('originType').value : 'port',
-                        originCountry: document.getElementById('originCountry') ? document.getElementById('originCountry').value : '',
-                        destType: document.getElementById('destType') ? document.getElementById('destType').value : 'port',
-                        destCountry: document.getElementById('destCountry') ? document.getElementById('destCountry').value : '',
-                        cargoItems: cargoItems,
-                        services: services
-                    });
-                    localStorage.setItem('ftl_search_history', JSON.stringify(hist.slice(0, 5)));
-                } catch(e) { console.error('Error saving history', e); }
-
-                // Show loader or disable button if needed
-                form.submit();
-            } else {
-                // Inject transport_mode and service_type into hidden fields before submitting
-document.getElementById('hidden_transport_mode').value = selectedTransportMode;
-document.getElementById('hidden_service_type').value = selectedCargoType;
-document.getElementById('wizardSearchForm').submit();
-            }
-        }
-
-        // --- History Management ---
-        document.addEventListener('DOMContentLoaded', function () {
-            populateCountries('origin', document.getElementById('originType').value);
-            populateCountries('dest', document.getElementById('destType').value);
-            updateMovementType();
-            updateDirection();
-            renderQueryHistory();
-        });
-
-        function renderQueryHistory() {
-            const tbody = document.getElementById('historyTableBody');
-            if (!tbody) return;
-            
-            let hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
-            if(hist.length === 0) {
-                hist = [
-                    { date: new Date().toLocaleString(), origin: 'Shanghai (CNSHA)', destination: 'Hamburg (DEHAM)', service: 'Port to Port (LCL)', details: '0.00 CBM' },
-                    { date: new Date().toLocaleString(), origin: 'Singapore (SGPIN)', destination: 'Rotterdam (NLRTM)', service: 'Door to Door (FCL)', details: '1 × Container' }
-                ];
-                localStorage.setItem('ftl_search_history', JSON.stringify(hist));
-            }
-            tbody.innerHTML = hist.map((h, i) => `
-                <tr>
-                    <td class="ps-3 py-3 font-monospace text-muted" style="font-size:0.75rem;">${h.date}</td>
-                    <td class="py-3">
-                        <div class="fw-bold text-dark" style="font-size:0.8rem;">${h.origin} <i class="bi bi-arrow-right mx-1 text-primary"></i> ${h.destination}</div>
-                    </td>
-                    <td class="py-3 text-secondary" style="font-size:0.8rem;"><i class="bi bi-box-seam me-1"></i> ${h.details}</td>
-                    <td class="py-3"><span class="badge table-badge table-badge-primary" style="background-color: var(--bg-gray); color: var(--primary-color); border-radius: 20px; padding: 4px 12px; font-weight: 600;">${h.service}</span></td>
-                    <td class="pe-3 py-3 text-end">
-                        <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:0.7rem; font-weight:700;" onclick="loadHistory(${i})">Re-run</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function clearQueryHistory() {
-            localStorage.removeItem('ftl_search_history');
-            renderQueryHistory();
-        }
-
-        function loadHistory(idx) {
-            const hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
-            const r = hist[idx];
-            if(!r) return;
-            
-            // Try to extract country and type from origin string e.g. "Shanghai (CNSHA)"
-            let oCountry = 'CN', oType = 'port';
-            if (r.origin) {
-                const match = r.origin.match(/\(([A-Z]{2})[A-Z0-9]*\)/i);
-                if (match && match[1]) {
-                    oCountry = match[1].toUpperCase();
-                    oType = (r.origin.indexOf('Port') > -1 || r.origin.match(/\([A-Z]{5}\)/)) ? 'port' : 'door';
-                }
-            }
-            let dCountry = 'US', dType = 'port';
-            if (r.destination) {
-                const match = r.destination.match(/\(([A-Z]{2})[A-Z0-9]*\)/i);
-                if (match && match[1]) {
-                    dCountry = match[1].toUpperCase();
-                    dType = (r.destination.indexOf('Port') > -1 || r.destination.match(/\([A-Z]{5}\)/)) ? 'port' : 'door';
-                }
-            }
-            
-            // Set Origin
-            document.getElementById('originType').value = (r.originType || oType).toLowerCase();
-            handleLocationTypeChange('origin');
-            document.getElementById('originCountry').value = r.originCountry || oCountry;
-            handleCountryChange('origin');
-            document.getElementById('originLocation').value = r.origin;
-            
-            // Set Destination
-            document.getElementById('destType').value = (r.destType || dType).toLowerCase();
-            handleLocationTypeChange('dest');
-            document.getElementById('destCountry').value = r.destCountry || dCountry;
-            handleCountryChange('dest');
-            document.getElementById('destLocation').value = r.destination;
-            
-            // Set Cargo Type based on service string
-            if (r.service && r.service.includes('FCL')) {
-                selectCargoType('fcl');
-            } else {
-                selectCargoType('lcl');
-            }
-            
-            // Restore Cargo Items
-            if (r.cargoItems && r.cargoItems.length > 0 && (!r.service || !r.service.includes('FCL'))) {
-                document.getElementById('cargoItems').innerHTML = '';
-                cargoItemCounter = 0;
-                r.cargoItems.forEach(item => {
-                    addCargoItem();
-                    const itemId = `cargo-${cargoItemCounter}`;
-                    const el = document.getElementById(itemId);
-                    if(el) {
-                        if(item.pieces) el.querySelector('input[name="item_qty[]"]').value = item.pieces;
-                        if(item.type) el.querySelector('select[name="item_type[]"]').value = item.type;
-                        if(item.length) el.querySelector('input[name="item_length[]"]').value = item.length;
-                        if(item.width) el.querySelector('input[name="item_width[]"]').value = item.width;
-                        if(item.height) el.querySelector('input[name="item_height[]"]').value = item.height;
-                        if(item.dim_unit) el.querySelector('select[name="item_dim_unit[]"]').value = item.dim_unit;
-                        if(item.weight) el.querySelector('input[name="item_weight[]"]').value = item.weight;
-                        if(item.weight_unit) el.querySelector('select[name="item_weight_unit[]"]').value = item.weight_unit;
-                        if(item.volume) el.querySelector('input[name="item_volume[]"]').value = item.volume;
-                        if(item.desc) el.querySelector('input[name="item_desc[]"]').value = item.desc;
-                    }
-                });
-            }
-
-            // Restore Services
-            if (r.services) {
-                const s = r.services;
-                if(s.incoterm) document.getElementById('incoterm').value = s.incoterm;
-                if(s.freightTerms) document.getElementById('freightTerms').value = s.freightTerms;
-                if(s.cargoReadyDate) document.getElementById('cargoReadyDate').value = s.cargoReadyDate;
-                if(s.customerReference) document.getElementById('customerReference').value = s.customerReference;
-                if(s.trafficType) document.getElementById('trafficType').value = s.trafficType;
-                
-                const setCheckbox = (id, checked) => {
-                    const cb = document.getElementById(id);
-                    if (!cb) return;
-                    cb.checked = checked;
-                    if (id === 'service1') {
-                        const card = cb.closest('.service-card');
-                        if (card) checked ? card.classList.add('selected') : card.classList.remove('selected');
-                    } else if (id === 'service2') {
-                        if (typeof toggleInsuranceValue === 'function') toggleInsuranceValue();
-                    } else if (id === 'service3') {
-                        if (typeof togglePickupDetails === 'function') togglePickupDetails();
-                    } else if (id === 'service4') {
-                        if (typeof toggleDeliveryDetails === 'function') toggleDeliveryDetails();
-                    } else if (id === 'includeFreight') {
-                        if (typeof updateChargeStatus === 'function') updateChargeStatus('freight');
-                    } else if (id === 'includeOriginCharges') {
-                        if (typeof updateChargeStatus === 'function') updateChargeStatus('origin');
-                    } else if (id === 'includeDestCharges') {
-                        if (typeof updateChargeStatus === 'function') updateChargeStatus('dest');
-                    }
-                };
-
-                if (s.includeFreight !== undefined) setCheckbox('includeFreight', s.includeFreight);
-                if (s.includeOriginCharges !== undefined) setCheckbox('includeOriginCharges', s.includeOriginCharges);
-                if (s.includeDestCharges !== undefined) setCheckbox('includeDestCharges', s.includeDestCharges);
-                if (s.customsClearance !== undefined) setCheckbox('service1', s.customsClearance);
-                
-                if (s.insurance !== undefined) {
-                    setCheckbox('service2', s.insurance);
-                    if(s.insurance) {
-                        setTimeout(() => {
-                            if(s.insuranceAmount) document.getElementById('insuranceAmount').value = s.insuranceAmount;
-                            if(s.insuranceCurrency) document.getElementById('insuranceCurrency').value = s.insuranceCurrency;
-                        }, 50);
-                    }
-                }
-                
-                if (s.pickup !== undefined) {
-                    setCheckbox('service3', s.pickup);
-                    if(s.pickup && s.pickupLocation) {
-                        setTimeout(() => document.getElementById('pickupLocation').value = s.pickupLocation, 50);
-                    }
-                }
-                
-                if (s.delivery !== undefined) {
-                    setCheckbox('service4', s.delivery);
-                    if(s.delivery && s.deliveryLocation) {
-                        setTimeout(() => document.getElementById('deliveryLocation').value = s.deliveryLocation, 50);
-                    }
-                }
-            }
-
-            // Force Open Route Panel
-            const panel = document.getElementById('routePanel');
-            const section = document.getElementById('routeSection');
-            if (panel && section) {
-                ['cargo', 'services'].forEach(p => {
-                    document.getElementById(p + 'Panel')?.classList.remove('open');
-                    document.getElementById(p + 'Section')?.classList.remove('active');
-                });
-                panel.classList.add('open');
-                section.classList.add('active');
-                currentPanel = 'route';
-            }
-            
-            // Validate Route
-            document.getElementById('routeSection').classList.add('completed');
-            document.getElementById('cargoSection').classList.remove('completed');
-            
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            alert('🎉 Quote request submitted! You will be redirected to view available offers.');
         }
     
 
-// Ensure the first cargo item is added on load
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof addCargoItem === 'function') {
-        addCargoItem();
+    let sideMap;
+    let sideOriginMarker, sideDestMarker, sideRouteLine;
+
+    document.addEventListener('DOMContentLoaded', function() {
+    // Add tab click listener to invalidate map size
+    document.querySelectorAll('.header-section').forEach(tab => {
+        tab.addEventListener('click', () => {
+            setTimeout(() => { if(sideMap) sideMap.invalidateSize(); }, 300);
+        });
+    });
+
+        if(document.getElementById('sideMap')) {
+            sideMap = L.map('sideMap').setView([41.8719, 12.5674], 5); // Italy
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(sideMap);
+
+            const originInput = document.getElementById('wizOriginLocation');
+            const destInput = document.getElementById('wizDestLocation');
+            
+            if(originInput) originInput.addEventListener('blur', updateSideMap);
+            if(destInput) destInput.addEventListener('blur', updateSideMap);
+        }
+    });
+
+    function updateSideMap() {
+        if(!sideMap) return;
+        
+        const originInput = document.getElementById('wizOriginLocation');
+        const destInput = document.getElementById('wizDestLocation');
+        
+        const originVal = originInput ? originInput.value : '';
+        const destVal = destInput ? destInput.value : '';
+        
+        if (sideOriginMarker) sideMap.removeLayer(sideOriginMarker);
+        if (sideDestMarker) sideMap.removeLayer(sideDestMarker);
+        if (sideRouteLine) sideMap.removeLayer(sideRouteLine);
+        
+        let originLatlng = null;
+        let destLatlng = null;
+
+        if (originVal.length > 2) {
+            originLatlng = [22.5, 114.0]; 
+            
+            const originIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:#2563eb; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow: 0 0 10px rgba(37,99,235,0.8); display:flex; justify-content:center; align-items:center;'><span style='color:white; font-size:10px; font-weight:bold;'>O</span></div>",
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            sideOriginMarker = L.marker(originLatlng, {icon: originIcon}).addTo(sideMap);
+
+        }
+        
+        if (destVal.length > 2) {
+            destLatlng = [53.5, 9.9]; 
+            
+            const destIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:#dc2626; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow: 0 0 10px rgba(220,38,38,0.8); display:flex; justify-content:center; align-items:center;'><span style='color:white; font-size:10px; font-weight:bold;'>D</span></div>",
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            sideDestMarker = L.marker(destLatlng, {icon: destIcon}).addTo(sideMap);
+
+        }
+        
+        if (originLatlng && destLatlng) {
+            sideRouteLine = L.polyline([originLatlng, destLatlng], {
+                color: '#8b5cf6', weight: 3, dashArray: '5, 10', opacity: 0.8
+            }).addTo(sideMap);
+            sideMap.fitBounds(sideRouteLine.getBounds(), {padding: [30, 30]});
+        } else if (originLatlng) {
+            sideMap.setView(originLatlng, 4);
+        } else if (destLatlng) {
+            sideMap.setView(destLatlng, 4);
+        }
     }
-});
+
+    // ==========================================
+    // Automated Data Fetching (Mock API)
+    // ==========================================
+    function triggerAutomatedDataFetch() {
+        const originVal = document.getElementById('wizOriginLocation').value;
+        const destVal = document.getElementById('wizDestLocation').value;
+        
+        if (originVal && originVal.length > 2) {
+            // Mock fetching transport lanes to determine Import/Export
+            console.log("Fetching Transport Lanes for origin:", originVal);
+            const directionSelect = document.querySelector('select[name="direction"]');
+            if (originVal.toLowerCase().includes('us') || originVal.toLowerCase().includes('united states')) {
+                directionSelect.value = 'EXPORT';
+            } else {
+                directionSelect.value = 'IMPORT';
+            }
+        }
+        
+        if (originVal && destVal) {
+            console.log("Validating route between", originVal, "and", destVal);
+            // Mock Validation
+            if (destVal.toLowerCase() === 'mars' || destVal.toLowerCase() === 'moon') {
+                alert("Destination is not available for the chosen origin based on Transport Lanes.");
+                document.getElementById('wizDestLocation').value = '';
+            }
+            
+            // Mock fetching Value-Added Services
+            console.log("Fetching Value-Added Services for trade link.");
+            // e.g. Automatically check "Customs Clearance" if available
+            const destChargesCheckbox = document.getElementById('wizIncludeDestCharges');
+            if(destChargesCheckbox) {
+                // If import to US, require dest charges
+                if(destVal.toLowerCase().includes('us')) {
+                    destChargesCheckbox.checked = true;
+                    updateWizChargeStatus('dest');
+                }
+            }
+        }
+    }
+
+
+
+    // Attach to existing blur events
+    document.addEventListener('DOMContentLoaded', function() {
+        const originInput = document.getElementById('wizOriginLocation');
+        const destInput = document.getElementById('wizDestLocation');
+        
+        if(originInput) {
+            originInput.addEventListener('blur', triggerAutomatedDataFetch);
+        }
+
+        const transportModeSelect = document.getElementById('wizTransportMode');
+        const offlineBanner = document.getElementById('offlineServiceBanner');
+        const offlineText = document.getElementById('offlineServiceText');
+        const cargoScrollArea = document.getElementById('cargoScrollArea');
+        const routeFields = document.getElementById('routeFieldsContainer'); // we need to define this or just use display block
+
+        if (transportModeSelect) {
+            transportModeSelect.addEventListener('change', function(e) {
+                const disabledElements = [
+                    document.getElementById('offlineDisabledArea1'),
+                    document.getElementById('panel2'),
+                    document.getElementById('panel3'),
+                    document.getElementById('tab2'),
+                    document.getElementById('tab3'),
+                    document.getElementById('sideMap').parentElement.parentElement // Blur the map card too
+                ];
+
+                if (this.value === 'AIR' || this.value === 'ROAD') {
+                    const modeName = this.options[this.selectedIndex].text;
+                    offlineText.innerText = `${modeName} quotes require direct contact with our office for personalized rates and service.`;
+                    offlineBanner.style.display = 'block';
+                    
+                    disabledElements.forEach(el => {
+                        if(el) el.classList.add('offline-disabled');
+                    });
+                } else {
+                    offlineBanner.style.display = 'none';
+                    disabledElements.forEach(el => {
+                        if(el) el.classList.remove('offline-disabled');
+                    });
+                }
+            });
+        }
+
+        if(destInput) {
+            destInput.addEventListener('blur', triggerAutomatedDataFetch);
+        }
+    });
+
 </script>
 {% endblock %}

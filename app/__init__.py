@@ -268,6 +268,8 @@ def seed_lookups():
         ('incoterm', 'CIF', 'CIF - Cost, Insurance & Freight', None),
         ('incoterm', 'DAP', 'DAP - Delivered At Place', None),
         ('incoterm', 'DDP', 'DDP - Delivered Duty Paid', None),
+        ('incoterm', 'DPU', 'DPU - Delivered at Place Unloaded', None),
+        ('incoterm', 'EXW', 'EXW - Ex Works', None),
         
         # Package Types
         ('package_type', 'pallets', 'Pallets', None),
