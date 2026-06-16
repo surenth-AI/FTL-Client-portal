@@ -246,8 +246,8 @@
             </div>
             
             <div style="width: 15%" class="text-end">
-                <div class="fs-4 fw-bold" style="color: var(--primary-color);">${{ "%.2f"|format(res.total_cost) }}</div>
-                <small class="text-muted">USD</small>
+                <div class="fs-4 fw-bold" style="color: var(--primary-color);">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</div>
+                <small class="text-muted">Total</small>
             </div>
             <div style="width: 15%" class="text-center d-flex flex-column gap-2 px-2" onclick="event.stopPropagation();">
                 <button class="btn btn-sm btn-outline-secondary fw-bold"><i class="bi bi-bookmark"></i> Save</button>
@@ -264,50 +264,37 @@
         <!-- Breakdown Accordion Row -->
         <div id="breakdown-{{ loop.index }}" class="quote-breakdown-row p-4 border-top" style="display: none; background: var(--bg-gray); border-color: var(--border-color) !important;">
             
-            <!-- Origin Charges -->
-            <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-box-arrow-in-right"></i> Origin Charges</h6>
+            <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-receipt"></i> Quotation Breakdown</h6>
             <table class="detail-table">
                 <thead>
-                    <tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Calculation</th>
+                        <th>Units</th>
+                        <th>Unit Price</th>
+                        <th class="text-end">Final Amount</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    <tr><td>THC</td><td>Terminal Handling Charge</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.2) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.2 * query.volume) }}</td></tr>
-                    <tr><td>DOC</td><td>Documentation Fee</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
+                    {% for line in res.breakdown %}
+                    <tr>
+                        <td>{{ line.articleCode }}</td>
+                        <td>{{ line.articleName }}</td>
+                        <td>{{ line.calcCodeBase }}</td>
+                        <td>{{ "%.2f"|format(line.appliedQty) }}</td>
+                        <td>{{ line.currency }} {{ "%.2f"|format(line.appliedRate) }}</td>
+                        <td class="text-end fw-bold">{{ line.currency }} {{ "%.2f"|format(line.amount) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No line items provided in API.</td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
             
-            <!-- Freight Charges -->
-            <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-ship"></i> Freight Charges</h6>
-            <table class="detail-table">
-                <thead>
-                    <tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>OFR</td><td>Ocean Freight Cost</td><td>Base Rate</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.base_rate) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.base_rate * query.volume) }}</td></tr>
-                    <tr><td>BAF</td><td>Bunker Adjustment</td><td>Surcharge</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td></tr>
-                </tbody>
-            </table>
-            
-            <!-- Destination Charges -->
-            <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-box-arrow-right"></i> Destination Charges</h6>
-            <table class="detail-table">
-                <thead>
-                    <tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>DTHC</td><td>Dest. Terminal Handling</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3 * query.volume) }}</td></tr>
-                    <tr><td>ISF</td><td>Security Filing</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
-                </tbody>
-            </table>
-            
-            <!-- Summary Bar -->
             <div class="summary-bar mt-4">
-                <div>
-                    <span class="d-block small text-muted text-uppercase fw-bold mb-1"><i class="bi bi-calculator"></i> Summary</span>
-                    <span class="text-body" style="font-size: 0.85rem;">Includes all requested Value Added Services</span>
-                </div>
-                <div class="text-end">
-                    <span class="me-3 text-muted" style="font-size: 0.9rem;">Total Price</span>
                     <span class="fs-4 fw-bold" style="color: var(--primary-color);">USD {{ "%.2f"|format(res.total_cost) }}</span>
                 </div>
             </div>
@@ -348,9 +335,9 @@
                     {% endif %}
                 </div>
                 
-                <div class="display-6 mb-1 text-primary fw-bold">${{ "%.2f"|format(res.total_cost) }}</div>
+                <div class="display-6 mb-1 text-primary fw-bold">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</div>
                 <div class="text-muted small mb-3">
-                    (${{ "%.2f"|format(res.base_rate) }} Base + ${{ "%.2f"|format(res.surcharges) }} Surcharges)
+                    (Includes all Quotation Line Items)
                 </div>
                 
                 <hr>
@@ -425,44 +412,45 @@
                         </div>
                     </div>
 
-                    <!-- Origin Charges -->
-                    <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-box-arrow-in-right"></i> Origin Charges</h6>
+                    <!-- API Quotation Line Items -->
+                    <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-receipt"></i> Quotation Breakdown</h6>
                     <table class="detail-table">
-                        <thead><tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Calculation</th>
+                                <th>Units</th>
+                                <th>Unit Price</th>
+                                <th class="text-end">Final Amount</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            <tr><td>THC</td><td>Terminal Handling Charge</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.2) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.2 * query.volume) }}</td></tr>
-                            <tr><td>DOC</td><td>Documentation Fee</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
-                        </tbody>
-                    </table>
-                    
-                    <!-- Freight Charges -->
-                    <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-ship"></i> Freight Charges</h6>
-                    <table class="detail-table">
-                        <thead><tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr></thead>
-                        <tbody>
-                            <tr><td>OFR</td><td>Ocean Freight Cost</td><td>Base Rate</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.base_rate) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.base_rate * query.volume) }}</td></tr>
-                            <tr><td>BAF</td><td>Bunker Adjustment</td><td>Surcharge</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td></tr>
-                        </tbody>
-                    </table>
-                    
-                    <!-- Destination Charges -->
-                    <h6 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-box-arrow-right"></i> Destination Charges</h6>
-                    <table class="detail-table">
-                        <thead><tr><th>Fee Code</th><th>Fee Name</th><th>Comment</th><th>Units</th><th>Unit Price</th><th class="text-end">Final Amount</th></tr></thead>
-                        <tbody>
-                            <tr><td>DTHC</td><td>Dest. Terminal Handling</td><td>Per CBM</td><td>{{ query.volume }}</td><td>USD {{ "%.2f"|format(res.surcharges * 0.3) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.3 * query.volume) }}</td></tr>
-                            <tr><td>ISF</td><td>Security Filing</td><td>Per Bill</td><td>1</td><td>USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td><td class="text-end fw-bold">USD {{ "%.2f"|format(res.surcharges * 0.1) }}</td></tr>
+                            {% for line in res.breakdown %}
+                            <tr>
+                                <td>{{ line.articleCode }}</td>
+                                <td>{{ line.articleName }}</td>
+                                <td>{{ line.calcCodeBase }}</td>
+                                <td>{{ "%.2f"|format(line.appliedQty) }}</td>
+                                <td>{{ line.currency }} {{ "%.2f"|format(line.appliedRate) }}</td>
+                                <td class="text-end fw-bold">{{ line.currency }} {{ "%.2f"|format(line.amount) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No line items provided in API.</td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                     
                     <div class="summary-bar mt-4">
                         <div>
                             <span class="d-block small text-muted text-uppercase fw-bold mb-1"><i class="bi bi-calculator"></i> Summary</span>
-                            <span class="text-body" style="font-size: 0.85rem;">Includes all requested Value Added Services</span>
+                            <span class="text-body" style="font-size: 0.85rem;">Official API Quotation Total</span>
                         </div>
                         <div class="text-end">
                             <span class="me-3 text-muted" style="font-size: 0.9rem;">Total Price</span>
-                            <span class="fs-4 fw-bold" style="color: var(--primary-color);">USD {{ "%.2f"|format(res.total_cost) }}</span>
+                            <span class="fs-4 fw-bold" style="color: var(--primary-color);">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</span>
                         </div>
                     </div>
                 </div>

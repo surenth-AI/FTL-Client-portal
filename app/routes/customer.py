@@ -325,7 +325,8 @@ def rates():
                     'volume': sum(c['volume'] for c in payload['commodities']),
                     'service_type': service_type,
                     'cargo_items': payload['commodities'],
-                    'quote_id': quo_id
+                    'quote_id': quo_id,
+                    'api_quotation_id': data.get('quotationId', '')
                 }
                 return redirect(url_for('customer.rate_results'))
             else:
@@ -478,19 +479,34 @@ def rates():
     except Exception as ex:
         print("Error merging lookup ports:", ex)
 
+    from app.services.master_data import get_code_list
     # Fetch other lookup fields
     try:
-        incoterms = Lookup.query.filter_by(category='incoterm').all()
-        package_types = [{'code': pt.code, 'name': pt.name} for pt in Lookup.query.filter_by(category='package_type').all()]
-        container_types = [{'code': ct.code, 'name': ct.name} for ct in Lookup.query.filter_by(category='container_type').all()]
-        weight_uom = [{'code': wu.code, 'name': wu.name} for wu in Lookup.query.filter_by(category='weight_uom').all()]
-        volume_uom = [{'code': vu.code, 'name': vu.name} for vu in Lookup.query.filter_by(category='volume_uom').all()]
-        freight_terms = Lookup.query.filter_by(category='freight_terms').all()
+        # Fetch from new CodeLists API where supported
+        incoterms_api = get_code_list('incoterm')
+        incoterms = incoterms_api if incoterms_api else []
+        
+        package_api = get_code_list('packagecode')
+        package_types = [pt.to_dict() for pt in package_api] if package_api else []
+        
+        container_api = get_code_list('freighttransporttype')
+        container_types = [ct.to_dict() for ct in container_api] if container_api else []
+        
+        # Fetch Value Added Services
+        vas_api = get_code_list('vastype')
+        vas_types = [c.to_dict() for c in vas_api] if vas_api else []
+
+        # Hardcode basic UOMs and Terms since they are not in the CodeLists API, stripping internal DB dependencies
+        weight_uom = [{'code': 'kg', 'name': 'Kilograms (kg)'}, {'code': 'lbs', 'name': 'Pounds (lbs)'}]
+        volume_uom = [{'code': 'cbm', 'name': 'Cubic Meters (cbm)'}, {'code': 'cbf', 'name': 'Cubic Feet (cbf)'}]
+        freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
     except Exception as ex:
         print("Error fetching lookup lists:", ex)
         incoterms = []
         package_types = []
         container_types = []
+
+        vas_types = []
         weight_uom = []
         volume_uom = []
         freight_terms = []
@@ -507,6 +523,8 @@ def rates():
                          incoterms=incoterms,
                          package_types_json=json.dumps(package_types),
                          container_types_json=json.dumps(container_types),
+
+                         vas_types_json=json.dumps(vas_types),
                          weight_uom_json=json.dumps(weight_uom),
                          volume_uom_json=json.dumps(volume_uom),
                          freight_terms=freight_terms)
@@ -629,27 +647,60 @@ def rate_results():
     if not query:
         return redirect(url_for('customer.new_booking'))
         
-    rates = Rate.query.filter_by(
-        origin=query['origin'], 
-        destination=query['destination'],
-        service_type=query['service_type']
-    ).all()
-
-    if not rates:
-        import datetime
-        today = datetime.date.today()
-        future = today + datetime.timedelta(days=30)
-        rates = [
-            Rate(origin=query['origin'], destination=query['destination'], nvocc_name='OceanLink Express', base_rate=120.0, surcharges=150.0, transit_days=24, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='MAERSK', frequency='Weekly'),
-            Rate(origin=query['origin'], destination=query['destination'], nvocc_name='GlobalFreight Line', base_rate=105.0, surcharges=200.0, transit_days=28, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='MSC', frequency='Bi-Weekly'),
-            Rate(origin=query['origin'], destination=query['destination'], nvocc_name='FastTransit Cargo', base_rate=135.0, surcharges=100.0, transit_days=21, validity_start=today, validity_end=future, service_type=query['service_type'], carrier_name='CMA CGM', frequency='Weekly')
-        ]
-        db.session.add_all(rates)
-        db.session.commit()
-
-    vol = query.get('volume') or 1.0
-    results = RateEngine.calculate_ranks(rates, vol)
+    api_id = query.get('api_quotation_id')
+    results = []
     
+    if api_id:
+        import requests
+        headers = {'accept': 'application/json', 'x-api-key': '1'}
+        try:
+            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json().get('quotation', {})
+                
+                header = data.get('header', {})
+                sailings = data.get('sailings', [])
+                tariff = data.get('tariff', {})
+                
+                sailing = sailings[0] if sailings else {}
+                pol = sailing.get('pol', {})
+                pod = sailing.get('pod', {})
+                
+                # Calculate transit days
+                import datetime
+                transit_days = 0
+                if pol.get('etd') and pod.get('eta'):
+                    try:
+                        etd = datetime.datetime.strptime(pol['etd'][:10], '%Y-%m-%d')
+                        eta = datetime.datetime.strptime(pod['eta'][:10], '%Y-%m-%d')
+                        transit_days = (eta - etd).days
+                    except:
+                        pass
+                
+                # Calculate total price
+                lines = tariff.get('lines', [])
+                total_cost = sum(line.get('amount', 0) for line in lines)
+                
+                # Format to match the frontend expectations while passing real API data
+                results = [{
+                    'api_quote': data,
+                    'total_cost': total_cost,
+                    'transit_days': transit_days,
+                    'carrier': sailing.get('linerName') or 'Standard Carrier',
+                    'frequency': 'API Specific',
+                    'ui_tag': 'Official API Quote',
+                    'rate': {
+                        'nvocc_name': 'Realnexus API',
+                        'validity_end': header.get('validUntil', 'N/A'),
+                        'id': api_id
+                    },
+                    'breakdown': lines
+                }]
+            else:
+                flash(f"Failed to fetch official quotation details. API returned {resp.status_code}.", "danger")
+        except Exception as e:
+            flash(f"Error communicating with API: {str(e)}", "danger")
+
     return render_template('customer/rate_results.html', results=results, query=query)
 
 @customer.route('/finalize-booking', methods=['GET', 'POST'])

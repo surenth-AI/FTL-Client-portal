@@ -237,11 +237,7 @@
                         </a>
                     </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'admin.master_data' %}active{% endif %}" href="{{ url_for('admin.master_data') }}">
-                            <i class="bi bi-database-fill-gear"></i> Master Data
-                        </a>
-                    </li>
+
 
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
@@ -360,7 +356,7 @@
 
                             <li><a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">Rates</a></li>
 
-                             <li><a class="nav-link {% if request.endpoint == 'admin.master_data' %}active{% endif %}" href="{{ url_for('admin.master_data') }}">Master Data</a></li>
+
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% elif current_user.role == 'customer' %}
                             <li><a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">Dashboard</a></li>

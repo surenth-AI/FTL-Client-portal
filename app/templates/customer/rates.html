@@ -1676,82 +1676,8 @@ html[data-color-scheme='dark'] .rates-view-content {
                         <!-- Additional Services -->
                         <div class="additional-services-section">
                             <h3 class="section-subtitle">Additional Services (Optional)</h3>
-                            <div class="services-grid">
-                                <div class="service-card" onclick="toggleService(this)">
-                                    <input type="checkbox" id="service1">
-                                    <div class="service-name">Customs Clearance</div>
-                                    <div class="service-description">We handle all customs documentation and clearance
-                                        procedures</div>
-                                </div>
-                                <div class="service-card" onclick="toggleService(this)" id="serviceInsurance">
-                                    <input type="checkbox" id="service2" onchange="toggleInsuranceValue()">
-                                    <div class="service-name">Insurance</div>
-                                    <div class="service-description">Full cargo insurance coverage during transit</div>
-                                    <div class="service-extra" id="insuranceValue" style="display: none;">
-                                        <div class="form-grid"
-                                            style="grid-template-columns: 2fr 1fr; margin-top: 1rem;">
-                                            <div class="form-group">
-                                                <label class="form-label" style="font-size: 0.8rem;">Value of Goods
-                                                    <span class="required">*</span></label>
-                                                <input type="number" class="form-input" placeholder="0.00" step="0.01"
-                                                    id="insuranceAmount">
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label" style="font-size: 0.8rem;">Currency</label>
-                                                <select class="form-select" id="insuranceCurrency">
-                                                    <option value="USD">USD</option>
-                                                    <option value="EUR">EUR</option>
-                                                    <option value="GBP">GBP</option>
-                                                    <option value="CNY">CNY</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="service-card" onclick="toggleService(this)" id="servicePickup">
-                                    <input type="checkbox" id="service3" onchange="togglePickupDetails()">
-                                    <div class="service-name">Door Pickup</div>
-                                    <div class="service-description">We collect your cargo from your specified location
-                                    </div>
-                                    <div class="service-extra" id="pickupDetails" style="display: none;">
-                                        <div class="form-group" style="margin-top: 1rem;">
-                                            <label class="form-label" style="font-size: 0.8rem;">Pickup Location <span
-                                                    class="required">*</span></label>
-                                            <div class="searchable-select">
-                                                <input type="text" class="form-input" id="pickupLocation" name="pickup_address"
-                                                    placeholder="Search by city name or zip code"
-                                                    onfocus="showServiceDropdown('pickup')"
-                                                    oninput="filterServiceLocations('pickup')" autocomplete="off">
-                                                <div class="searchable-dropdown" id="pickupDropdown"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="service-card" onclick="toggleService(this)" id="serviceDelivery">
-                                    <input type="checkbox" id="service4" onchange="toggleDeliveryDetails()">
-                                    <div class="service-name">Door Delivery</div>
-                                    <div class="service-description">We deliver your cargo to the final destination
-                                    </div>
-                                    <div class="service-extra" id="deliveryDetails" style="display: none;">
-                                        <div class="form-group" style="margin-top: 1rem;">
-                                            <label class="form-label" style="font-size: 0.8rem;">Delivery Location <span
-                                                    class="required">*</span></label>
-                                            <div class="searchable-select">
-                                                <input type="text" class="form-input" id="deliveryLocation" name="place_of_delivery"
-                                                    placeholder="Search by city name or zip code"
-                                                    onfocus="showServiceDropdown('delivery')"
-                                                    oninput="filterServiceLocations('delivery')" autocomplete="off">
-                                                <div class="searchable-dropdown" id="deliveryDropdown"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="service-card" onclick="toggleService(this)">
-                                    <input type="checkbox" id="service5">
-                                    <div class="service-name">Temperature Controlled</div>
-                                    <div class="service-description">Refrigerated container for temperature-sensitive
-                                        goods</div>
-                                </div>
+                            <div class="services-grid" id="vasGrid">
+                                <!-- Dynamically populated by JS -->
                             </div>
                         </div>
                     </div>
@@ -1808,6 +1734,7 @@ const apiOrigins = {{ origins_json | safe }};
 const apiDestinations = {{ destinations_json | safe }};
 const packageTypes = {{ package_types_json | safe }};
 const containerTypes = {{ container_types_json | safe }};
+const vasTypes = {{ vas_types_json | safe }};
 const weightUomOptions = {{ weight_uom_json | safe }};
 const volumeUomOptions = {{ volume_uom_json | safe }};
 
@@ -2403,6 +2330,89 @@ function filterLocations(locationType) {
             console.log('Route value updated to:', document.getElementById('routeValue').textContent);
             console.log('Route value classes:', document.getElementById('routeValue').className);
 
+            // Render dynamic VAS types
+            const vasGrid = document.getElementById('vasGrid');
+            if (vasGrid && vasTypes) {
+                vasGrid.innerHTML = vasTypes.map((vas, idx) => {
+                    const isInsurance = vas.name.toLowerCase().includes('insurance');
+                    const isPickup = vas.name.toLowerCase().includes('pickup');
+                    const isDelivery = vas.name.toLowerCase().includes('delivery');
+                    
+                    let checkboxId = `service-${idx}`;
+                    let extraHtml = '';
+                    let onChangeHtml = '';
+                    let cardIdHtml = '';
+                    
+                    if (isInsurance) {
+                        checkboxId = 'service2';
+                        cardIdHtml = 'id="serviceInsurance"';
+                        onChangeHtml = 'onchange="toggleInsuranceValue()"';
+                        extraHtml = `
+                            <div class="service-extra" id="insuranceValue" style="display: none;" onclick="event.stopPropagation()">
+                                <div class="form-grid" style="grid-template-columns: 2fr 1fr; margin-top: 1rem;">
+                                    <div class="form-group">
+                                        <label class="form-label" style="font-size: 0.8rem;">Value of Goods <span class="required">*</span></label>
+                                        <input type="number" class="form-input" placeholder="0.00" step="0.01" id="insuranceAmount">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" style="font-size: 0.8rem;">Currency</label>
+                                        <select class="form-select" id="insuranceCurrency">
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (isPickup) {
+                        checkboxId = 'service3';
+                        cardIdHtml = 'id="servicePickup"';
+                        onChangeHtml = 'onchange="togglePickupDetails()"';
+                        extraHtml = `
+                            <div class="service-extra" id="pickupDetails" style="display: none;" onclick="event.stopPropagation()">
+                                <div class="form-group" style="margin-top: 1rem;">
+                                    <label class="form-label" style="font-size: 0.8rem;">Pickup Location <span class="required">*</span></label>
+                                    <div class="searchable-select">
+                                        <input type="text" class="form-input" id="pickupLocation" name="pickup_address"
+                                            placeholder="Search by city name or zip code"
+                                            onfocus="showServiceDropdown('pickup')"
+                                            oninput="filterServiceLocations('pickup')" autocomplete="off">
+                                        <div class="searchable-dropdown" id="pickupDropdown"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (isDelivery) {
+                        checkboxId = 'service4';
+                        cardIdHtml = 'id="serviceDelivery"';
+                        onChangeHtml = 'onchange="toggleDeliveryDetails()"';
+                        extraHtml = `
+                            <div class="service-extra" id="deliveryDetails" style="display: none;" onclick="event.stopPropagation()">
+                                <div class="form-group" style="margin-top: 1rem;">
+                                    <label class="form-label" style="font-size: 0.8rem;">Delivery Location <span class="required">*</span></label>
+                                    <div class="searchable-select">
+                                        <input type="text" class="form-input" id="deliveryLocation" name="place_of_delivery"
+                                            placeholder="Search by city name or zip code"
+                                            onfocus="showServiceDropdown('delivery')"
+                                            oninput="filterServiceLocations('delivery')" autocomplete="off">
+                                        <div class="searchable-dropdown" id="deliveryDropdown"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    return `
+                        <div class="service-card" onclick="toggleService(this)" ${cardIdHtml}>
+                            <input type="checkbox" id="${checkboxId}" value="${vas.code}" ${onChangeHtml}>
+                            <div class="service-name">${vas.name}</div>
+                            ${extraHtml}
+                        </div>
+                    `;
+                }).join('');
+            }
+            
             // Update available incoterms based on origin/destination types
             updateAvailableIncoterms();
 
@@ -2411,63 +2421,8 @@ function filterLocations(locationType) {
         }
 
         function updateAvailableIncoterms() {
-            const originType = document.getElementById('originType').value;
-            const destType = document.getElementById('destType').value;
-            const trafficType = document.getElementById('trafficType').value;
-            const incotermSelect = document.getElementById('incoterm');
-
-            // Clear existing options except the first placeholder
-            incotermSelect.innerHTML = '<option value="">Select incoterm</option>';
-
-            let options = [];
-            let defaultOpt = '';
-
-            if (trafficType === 'EX') {
-                if (destType === 'port') {
-                    options = [
-                        { value: 'CFR', text: 'CFR - Cost and Freight' },
-                        { value: 'DPU', text: 'DPU - Delivered at Place Unloaded (Coming Soon)', disabled: true },
-                        { value: 'FOB', text: 'FOB - Free On Board' },
-                        { value: 'DAP', text: 'DAP - Delivered At Place (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = 'CFR';
-                } else { // destType === 'door'
-                    options = [
-                        { value: 'DAP', text: 'DAP - Delivered At Place (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = '';
-                }
-            } else if (trafficType === 'IM') {
-                if (originType === 'port') {
-                    options = [
-                        { value: 'FOB', text: 'FOB - Free On Board' },
-                        { value: 'FCA', text: 'FCA - Free Carrier (Coming Soon)', disabled: true },
-                        { value: 'CFR', text: 'CFR - Cost and Freight' },
-                        { value: 'EXW', text: 'EXW - Ex Works (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = 'FOB';
-                } else { // originType === 'door'
-                    options = [
-                        { value: 'EXW', text: 'EXW - Ex Works (Coming Soon)', disabled: true }
-                    ];
-                    defaultOpt = '';
-                }
-            }
-
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt.value;
-                option.textContent = opt.text;
-                if (opt.disabled) {
-                    option.disabled = true;
-                }
-                incotermSelect.appendChild(option);
-            });
-
-            if (defaultOpt) {
-                incotermSelect.value = defaultOpt;
-                incotermSelect.dispatchEvent(new Event('change'));
-            }
+            // Deprecated: UI filtering of incoterms is removed.
+            // Incoterms are now exclusively rendered from the API via Jinja.
         }
 
         function onFreightTermsChange() {
@@ -2511,16 +2466,12 @@ function filterLocations(locationType) {
                         <label class="form-label">Package Type <span class="required">*</span></label>
                         <select class="form-select" name="item_type[]" required>
                             <option value="">Select package type</option>
-                            <option value="pallets">Pallets</option>
-                            <option value="boxes">Boxes/Crates</option>
-                            <option value="drums">Drums</option>
-                            <option value="bags">Bags</option>
-                            <option value="other">Other</option>
+                            ${packageTypes.map(pt => `<option value="${pt.code}">${pt.name}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Goods Type <span class="required">*</span></label>
-                        <select class="form-select" id="${itemId}-goods" name="goods_type[]" name="goods_type[]" required>
+                        <select class="form-select" id="${itemId}-goods" name="goods_type[]" required>
                             <option value="">Select goods type</option>
                             <option value="commercial">Commercial Cargo</option>
                             <option value="personal" disabled style="color: #94a3b8;">Personal Effects (Upon Request)</option>
@@ -3246,7 +3197,7 @@ function filterLocations(locationType) {
             }
 
             // Validate insurance value if insurance is selected
-            const insuranceChecked = document.getElementById('service2').checked;
+            const insuranceChecked = document.getElementById('service2')?.checked || false;
             if (insuranceChecked) {
                 const insuranceAmount = document.getElementById('insuranceAmount').value;
                 if (!insuranceAmount || parseFloat(insuranceAmount) <= 0) {
@@ -3257,7 +3208,7 @@ function filterLocations(locationType) {
             }
 
             // Validate pickup location if pickup service is selected
-            const pickupChecked = document.getElementById('service3').checked;
+            const pickupChecked = document.getElementById('service3')?.checked || false;
             if (pickupChecked) {
                 const pickupLocation = document.getElementById('pickupLocation').value;
                 if (!pickupLocation) {
@@ -3268,7 +3219,7 @@ function filterLocations(locationType) {
             }
 
             // Validate delivery location if delivery service is selected
-            const deliveryChecked = document.getElementById('service4').checked;
+            const deliveryChecked = document.getElementById('service4')?.checked || false;
             if (deliveryChecked) {
                 const deliveryLocation = document.getElementById('deliveryLocation').value;
                 if (!deliveryLocation) {
