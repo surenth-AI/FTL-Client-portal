@@ -1839,6 +1839,11 @@ function handleLocationTypeChange(locationType) {
     
     populateCountries(locationType, type);
     updateMovementType();
+    
+    // Update incoterms filtering based on new route types
+    if (typeof updateAvailableIncoterms === 'function') {
+        updateAvailableIncoterms();
+    }
 }
 
 function populateCountries(locationType, type) {
@@ -2422,8 +2427,62 @@ function filterLocations(locationType) {
         }
 
         function updateAvailableIncoterms() {
-            // Deprecated: UI filtering of incoterms is removed.
-            // Incoterms are now exclusively rendered from the API via Jinja.
+            const trafficTypeEl = document.getElementById('trafficType');
+            const originTypeEl = document.getElementById('originType');
+            const destTypeEl = document.getElementById('destType');
+            const incotermSelect = document.getElementById('incoterm');
+            
+            if (!trafficTypeEl || !originTypeEl || !destTypeEl || !incotermSelect) return;
+            
+            const trafficType = trafficTypeEl.value;
+            const originType = originTypeEl.value;
+            const destType = destTypeEl.value;
+            const options = incotermSelect.options;
+
+            // Define allowed incoterms based on rules
+            let allowed = [];
+            if (trafficType === 'EX') {
+                if (destType === 'port') {
+                    allowed = ['CFR', 'DPU', 'FOB', 'DAP'];
+                } else if (destType === 'door') {
+                    allowed = ['DAP'];
+                }
+            } else if (trafficType === 'IM') {
+                if (originType === 'port') {
+                    allowed = ['FOB', 'FCA', 'CFR', 'EXW'];
+                } else if (originType === 'door') {
+                    allowed = ['EXW'];
+                }
+            }
+
+            let currentSelectionValid = false;
+
+            // Show/hide options and check if current selection is still valid
+            for (let i = 0; i < options.length; i++) {
+                const opt = options[i];
+                if (opt.value === "") continue; // Always allow the empty/default option
+                
+                if (allowed.includes(opt.value)) {
+                    opt.style.display = '';
+                    if (opt.selected) currentSelectionValid = true;
+                } else {
+                    opt.style.display = 'none';
+                    if (opt.selected) opt.selected = false;
+                }
+            }
+
+            if (!currentSelectionValid && incotermSelect.value !== "") {
+                // Set to default based on rules
+                let def = '';
+                if (trafficType === 'EX' && destType === 'port') def = 'CFR';
+                else if (trafficType === 'EX' && destType === 'door') def = 'DAP';
+                else if (trafficType === 'IM' && originType === 'port') def = 'FOB';
+                else if (trafficType === 'IM' && originType === 'door') def = 'EXW';
+                
+                incotermSelect.value = def;
+                // Trigger change event to update freight terms and inclusions
+                incotermSelect.dispatchEvent(new Event('change'));
+            }
         }
 
         function onFreightTermsChange() {
