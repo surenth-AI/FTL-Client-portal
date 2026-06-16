@@ -267,6 +267,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">
+                            <i class="bi bi-plus-circle"></i> New Booking
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if 'tracking' in request.endpoint %}active{% endif %}" href="{{ url_for('tracking.index') }}">
                             <i class="bi bi-geo-alt"></i> Live Tracking
                         </a>
@@ -369,6 +374,7 @@
                             <li><a class="nav-link {% if request.endpoint == 'customer.my_quotes' %}active{% endif %}" href="{{ url_for('customer.my_quotes') }}">My Quotes</a></li>
 
                             <li><a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">Shipments</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">New Booking</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% elif current_user.role == 'agent' %}
                             <li><a class="nav-link {% if request.endpoint == 'agent.dashboard' %}active{% endif %}" href="{{ url_for('agent.dashboard') }}">Agent Dashboard</a></li>
