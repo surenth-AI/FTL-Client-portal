@@ -1410,6 +1410,7 @@ html[data-color-scheme='dark'] .rates-view-content {
         <input type="hidden" name="movement_type" id="hidden_movement_type" value="PORT_TO_PORT">
 
         <div class="quote-card">
+            <h3 class="mb-4 fw-bold">New Quote Request</h3>
             <!-- Transport Mode Selection (Above Steps) -->
             <div class="transport-mode-header">
                 <div class="mode-selector">
@@ -1438,15 +1439,15 @@ html[data-color-scheme='dark'] .rates-view-content {
             <!-- Steps Ribbon -->
             <div class="quote-header" id="stepsRibbon">
                 <div class="header-section" id="routeSection" onclick="togglePanel('route')">
-                    <div class="section-label">Route</div>
+                    <div class="section-label"><span style="color: var(--primary-color); margin-right: 5px; font-weight: bold;">1.</span>Route</div>
                     <div id="routeValue" class="section-placeholder">Origin  Destination</div>
                 </div>
                 <div class="header-section" id="cargoSection" onclick="togglePanel('cargo')">
-                    <div class="section-label">Cargo</div>
+                    <div class="section-label"><span style="color: var(--primary-color); margin-right: 5px; font-weight: bold;">2.</span>Cargo</div>
                     <div id="cargoValue" class="section-placeholder">What are you shipping</div>
                 </div>
                 <div class="header-section" id="servicesSection" onclick="togglePanel('services')">
-                    <div class="section-label">Services</div>
+                    <div class="section-label"><span style="color: var(--primary-color); margin-right: 5px; font-weight: bold;">3.</span>Services</div>
                     <div id="servicesValue" class="section-placeholder">Select services</div>
                 </div>
             </div>

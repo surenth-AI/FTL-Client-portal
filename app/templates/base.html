@@ -255,6 +255,11 @@
                             <i class="bi bi-search"></i> Search Rates
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'customer.my_quotes' %}active{% endif %}" href="{{ url_for('customer.my_quotes') }}">
+                            <i class="bi bi-file-earmark-text"></i> My Quotes
+                        </a>
+                    </li>
 
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">
@@ -361,6 +366,7 @@
                         {% elif current_user.role == 'customer' %}
                             <li><a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">Dashboard</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'customer.rates' %}active{% endif %}" href="{{ url_for('customer.rates') }}">Search Rates</a></li>
+                            <li><a class="nav-link {% if request.endpoint == 'customer.my_quotes' %}active{% endif %}" href="{{ url_for('customer.my_quotes') }}">My Quotes</a></li>
 
                             <li><a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">Shipments</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>

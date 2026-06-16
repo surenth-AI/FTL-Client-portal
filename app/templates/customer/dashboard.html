@@ -103,7 +103,7 @@
 
 <!-- Quick Actions -->
 <div class="row g-3 mb-4 intel-fade-in" style="animation-delay: 0.1s;">
-    <div class="col-6 col-md-4">
+    <div class="col-6 col-md-3">
         <a href="{{ url_for('customer.my_shipments') }}" class="action-card">
             <div class="glass-card action-inner p-4 text-center h-100">
                 <div class="action-icon bg-success bg-opacity-10 mx-auto">
@@ -114,7 +114,18 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-4">
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('customer.rates') }}" class="action-card">
+            <div class="glass-card action-inner p-4 text-center h-100">
+                <div class="action-icon bg-primary bg-opacity-10 mx-auto">
+                    <i class="bi bi-plus-lg text-primary fs-5"></i>
+                </div>
+                <div class="fw-bold text-dark small mb-1">New Booking</div>
+                <div class="text-muted" style="font-size: 0.7rem;">Create new booking</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
         <a href="{{ url_for('tracking.index') }}" class="action-card">
             <div class="glass-card action-inner p-4 text-center h-100">
                 <div class="action-icon bg-warning bg-opacity-10 mx-auto">
@@ -125,7 +136,7 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-4">
+    <div class="col-6 col-md-3">
         {% if si_needed %}
         <a href="{{ url_for('customer.submit_si', booking_id=si_needed.id) }}" class="action-card">
             <div class="glass-card action-inner urgent p-4 text-center h-100">
@@ -137,7 +148,13 @@
             </div>
         </a>
         {% else %}
-
+        <div class="glass-card action-inner p-4 text-center h-100" style="opacity: 0.5;">
+            <div class="action-icon bg-secondary bg-opacity-10 mx-auto">
+                <i class="bi bi-check-circle text-secondary fs-5"></i>
+            </div>
+            <div class="fw-bold text-dark small mb-1">No Pending SI</div>
+            <div class="text-muted" style="font-size: 0.7rem;">All caught up</div>
+        </div>
         {% endif %}
     </div>
 </div>

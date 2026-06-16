@@ -183,6 +183,14 @@ def dashboard():
                          si_needed=si_needed,
                          today=datetime.now())
 
+@customer.route('/my_quotes')
+@login_required
+def my_quotes():
+    if current_user.role not in ['customer', 'agent']:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('index'))
+    return render_template('customer/my_quotes.html')
+
 @customer.route('/rates', methods=['GET', 'POST'])
 @login_required
 def rates():
