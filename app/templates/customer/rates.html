@@ -3394,12 +3394,32 @@ document.getElementById('wizardSearchForm').submit();
             handleCountryChange('origin');
             document.getElementById('originLocation').value = r.origin;
             
+            // Extract origin code and name
+            let oName = r.origin;
+            let oCode = '';
+            let oMatch = r.origin.match(/^(.*?)\s*\(([A-Z0-9]+)\)$/i);
+            if (oMatch) {
+                oName = oMatch[1].trim();
+                oCode = oMatch[2];
+            }
+            selectedLocations.origin = { name: oName, code: oCode };
+            
             // Set Destination
             document.getElementById('destType').value = (r.destType || dType).toLowerCase();
             handleLocationTypeChange('dest');
             document.getElementById('destCountry').value = r.destCountry || dCountry;
             handleCountryChange('dest');
             document.getElementById('destLocation').value = r.destination;
+            
+            // Extract dest code and name
+            let dName = r.destination;
+            let dCode = '';
+            let dMatch = r.destination.match(/^(.*?)\s*\(([A-Z0-9]+)\)$/i);
+            if (dMatch) {
+                dName = dMatch[1].trim();
+                dCode = dMatch[2];
+            }
+            selectedLocations.dest = { name: dName, code: dCode };
             
             // Set Cargo Type based on service string
             if (r.service && r.service.includes('FCL')) {
