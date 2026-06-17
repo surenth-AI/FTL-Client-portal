@@ -250,7 +250,12 @@
                 <small class="text-muted">Total</small>
             </div>
             <div style="width: 15%" class="text-center d-flex flex-column gap-2 px-2" onclick="event.stopPropagation();">
-                <button class="btn btn-sm btn-outline-secondary fw-bold"><i class="bi bi-bookmark"></i> Save</button>
+                <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0">
+                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                    <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
+                    <button class="btn btn-sm btn-outline-secondary fw-bold w-100"><i class="bi bi-bookmark"></i> Save</button>
+                </form>
                 <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0">
                     <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
                     <input type="hidden" name="volume" value="{{ query.volume }}">
@@ -367,7 +372,12 @@
                     <span class="text-primary small fw-bold"><i class="bi bi-arrows-angle-expand"></i> Click card for detailed breakdown</span>
                 </div>
                 <div class="d-flex gap-2" onclick="event.stopPropagation();">
-                    <button class="btn btn-outline-secondary flex-grow-1 fw-bold"><i class="bi bi-bookmark"></i> Save</button>
+                    <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0 flex-grow-1">
+                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                        <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
+                        <button class="btn btn-outline-secondary w-100 fw-bold"><i class="bi bi-bookmark"></i> Save</button>
+                    </form>
                     <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0 flex-grow-1">
                         <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
                         <input type="hidden" name="volume" value="{{ query.volume }}">

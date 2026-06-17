@@ -189,7 +189,43 @@ def my_quotes():
     if current_user.role not in ['customer', 'agent']:
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
-    return render_template('customer/my_quotes.html')
+    quotes = Booking.query.filter_by(user_id=current_user.id, status='Saved Quote').order_by(Booking.created_at.desc()).all()
+    return render_template('customer/my_quotes.html', quotes=quotes)
+
+@customer.route('/save-quote', methods=['POST'])
+@login_required
+def save_quote():
+    if current_user.role not in ['customer', 'agent']:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('index'))
+    
+    rate_id = request.form.get('rate_id')
+    total_cost = request.form.get('total_cost', 0.0)
+    service_type = request.form.get('service_type', 'LCL')
+    
+    query = session.get('search_query', {})
+    origin = query.get('origin', 'Unknown')
+    destination = query.get('destination', 'Unknown')
+    volume = query.get('volume', 0.0)
+    
+    rate = Rate.query.get(rate_id) if rate_id else None
+    nvocc_name = rate.nvocc_name if rate else 'API Quote'
+
+    booking = Booking(
+        user_id=current_user.id,
+        origin=origin,
+        destination=destination,
+        volume=float(volume) if volume else 0.0,
+        selected_nvocc=nvocc_name,
+        total_cost=float(total_cost) if total_cost else 0.0,
+        service_type=service_type,
+        status='Saved Quote'
+    )
+    db.session.add(booking)
+    db.session.commit()
+    
+    flash('Quote successfully saved!', 'success')
+    return redirect(url_for('customer.my_quotes'))
 
 @customer.route('/rates', methods=['GET', 'POST'])
 @login_required
@@ -336,7 +372,7 @@ def rates():
                     'quote_id': quo_id,
                     'api_quotation_id': data.get('quotationId', '')
                 }
-                return redirect(url_for('customer.my_quotes'))
+                return redirect(url_for('customer.rate_results'))
             else:
                 import json
                 print("Constructed Payload:", json.dumps(payload, indent=2))
