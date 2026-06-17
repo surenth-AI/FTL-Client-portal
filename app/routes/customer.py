@@ -336,7 +336,7 @@ def rates():
                     'quote_id': quo_id,
                     'api_quotation_id': data.get('quotationId', '')
                 }
-                return redirect(url_for('customer.rate_results'))
+                return redirect(url_for('customer.my_quotes'))
             else:
                 import json
                 print("Constructed Payload:", json.dumps(payload, indent=2))
