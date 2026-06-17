@@ -1,89 +1,114 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from config import Config
 from flasgger import Swagger
+from flask_talisman import Talisman
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
+import logging
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'info'
 swagger = Swagger()
+talisman = Talisman()
+limiter = Limiter(key_func=get_remote_address)
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Set up basic JSON logging structure
+    if not app.debug:
+        try:
+            from pythonjsonlogger import jsonlogger
+            logHandler = logging.StreamHandler()
+            formatter = jsonlogger.JsonFormatter()
+            logHandler.setFormatter(formatter)
+            app.logger.addHandler(logHandler)
+            app.logger.setLevel(logging.INFO)
+        except ImportError:
+            pass
+
     db.init_app(app)
     login_manager.init_app(app)
     swagger.init_app(app)
+    
+    # Initialize security extensions
+    talisman.init_app(app, content_security_policy=False) # Disabled CSP temporarily to avoid breaking inline scripts
+    limiter.init_app(app)
 
     # Ensure upload folder exists
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
-    with app.app_context():
-        from app.models import models
-        try:
-            db.create_all()
-        except Exception as e:
-            app.logger.warning(f"Skipping auto-table creation: {e}")
-        # Safe self-healing SQLite column alteration
-        try:
-            db.session.execute(db.text("ALTER TABLE system_setting ADD COLUMN default_layout VARCHAR(50) DEFAULT 'sidebar';"))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            
-        # Safe self-healing for login_banner_path
-        try:
-            db.session.execute(db.text("ALTER TABLE system_setting ADD login_banner_path VARCHAR(255) DEFAULT 'img/login_hero.png';"))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        # Safe self-healing for SMTP columns
-        for col, col_type in [
-            ('smtp_server', 'VARCHAR(255) NULL'),
-            ('smtp_port', 'INTEGER DEFAULT 587'),
-            ('smtp_user', 'VARCHAR(255) NULL'),
-            ('smtp_password', 'VARCHAR(255) NULL'),
-            ('receiver_email', 'VARCHAR(255) NULL'),
-            ('typography', "VARCHAR(100) DEFAULT 'Inter'")
-        ]:
+    @app.cli.command("init-db")
+    def init_db_command():
+        """Initialize database and seed data"""
+        with app.app_context():
+            from app.models import models
             try:
-                db.session.execute(db.text(f"ALTER TABLE system_setting ADD {col} {col_type};"))
+                db.create_all()
+            except Exception as e:
+                app.logger.warning(f"Skipping auto-table creation: {e}")
+            # Safe self-healing SQLite column alteration
+            try:
+                db.session.execute(db.text("ALTER TABLE system_setting ADD COLUMN default_layout VARCHAR(50) DEFAULT 'sidebar';"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                
+            # Safe self-healing for login_banner_path
+            try:
+                db.session.execute(db.text("ALTER TABLE system_setting ADD login_banner_path VARCHAR(255) DEFAULT 'img/login_hero.png';"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
 
-        # Safe self-healing for user columns
-        for col, col_type in [
-            ('email_verified', 'BOOLEAN DEFAULT 0'),
-            ('email_token_expiry', 'DATETIME NULL'),
-            ('password_reset_token', 'VARCHAR(256) NULL'),
-            ('password_reset_token_expiry', 'DATETIME NULL'),
-            ('deactivation_reason', 'VARCHAR(1000) NULL'),
-            ('rejection_reason', 'VARCHAR(1000) NULL')
-        ]:
+            # Safe self-healing for SMTP columns
+            for col, col_type in [
+                ('smtp_server', 'VARCHAR(255) NULL'),
+                ('smtp_port', 'INTEGER DEFAULT 587'),
+                ('smtp_user', 'VARCHAR(255) NULL'),
+                ('smtp_password', 'VARCHAR(255) NULL'),
+                ('receiver_email', 'VARCHAR(255) NULL'),
+                ('typography', "VARCHAR(100) DEFAULT 'Inter'")
+            ]:
+                try:
+                    db.session.execute(db.text(f"ALTER TABLE system_setting ADD {col} {col_type};"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+            # Safe self-healing for user columns
+            for col, col_type in [
+                ('email_verified', 'BOOLEAN DEFAULT 0'),
+                ('email_token_expiry', 'DATETIME NULL'),
+                ('password_reset_token', 'VARCHAR(256) NULL'),
+                ('password_reset_token_expiry', 'DATETIME NULL'),
+                ('deactivation_reason', 'VARCHAR(1000) NULL'),
+                ('rejection_reason', 'VARCHAR(1000) NULL')
+            ]:
+                try:
+                    db.session.execute(db.text(f"ALTER TABLE user ADD {col} {col_type};"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+            from app.models.models import SystemSetting
             try:
-                db.session.execute(db.text(f"ALTER TABLE user ADD {col} {col_type};"))
-                db.session.commit()
+                s = SystemSetting.query.first()
+                if not s:
+                    db.session.add(SystemSetting(theme_color='blue', logo_path='img/logo.png', default_layout='sidebar', typography='Inter'))
+                    db.session.commit()
+                elif not s.typography:
+                    s.typography = 'Inter'
+                    db.session.commit()
             except Exception:
                 db.session.rollback()
-
-        from app.models.models import SystemSetting
-        try:
-            s = SystemSetting.query.first()
-            if not s:
-                db.session.add(SystemSetting(theme_color='blue', logo_path='img/logo.png', default_layout='sidebar', typography='Inter'))
-                db.session.commit()
-            elif not s.typography:
-                s.typography = 'Inter'
-                db.session.commit()
-        except Exception:
-            db.session.rollback()
 
     @app.context_processor
     def inject_system_settings():
@@ -136,17 +161,17 @@ def create_app(config_class=Config):
     app.register_blueprint(ap_invoices_bp, url_prefix='/ap-invoices')
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    with app.app_context():
-        from app.models import models
-        try:
-            db.create_all()
-        except Exception as e:
-            app.logger.warning(f"Skipping second auto-table creation: {e}")
-        try:
-            seed_admin()
-            seed_lookups()
-        except Exception as e:
-            print(f"Seeding skipped or failed: {e}")
+    # Remove second db.create_all block as it is moved to CLI
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template("errors/404.html") if os.path.exists(os.path.join(app.template_folder, 'errors/404.html')) else "404 Not Found", 404
+
+    @app.errorhandler(500)
+    def server_error(e):
+        db.session.rollback()
+        app.logger.error(e, exc_info=True)
+        return render_template("errors/500.html") if os.path.exists(os.path.join(app.template_folder, 'errors/500.html')) else "500 Internal Server Error", 500
+
     from flask import redirect, url_for
     from flask_login import current_user
 

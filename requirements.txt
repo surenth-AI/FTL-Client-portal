@@ -19,3 +19,7 @@ gunicorn
 flasgger
 pyodbc
 cachetools
+
+flask-talisman
+flask-limiter
+python-json-logger
