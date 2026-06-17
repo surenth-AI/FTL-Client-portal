@@ -211,6 +211,8 @@ def save_quote():
     rate = Rate.query.get(rate_id) if rate_id else None
     nvocc_name = rate.nvocc_name if rate else 'API Quote'
 
+    api_id = query.get('api_quotation_id', '')
+
     booking = Booking(
         user_id=current_user.id,
         origin=origin,
@@ -219,6 +221,7 @@ def save_quote():
         selected_nvocc=nvocc_name,
         total_cost=float(total_cost) if total_cost else 0.0,
         service_type=service_type,
+        api_booking_ref=api_id,
         status='Saved Quote'
     )
     db.session.add(booking)
@@ -226,6 +229,30 @@ def save_quote():
     
     flash('Quote successfully saved!', 'success')
     return redirect(url_for('customer.my_quotes'))
+
+@customer.route('/quote/<int:quote_id>')
+@login_required
+def quote_detail(quote_id):
+    if current_user.role not in ['customer', 'agent']:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('index'))
+    
+    quote = Booking.query.filter_by(id=quote_id, user_id=current_user.id, status='Saved Quote').first_or_404()
+    
+    breakdown = []
+    if quote.api_booking_ref:
+        import requests
+        headers = {'accept': 'application/json', 'x-api-key': '1'}
+        try:
+            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{quote.api_booking_ref}", headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json().get('quotation', {})
+                tariff = data.get('tariff', {})
+                breakdown = tariff.get('lines', [])
+        except Exception as e:
+            print("Failed to fetch quote breakdown:", e)
+
+    return render_template('customer/quote_detail.html', quote=quote, breakdown=breakdown)
 
 @customer.route('/rates', methods=['GET', 'POST'])
 @login_required
