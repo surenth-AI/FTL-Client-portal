@@ -52,6 +52,8 @@ class Config:
                 f"Encrypt=yes;"
                 f"TrustServerCertificate=yes;"  # Highly recommended locally to bypass SSL validation
                 f"Connection Timeout=30;"
+                f"ConnectRetryCount=3;"
+                f"ConnectRetryInterval=10;"
             )
         params = urllib.parse.quote_plus(odbc_str)
         SQLALCHEMY_DATABASE_URI = f"mssql+pyodbc:///?odbc_connect={params}"
@@ -62,7 +64,12 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     if azure_conn_str or db_server:
         SQLALCHEMY_ENGINE_OPTIONS = {
-            'connect_args': {'use_setinputsizes': False}
+            'connect_args': {'use_setinputsizes': False},
+            'pool_size': 10,
+            'max_overflow': 20,
+            'pool_recycle': 1800,
+            'pool_pre_ping': True,
+            'pool_timeout': 30
         }
     else:
         SQLALCHEMY_ENGINE_OPTIONS = {}
