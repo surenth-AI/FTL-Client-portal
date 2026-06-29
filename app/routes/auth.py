@@ -273,6 +273,16 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
 
+@auth.route('/profile')
+@login_required
+def profile():
+    if current_user.role in ['super_admin', 'admin', 'operation_executive']:
+        return render_template('profile/admin.html')
+    elif current_user.role == 'agent':
+        return render_template('profile/agent.html')
+    else:
+        return render_template('profile/customer.html')
+
 import secrets
 from datetime import datetime, timedelta
 

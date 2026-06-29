@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify
 from flask_login import login_required, current_user
 from app.models.models import Rate, Booking, TrackingEvent, CargoItem, BookingAttachment, ShippingInstruction
 from app.services.rate_engine import RateEngine
@@ -6,6 +6,7 @@ from app import db
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
+import json
 import requests
 import re
 
@@ -263,12 +264,12 @@ def rates():
     if request.method == 'POST':
         import requests
         
-        service_type = request.form.get('service_type', 'LCL')
+        service_type = request.form.get('service_type', 'LCL').upper()
         goods_types = request.form.getlist('goods_type[]')
         
         # Extract IDs from User Profile mappings
-        branch_id = 0
-        customer_id = 0
+        branch_id = 1
+        customer_id = 1
         if current_user.branches:
             try: branch_id = int(current_user.branches[0].branch_id)
             except: pass
@@ -277,6 +278,8 @@ def rates():
             except: pass
             
         # Build API Payload
+        traffic_type = request.form.get("traffic_type") or "EX"
+        
         valid_from = request.form.get("cargo_ready_date", "")
         if not valid_from:
             valid_from = datetime.now().strftime("%Y-%m-%d")
@@ -290,49 +293,54 @@ def rates():
             valid_from = valid_from_dt.strftime("%Y-%m-%d")
             
         valid_until = (valid_from_dt + timedelta(days=30)).strftime("%Y-%m-%d")
+        # Extract locodes from origin and destination
+        origin_str = request.form.get("origin", "")
+        dest_str = request.form.get("destination", "")
+        
+        import re
+        pol_locode = ""
+        m_pol = re.search(r'\(([^)]+)\)$', origin_str.strip())
+        if m_pol: pol_locode = m_pol.group(1).strip()
+        
+        pod_locode = ""
+        m_pod = re.search(r'\(([^)]+)\)$', dest_str.strip())
+        if m_pod: pod_locode = m_pod.group(1).strip()
 
         payload = {
-            "header": {
-                "branchId": branch_id,
-                "customerId": customer_id,
-                "customerContactId": current_user.id,
-                "customerReference": request.form.get("customer_reference", ""),
-                "trafficType": request.form.get("direction", "EXPORT") or "EXPORT",
-                "freightTransportMode": request.form.get("transport_mode", ""),
-                "freightTransportType": service_type,
-                "movementType": request.form.get("movement_type", "PORT_TO_PORT") or "PORT_TO_PORT",
-                "cargoClassification": "11" if "HAZARDOUS" in goods_types else "12",
-                "incoTerm": request.form.get("freight_terms", ""),
-                "incoLocation": "",
-                "entryMethod": "PORTAL",
-                "paymentMethod": request.form.get("payment_terms", ""),
-                "specialInstructions": request.form.get("special_instructions", ""),
-                "internalMemo": "",
-                "validFrom": valid_from,
-                "validUntil": valid_until,
-                "currency": request.form.get("currency", "USD"),
-                "cur1": "",
-                "cur2": "",
-                "roe1": 0,
-                "roe2": 0,
-                "routing": {
-                    "porLocode": "",
-                    "porLocation": request.form.get("pickup_address", ""),
-                    "polLocode": "",
-                    "polLocation": request.form.get("origin", ""),
-                    "podLocode": "",
-                    "podLocation": request.form.get("destination", ""),
-                    "delLocode": "",
-                    "delLocation": request.form.get("place_of_delivery", "")
+            "branchId": branch_id,
+            "customerId": customer_id,
+            "accountContactId": current_user.id,
+            "customerReference": request.form.get("customer_reference") or "WEB-QUOTE",
+            "trafficType": traffic_type,
+            "freightTransportMode": request.form.get("transport_mode", ""),
+            "freightTransportType": service_type,
+            "movementType": request.form.get("movement_type", "PORT_TO_PORT") or "PORT_TO_PORT",
+            "cargoClassification": "11" if "HAZARDOUS" in goods_types else "12",
+            "incoterm": request.form.get("freight_terms", ""),
+            "validOn": valid_from,
+            "currency": request.form.get("currency", "USD"),
+            "paymentMethod": request.form.get("payment_terms", ""),
+            "specialInstructions": request.form.get("special_instructions", ""),
+            "route": {
+                "porLocode": "",
+                "porLocation": request.form.get("pickup_address", ""),
+                "polLocode": pol_locode,
+                "polLocation": origin_str,
+                "podLocode": pod_locode,
+                "podLocation": dest_str,
+                "delLocode": "",
+                "delLocation": request.form.get("place_of_delivery", ""),
+                "pickup": {
+                    "location": request.form.get("pickup_address", "")
                 },
-                "vesselVoyageId": 0,
-                "pocIdPol": 0,
-                "pocIdPod": 0,
-                "haulageOriginNeeded": bool(request.form.get("pickup_address")),
-                "haulageDestinationNeeded": bool(request.form.get("place_of_delivery"))
+                "delivery": {
+                    "location": request.form.get("place_of_delivery", "")
+                }
             },
-            "commodities": [],
-            "tariffLines": []
+            "haulageOriginNeeded": bool(request.form.get("pickup_address")),
+            "haulageDestinationNeeded": bool(request.form.get("place_of_delivery")),
+            "cargo": [],
+            "valueAddedServices": []
         }
 
         if service_type == 'LCL':
@@ -344,19 +352,22 @@ def rates():
             
             for i in range(len(item_qtys)):
                 is_haz = (goods_types[i] == 'HAZARDOUS') if i < len(goods_types) else False
-                payload["commodities"].append({
-                    "nrPackages": int(item_qtys[i]) if item_qtys[i] else 1,
-                    "packageCode": item_types[i] if i < len(item_types) else "",
+                cargo_item = {
+                    "packageType": item_types[i] if i < len(item_types) else "",
                     "packageTypeDescription": item_types[i] if i < len(item_types) else "",
+                    "pieceCount": int(item_qtys[i]) if item_qtys[i] else 1,
                     "commodityDescription": item_descs[i] if i < len(item_descs) else "",
                     "weight": float(item_weights[i]) if i < len(item_weights) and item_weights[i] else 0.0,
                     "volume": float(item_volumes[i]) if i < len(item_volumes) and item_volumes[i] else 0.0,
+                    "stackable": True,
                     "dimensions": {"amount": 0, "length": 0, "width": 0, "height": 0},
-                    "imoDetails": {
-                        "hasImo": is_haz,
-                        "un": "", "class": "", "properShippingName": "", "packingGroup": ""
+                    "isHazardous": is_haz
+                }
+                if is_haz:
+                    cargo_item["imo"] = {
+                        "un": "UNKNOWN", "class": "UNKNOWN", "properShippingName": "UNKNOWN", "packingGroup": "UNKNOWN"
                     }
-                })
+                payload["cargo"].append(cargo_item)
         else:
             cont_types = request.form.getlist('cont_type[]')
             cont_qtys = request.form.getlist('cont_qty[]')
@@ -366,42 +377,51 @@ def rates():
             
             for i in range(len(cont_types)):
                 is_haz = (goods_types[i] == 'HAZARDOUS') if i < len(goods_types) else False
-                payload["commodities"].append({
-                    "nrPackages": int(cont_qtys[i]) if i < len(cont_qtys) and cont_qtys[i] else 1,
-                    "packageCode": cont_types[i] if i < len(cont_types) else "",
+                cargo_item = {
+                    "packageType": cont_types[i] if i < len(cont_types) else "",
                     "packageTypeDescription": cont_types[i] if i < len(cont_types) else "",
+                    "pieceCount": int(cont_qtys[i]) if i < len(cont_qtys) and cont_qtys[i] else 1,
                     "commodityDescription": c_descs[i] if i < len(c_descs) else "",
                     "weight": float(c_weights[i]) if i < len(c_weights) and c_weights[i] else 0.0,
                     "volume": float(c_volumes[i]) if i < len(c_volumes) and c_volumes[i] else 0.0,
+                    "stackable": True,
                     "dimensions": {"amount": 0, "length": 0, "width": 0, "height": 0},
-                    "imoDetails": {
-                        "hasImo": is_haz,
-                        "un": "", "class": "", "properShippingName": "", "packingGroup": ""
+                    "isHazardous": is_haz
+                }
+                if is_haz:
+                    cargo_item["imo"] = {
+                        "un": "UNKNOWN", "class": "UNKNOWN", "properShippingName": "UNKNOWN", "packingGroup": "UNKNOWN"
                     }
-                })
+                payload["cargo"].append(cargo_item)
 
         try:
             headers = {'accept': 'application/json', 'x-api-key': '1', 'Content-Type': 'application/json'}
-            api_resp = requests.post('http://realnexus.comit.cloud:5000/api/Quotations', json=payload, headers=headers, timeout=10)
+            api_resp = requests.post('http://realnexus.comit.cloud:5000/api/Quotations/request', json=payload, headers=headers, timeout=10)
             
-            if api_resp.status_code == 201:
+            if api_resp.status_code in [200, 201]:
                 data = api_resp.json()
-                quo_id = f"{data.get('quoPrefix1', 'QUO')}-{data.get('quoPrefix2', '2026')}-{data.get('quotationId', '')}"
+                
+                # The new API endpoint wraps the response in a "quotation" object containing "header"
+                if "quotation" in data and "header" in data["quotation"]:
+                    header_data = data["quotation"]["header"]
+                else:
+                    header_data = data
+                    
+                quo_id = f"{header_data.get('quoPrefix1') or 'QUO'}-{header_data.get('quoPrefix2') or '2026'}-{header_data.get('quotationId') or ''}"
                 flash(f"Success! Quotation {quo_id} has been created.", "success")
                 
                 # Mock up the rate results session so the redirect works nicely
                 session['search_query'] = {
-                    'origin': payload['header']['routing']['polLocation'],
-                    'destination': payload['header']['routing']['podLocation'],
-                    'volume': sum(c['volume'] for c in payload['commodities']),
+                    'origin': payload['route']['polLocation'],
+                    'destination': payload['route']['podLocation'],
+                    'volume': sum(c['volume'] for c in payload['cargo']),
                     'service_type': service_type,
-                    'cargo_items': payload['commodities'],
+                    'cargo_items': payload['cargo'],
                     'quote_id': quo_id,
-                    'api_quotation_id': data.get('quotationId', '')
+                    'api_quotation_id': header_data.get('quotationId', '')
                 }
                 return redirect(url_for('customer.rate_results'))
             else:
-                import json
                 print("Constructed Payload:", json.dumps(payload, indent=2))
                 print("API ERROR:", api_resp.status_code, api_resp.text)
                 flash(f"Failed to create quotation. API responded with status {api_resp.status_code}. Error details: {api_resp.text}", "danger")
@@ -409,148 +429,15 @@ def rates():
         except Exception as e:
             flash(f"API Error: {str(e)}", "danger")
             return redirect(url_for('customer.rates'))
-    # Fetch origins and destinations from Realnexus API
-    import json
-    import requests
-    
-    origins_data = []
-    destinations_data = []
-    
-    headers = {'accept': '*/*', 'x-api-key': '1'}
-    
-    try:
-        # Fetch transport lanes
-        tl_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/TransportLanes', headers=headers, timeout=5)
-        lanes = tl_resp.json() if tl_resp.status_code == 200 else []
-        
-        # Fetch origin ports
-        op_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/OriginPorts', headers=headers, timeout=5)
-        origin_ports = {p['code']: p for p in op_resp.json() if p.get('isActive') and p.get('code')} if op_resp.status_code == 200 else {}
-        
-        # Fetch destination ports
-        dp_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/DestinationPorts', headers=headers, timeout=5)
-        dest_ports = {p['code']: p for p in dp_resp.json() if p.get('isActive') and p.get('code')} if dp_resp.status_code == 200 else {}
-        
-        # Populate based on active lanes
-        for lane in lanes:
-            from_code = lane.get('fromUNLocode')
-            to_code = lane.get('toUNLocode')
-            
-            if from_code:
-                p_info = origin_ports.get(from_code)
-                if p_info:
-                    origins_data.append({
-                        'code': from_code,
-                        'name': p_info.get('name', from_code),
-                        'country': p_info.get('country', from_code[:2] if len(from_code) >= 2 else '')
-                    })
-                else:
-                    origins_data.append({
-                        'code': from_code,
-                        'name': from_code,
-                        'country': from_code[:2] if len(from_code) >= 2 else ''
-                    })
-            if to_code:
-                p_info = dest_ports.get(to_code)
-                if p_info:
-                    destinations_data.append({
-                        'code': to_code,
-                        'name': p_info.get('name', to_code),
-                        'country': p_info.get('country', to_code[:2] if len(to_code) >= 2 else '')
-                    })
-                else:
-                    destinations_data.append({
-                        'code': to_code,
-                        'name': to_code,
-                        'country': to_code[:2] if len(to_code) >= 2 else ''
-                    })
-                    
-        # De-duplicate
-        origins_data = list({x['code']: x for x in origins_data}.values())
-        destinations_data = list({x['code']: x for x in destinations_data}.values())
-        
-        # Fallback to general ports if no active lanes returned valid mapping
-        if not origins_data and origin_ports:
-            origins_data = [{
-                'code': p['code'],
-                'name': p.get('name', p['code']),
-                'country': p.get('country', p['code'][:2])
-            } for p in origin_ports.values()]
-        if not destinations_data and dest_ports:
-            destinations_data = [{
-                'code': p['code'],
-                'name': p.get('name', p['code']),
-                'country': p.get('country', p['code'][:2])
-            } for p in dest_ports.values()]
-            
-    except Exception as e:
-        print("Error fetching ports/lanes from API:", e)
-        
-    # Fallback to local DB if API fails or returns empty data
-    if not origins_data:
-        import re
-        db_origins = [o[0] for o in db.session.query(Rate.origin).distinct().all() if o[0]]
-        for o_str in db_origins:
-            m = re.search(r'^(.*?)\s*\((.*?)\)$', o_str)
-            if m:
-                code = m.group(2).strip()
-                origins_data.append({
-                    'code': code,
-                    'name': m.group(1).strip(),
-                    'country': code[:2] if len(code) >= 2 else 'US'
-                })
-            else:
-                origins_data.append({
-                    'code': o_str,
-                    'name': o_str,
-                    'country': o_str[:2] if len(o_str) >= 2 else 'US'
-                })
-                
-    if not destinations_data:
-        import re
-        db_dests = [d[0] for d in db.session.query(Rate.destination).distinct().all() if d[0]]
-        for d_str in db_dests:
-            m = re.search(r'^(.*?)\s*\((.*?)\)$', d_str)
-            if m:
-                code = m.group(2).strip()
-                destinations_data.append({
-                    'code': code,
-                    'name': m.group(1).strip(),
-                    'country': code[:2] if len(code) >= 2 else 'BE'
-                })
-            else:
-                destinations_data.append({
-                    'code': d_str,
-                    'name': d_str,
-                    'country': d_str[:2] if len(d_str) >= 2 else 'BE'
-                })
-
-    # Merge Lookup Ports from Database
-    from app.models.models import Lookup
-    try:
-        db_ports = Lookup.query.filter_by(category='port').all()
-        for lp in db_ports:
-            country = lp.code[:2] if len(lp.code) >= 2 else 'US'
-            ptype = 'port'
-            if lp.extra_info:
-                parts = lp.extra_info.split(',')
-                if len(parts) >= 1 and parts[0]: country = parts[0].strip().upper()
-                if len(parts) >= 2 and parts[1]: ptype = parts[1].strip().lower()
-            
-            port_info = {
-                'code': lp.code,
-                'name': lp.name,
-                'country': country,
-                'type': ptype
-            }
-            if not any(o['code'].upper() == lp.code.upper() for o in origins_data):
-                origins_data.append(port_info)
-            if not any(d['code'].upper() == lp.code.upper() for d in destinations_data):
-                destinations_data.append(port_info)
-    except Exception as ex:
-        print("Error merging lookup ports:", ex)
-
+    # Fetch Countries
     from app.services.master_data import get_code_list
+    try:
+        countries_api = get_code_list('countrycode')
+        countries = [c.to_dict() for c in countries_api] if countries_api else []
+    except Exception as ex:
+        print("Error fetching countries:", ex)
+        countries = []
+
     # Fetch other lookup fields
     try:
         # Fetch from new CodeLists API where supported
@@ -582,23 +469,40 @@ def rates():
         volume_uom = []
         freight_terms = []
 
-    # Keep compatibility with existing templates/variables if needed
-    origins = [f"{o['name']} ({o['code']})" for o in origins_data]
-    destinations = [f"{d['name']} ({d['code']})" for d in destinations_data]
-
     return render_template('customer/rates.html',
-                         origins=origins,
-                         destinations=destinations,
-                         origins_json=json.dumps(origins_data),
-                         destinations_json=json.dumps(destinations_data),
+                         countries=countries,
                          incoterms=incoterms,
                          package_types_json=json.dumps(package_types),
                          container_types_json=json.dumps(container_types),
-
                          vas_types_json=json.dumps(vas_types),
                          weight_uom_json=json.dumps(weight_uom),
                          volume_uom_json=json.dumps(volume_uom),
                          freight_terms=freight_terms)
+
+@customer.route('/api/get-ports/<direction>/<country_code>')
+@login_required
+def api_get_ports(direction, country_code):
+    import requests
+    headers = {'accept': '*/*', 'x-api-key': '1'}
+    endpoint = 'OriginPorts' if direction.lower() == 'origin' else 'DestinationPorts'
+    url = f"http://realnexus.comit.cloud:5000/api/Ports/{endpoint}/{country_code}"
+    try:
+        resp = requests.get(url, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            ports = resp.json()
+            valid_ports = []
+            for p in ports:
+                if p.get('isActive') and p.get('code'):
+                    valid_ports.append({
+                        'code': p['code'],
+                        'name': p.get('name', p['code']),
+                        'country': country_code.upper()
+                    })
+            return jsonify(valid_ports)
+        return jsonify([])
+    except Exception as e:
+        print(f"Error fetching ports for {country_code}: {e}")
+    return jsonify([])
 
 
 @customer.route('/new-booking', methods=['GET', 'POST'])
@@ -673,7 +577,16 @@ def new_booking():
     try:
         import requests
         headers = {'accept': '*/*', 'x-api-key': '1'}
-        tl_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/TransportLanes', headers=headers, timeout=5)
+        
+        branch_id = 1
+        if current_user.branches:
+            try: branch_id = int(current_user.branches[0].branch_id)
+            except: pass
+            
+        traffic_type = "EX"
+        
+        tl_url = f'http://realnexus.comit.cloud:5000/api/Ports/TransportLanes?branchId={branch_id}&trafficType={traffic_type}'
+        tl_resp = requests.get(tl_url, headers=headers, timeout=5)
         if tl_resp.status_code == 200:
             lanes = tl_resp.json()
             for lane in lanes:
@@ -752,16 +665,34 @@ def rate_results():
                 lines = tariff.get('lines', [])
                 total_cost = sum(line.get('amount', 0) for line in lines)
                 
+                is_lcl = query.get('service_type', '') in ['Less than a container load', 'LCL']
+                branch_name = 'Fast Transitline Antwerp'
+                carrier_name = branch_name if is_lcl else (sailing.get('linerName') or 'Standard Carrier')
+                nvocc_name = carrier_name
+                
+                # Extract Next Closing
+                next_closing = None
+                if pol:
+                    closing_val = pol.get('closingLcl') if is_lcl else pol.get('closing')
+                    if not closing_val:
+                        closing_val = pol.get('closing')
+                    if closing_val:
+                        try:
+                            next_closing = datetime.datetime.strptime(closing_val[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
+                        except:
+                            next_closing = closing_val[:10]
+                
                 # Format to match the frontend expectations while passing real API data
                 results = [{
                     'api_quote': data,
                     'total_cost': total_cost,
                     'transit_days': transit_days,
-                    'carrier': sailing.get('linerName') or 'Standard Carrier',
+                    'carrier': carrier_name,
                     'frequency': 'API Specific',
                     'ui_tag': 'Official API Quote',
+                    'next_closing': next_closing,
                     'rate': {
-                        'nvocc_name': 'Realnexus API',
+                        'nvocc_name': nvocc_name,
                         'validity_end': header.get('validUntil', 'N/A'),
                         'id': api_id
                     },

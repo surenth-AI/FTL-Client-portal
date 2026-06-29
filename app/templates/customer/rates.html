@@ -1636,10 +1636,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                     <label class="form-label">Cargo Ready Date <span class="required">*</span></label>
                                     <input type="date" class="form-input" id="cargoReadyDate" name="cargo_ready_date" required>
                                 </div>
-                                <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label class="form-label">Customer Reference <span class="required">*</span></label>
-                                    <input type="text" class="form-input" id="customerReference" name="customer_reference" placeholder="e.g. PO12345" required>
-                                </div>
+
                                 <div class="form-group" style="grid-column: 1 / -1;">
                                     <label class="form-label">Traffic Type <span class="required">*</span></label>
                                     <select class="form-select" id="trafficType" name="traffic_type" onchange="updateAvailableIncoterms()" required>
@@ -1730,51 +1727,17 @@ html[data-color-scheme='dark'] .rates-view-content {
 
 <script>
 
-// Dynamic ports from API passed by Flask
-const apiOrigins = {{ origins_json | safe }};
-const apiDestinations = {{ destinations_json | safe }};
+// Dynamic countries from API passed by Flask
+const apiCountries = {{ countries | tojson | safe }};
 const packageTypes = {{ package_types_json | safe }};
 const containerTypes = {{ container_types_json | safe }};
 const vasTypes = {{ vas_types_json | safe }};
 const weightUomOptions = {{ weight_uom_json | safe }};
 const volumeUomOptions = {{ volume_uom_json | safe }};
 
-const COUNTRY_NAMES = {
-    'US': 'United States',
-    'CN': 'China',
-    'GB': 'United Kingdom',
-    'DE': 'Germany',
-    'ES': 'Spain',
-    'FR': 'France',
-    'NL': 'Netherlands',
-    'BE': 'Belgium',
-    'DK': 'Denmark',
-    'IT': 'Italy',
-    'IN': 'India',
-    'AE': 'United Arab Emirates',
-    'SG': 'Singapore',
-    'HK': 'Hong Kong',
-    'JP': 'Japan',
-    'KR': 'South Korea',
-    'CA': 'Canada',
-    'MX': 'Mexico',
-    'BR': 'Brazil',
-    'AU': 'Australia',
-    'PL': 'Poland',
-    'SE': 'Sweden',
-    'NO': 'Norway',
-    'FI': 'Finland',
-    'CH': 'Switzerland',
-    'AT': 'Austria',
-    'TR': 'Turkey',
-    'VN': 'Vietnam',
-    'TH': 'Thailand',
-    'MY': 'Malaysia',
-    'ID': 'Indonesia',
-    'PH': 'Philippines',
-    'TW': 'Taiwan',
-    'ZA': 'South Africa'
-};
+// Cache for dynamically fetched ports
+window.fetchedPortsCache = { origin: {}, dest: {} };
+
 
 function updateMovementType() {
     const originTypeEl = document.getElementById('originType');
@@ -1852,36 +1815,25 @@ function populateCountries(locationType, type) {
     const currentValue = countrySelect.value;
     countrySelect.innerHTML = '<option value="">Select country</option>';
     
-    let countries = new Set();
-    
-    if (type === 'door') {
-        Object.keys(COUNTRY_NAMES).forEach(c => countries.add(c));
-    } else {
-        const portsList = (locationType === 'origin') ? apiOrigins : apiDestinations;
-        portsList.forEach(p => {
-            if (p.country) {
-                countries.add(p.country.toUpperCase());
-            }
-        });
-    }
-    
-    Array.from(countries).sort().forEach(code => {
-        const name = COUNTRY_NAMES[code] || code;
+    // Sort apiCountries by name, filtering out empty keys
+    const sorted = [...apiCountries].filter(c => c.code && c.name).sort((a, b) => a.name.localeCompare(b.name));
+    sorted.forEach(c => {
         const option = document.createElement('option');
-        option.value = code;
-        option.textContent = name;
+        option.value = c.code;
+        option.textContent = c.name;
         countrySelect.appendChild(option);
     });
     
-    if (countries.has(currentValue)) {
+    if (currentValue && sorted.some(c => c.code === currentValue)) {
         countrySelect.value = currentValue;
     }
 }
 
-function filterLocations(locationType) {
+async function filterLocations(locationType) {
     const country = document.getElementById(locationType + 'Country').value;
     const type = document.getElementById(locationType + 'Type').value;
-    const searchTerm = document.getElementById(locationType + 'Location').value.toLowerCase();
+    const inputEl = document.getElementById(locationType + 'Location');
+    const searchTerm = inputEl.value.toLowerCase();
     const dropdown = document.getElementById(locationType + 'Dropdown');
 
     if (!country) {
@@ -1889,25 +1841,45 @@ function filterLocations(locationType) {
         return;
     }
 
-    let filtered = [];
     if (type === 'door') {
         dropdown.classList.remove('show');
         selectedLocations[locationType] = { name: searchTerm, code: '' };
         return;
-    } else {
-        const portsList = (locationType === 'origin') ? apiOrigins : apiDestinations;
-        const locations = portsList.filter(p => p.country && p.country.toUpperCase() === country.toUpperCase());
-        filtered = locations.filter(loc => 
-            loc.name.toLowerCase().includes(searchTerm) ||
-            loc.code.toLowerCase().includes(searchTerm)
-        ).map(loc => ({
-            name: loc.name,
-            code: loc.code
-        }));
     }
 
+    dropdown.innerHTML = '<div class="dropdown-item text-center text-muted"><div class="spinner-border spinner-border-sm" role="status"></div> Loading ports...</div>';
+    dropdown.classList.add('show');
+
+    // Fetch from cache or API
+    let locations = window.fetchedPortsCache[locationType][country];
+    if (!locations) {
+        try {
+            const resp = await fetch(`/customer/api/get-ports/${locationType}/${country}`);
+            if (resp.ok) {
+                locations = await resp.json();
+                window.fetchedPortsCache[locationType][country] = locations;
+            } else {
+                locations = [];
+            }
+        } catch (e) {
+            console.error(e);
+            locations = [];
+        }
+    }
+
+    // Filter by search term
+    const searchWords = searchTerm.replace(/[()]/g, ' ').trim().split(/\s+/).filter(w => w);
+    const filtered = locations.filter(loc => {
+        if (searchWords.length === 0) return true;
+        const locText = `${loc.name} ${loc.code}`.toLowerCase();
+        return searchWords.every(word => locText.includes(word));
+    }).map(loc => ({
+        name: loc.name,
+        code: loc.code
+    }));
+
     if (filtered.length === 0) {
-        dropdown.innerHTML = '<div class="dropdown-no-results">No results found</div>';
+        dropdown.innerHTML = '<div class="dropdown-no-results">*No services listed for now</div>';
     } else {
         dropdown.innerHTML = filtered.map(loc => `
             <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\\'")}', '${loc.code}')">
@@ -1916,8 +1888,6 @@ function filterLocations(locationType) {
             </div>
         `).join('');
     }
-
-    dropdown.classList.add('show');
 }
 
         // Custom alert function for sandboxed environments
@@ -2249,47 +2219,6 @@ function filterLocations(locationType) {
                 return;
             }
             filterLocations(locationType);
-        }
-
-        function filterLocations_old(locationType) {
-            const country = document.getElementById(locationType + 'Country').value;
-            const type = document.getElementById(locationType + 'Type').value;
-            const searchTerm = document.getElementById(locationType + 'Location').value.toLowerCase();
-            const dropdown = document.getElementById(locationType + 'Dropdown');
-
-            if (!country) {
-                dropdown.classList.remove('show');
-                return;
-            }
-
-            const dataKey = type === 'door' ? 'cities' : 'ports';
-            const locations = locationData[dataKey][country] || [];
-
-            const filtered = locations.filter(loc => {
-                if (type === 'door') {
-                    return loc.name.toLowerCase().includes(searchTerm) ||
-                        loc.zipcode.toLowerCase().includes(searchTerm);
-                } else {
-                    return loc.name.toLowerCase().includes(searchTerm) ||
-                        loc.uncode.toLowerCase().includes(searchTerm);
-                }
-            });
-
-            if (filtered.length === 0) {
-                dropdown.innerHTML = '<div class="dropdown-no-results">No results found</div>';
-            } else {
-                dropdown.innerHTML = filtered.map(loc => {
-                    const code = type === 'door' ? loc.zipcode : loc.uncode;
-                    return `
-                        <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name}', '${code}')">
-                            <div class="dropdown-item-name">${loc.name}</div>
-                            <div class="dropdown-item-code">${code}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            dropdown.classList.add('show');
         }
 
         function selectLocation(locationType, name, code) {
@@ -3242,7 +3171,6 @@ function filterLocations(locationType) {
             const incoterm = document.getElementById('incoterm').value;
             const freightTerms = document.getElementById('freightTerms').value;
             const cargoReadyDate = document.getElementById('cargoReadyDate').value;
-            const customerReference = document.getElementById('customerReference').value;
             const trafficType = document.getElementById('trafficType').value;
 
             if (!route || !cargo) {
@@ -3250,8 +3178,8 @@ function filterLocations(locationType) {
                 return;
             }
 
-            if (!incoterm || !freightTerms || !cargoReadyDate || !customerReference || !trafficType) {
-                alert('Validation Error: Please select Incoterm, Freight Terms, Cargo Ready Date, Customer Reference, and Traffic Type in the Services section');
+            if (!incoterm || !freightTerms || !cargoReadyDate || !trafficType) {
+                alert('Validation Error: Please select Incoterm, Freight Terms, Cargo Ready Date, and Traffic Type in the Services section');
                 togglePanel('services');
                 return;
             }
@@ -3332,6 +3260,7 @@ function filterLocations(locationType) {
                                 weight: item.querySelector('input[name="item_weight[]"]')?.value || '',
                                 weight_unit: item.querySelector('select[name="item_weight_unit[]"]')?.value || '',
                                 volume: item.querySelector('input[name="item_volume[]"]')?.value || '',
+                                goods_type: item.querySelector('select[name="goods_type[]"]')?.value || '',
                                 desc: item.querySelector('input[name="item_desc[]"]')?.value || 'General Cargo'
                             });
                         });
@@ -3341,7 +3270,7 @@ function filterLocations(locationType) {
                         incoterm: document.getElementById('incoterm')?.value || '',
                         freightTerms: document.getElementById('freightTerms')?.value || '',
                         cargoReadyDate: document.getElementById('cargoReadyDate')?.value || '',
-                        customerReference: document.getElementById('customerReference')?.value || '',
+
                         trafficType: document.getElementById('trafficType')?.value || '',
                         includeFreight: document.getElementById('includeFreight')?.checked || false,
                         includeOriginCharges: document.getElementById('includeOriginCharges')?.checked || false,
@@ -3505,6 +3434,7 @@ document.getElementById('wizardSearchForm').submit();
                         if(item.weight) el.querySelector('input[name="item_weight[]"]').value = item.weight;
                         if(item.weight_unit) el.querySelector('select[name="item_weight_unit[]"]').value = item.weight_unit;
                         if(item.volume) el.querySelector('input[name="item_volume[]"]').value = item.volume;
+                        if(item.goods_type) el.querySelector('select[name="goods_type[]"]').value = item.goods_type;
                         if(item.desc) el.querySelector('input[name="item_desc[]"]').value = item.desc;
                     }
                 });
@@ -3516,8 +3446,13 @@ document.getElementById('wizardSearchForm').submit();
                 if(s.incoterm) document.getElementById('incoterm').value = s.incoterm;
                 if(s.freightTerms) document.getElementById('freightTerms').value = s.freightTerms;
                 if(s.cargoReadyDate) document.getElementById('cargoReadyDate').value = s.cargoReadyDate;
-                if(s.customerReference) document.getElementById('customerReference').value = s.customerReference;
-                if(s.trafficType) document.getElementById('trafficType').value = s.trafficType;
+                if(s.trafficType) {
+                    const tt = document.getElementById('trafficType');
+                    if (tt) {
+                        tt.value = s.trafficType;
+                        tt.dispatchEvent(new Event('change'));
+                    }
+                }
                 
                 const setCheckbox = (id, checked) => {
                     const cb = document.getElementById(id);

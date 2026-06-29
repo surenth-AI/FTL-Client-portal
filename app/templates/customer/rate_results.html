@@ -4,14 +4,37 @@
 {% block content %}
 <style>
     /* Ensure Bootstrap text classes respect custom theme variables in both dark and light modes */
-    .text-body { color: var(--text-primary) !important; }
-    .text-muted { color: var(--text-secondary) !important; }
-    .text-dark { color: var(--text-primary) !important; }
-    .bg-light { background-color: var(--bg-gray) !important; }
-    .text-primary { color: var(--primary-color) !important; }
-    .text-success { color: #20c997 !important; }
-    .border-success { border-color: rgba(32, 201, 151, 0.3) !important; }
-    .bg-success { background-color: #20c997 !important; }
+    .text-body {
+        color: var(--text-primary) !important;
+    }
+
+    .text-muted {
+        color: var(--text-secondary) !important;
+    }
+
+    .text-dark {
+        color: var(--text-primary) !important;
+    }
+
+    .bg-light {
+        background-color: var(--bg-gray) !important;
+    }
+
+    .text-primary {
+        color: var(--primary-color) !important;
+    }
+
+    .text-success {
+        color: #20c997 !important;
+    }
+
+    .border-success {
+        border-color: rgba(32, 201, 151, 0.3) !important;
+    }
+
+    .bg-success {
+        background-color: #20c997 !important;
+    }
 
     /* Fix modal close button in dark mode */
     html[data-color-scheme='dark'] .btn-close {
@@ -25,9 +48,9 @@
         border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 1.25rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
-    
+
     .view-toggle-btn {
         background: var(--bg-gray);
         border: 1px solid var(--border-color);
@@ -38,13 +61,20 @@
         cursor: pointer;
         transition: all 0.2s ease;
     }
+
     .view-toggle-btn.active {
         background: var(--primary-color);
         color: var(--button-text, #ffffff);
         border-color: var(--primary-color);
     }
-    .view-toggle-btn:first-child { border-radius: 6px 0 0 6px; }
-    .view-toggle-btn:last-child { border-radius: 0 6px 6px 0; }
+
+    .view-toggle-btn:first-child {
+        border-radius: 6px 0 0 6px;
+    }
+
+    .view-toggle-btn:last-child {
+        border-radius: 0 6px 6px 0;
+    }
 
     /* Table View Styles */
     .quote-table {
@@ -53,8 +83,9 @@
         border-radius: 8px;
         overflow: hidden;
         border: 1px solid var(--border-color);
-        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     }
+
     .quote-table th {
         background: var(--bg-gray);
         color: var(--text-muted);
@@ -64,47 +95,55 @@
         padding: 1rem;
         border-bottom: 2px solid var(--border-color);
     }
+
     .quote-master-row {
         cursor: pointer;
         transition: background 0.2s ease;
     }
+
     .quote-master-row:hover {
         background: var(--bg-gray);
     }
+
     .quote-master-row td {
         padding: 1.25rem 1rem;
         vertical-align: middle;
         border-bottom: 1px solid var(--border-color);
     }
+
     .carrier-logo-placeholder {
         font-size: 1.5rem;
         color: var(--primary-color);
         margin-right: 0.75rem;
     }
+
     .price-col {
         font-size: 1.25rem;
         font-weight: 700;
         color: var(--text-primary);
     }
-    
+
     /* Breakdown Shutter/Accordion */
     .quote-breakdown-row {
         display: none;
         background: var(--bg-gray);
     }
+
     .quote-breakdown-row.active {
         display: table-row;
     }
+
     .breakdown-container {
         padding: 1.5rem;
         border-bottom: 2px solid var(--border-color);
     }
-    
+
     /* Breakdown Detailed Table */
     .detail-table {
         width: 100%;
         margin-bottom: 1rem;
     }
+
     .detail-table th {
         font-size: 0.7rem;
         text-transform: uppercase;
@@ -112,13 +151,14 @@
         padding: 0.5rem;
         border-bottom: 1px solid var(--border-color);
     }
+
     .detail-table td {
         padding: 0.75rem 0.5rem;
         font-size: 0.85rem;
         border-bottom: 1px solid var(--border-color);
         color: var(--text-primary);
     }
-    
+
     /* Summary Bar */
     .summary-bar {
         background: var(--bg-gray);
@@ -130,24 +170,39 @@
         justify-content: space-between;
         align-items: center;
         font-weight: 600;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
     }
 
     /* Card View Styles */
-    .card-view-container { display: none; }
+    .card-view-container {
+        display: none;
+    }
+
     .quote-card {
         cursor: pointer;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+
     .quote-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
     }
-    
+
     /* Modal Override */
-    .modal-content { border-radius: 16px; border: none; }
-    .modal-header { border-radius: 16px 16px 0 0; }
-    .modal.show { backdrop-filter: blur(4px); } /* Optional subtle blur if backdrop is false */
+    .modal-content {
+        border-radius: 16px;
+        border: none;
+    }
+
+    .modal-header {
+        border-radius: 16px 16px 0 0;
+    }
+
+    .modal.show {
+        backdrop-filter: blur(4px);
+    }
+
+    /* Optional subtle blur if backdrop is false */
 </style>
 
 <div class="mb-3">
@@ -159,28 +214,49 @@
 <!-- Premium Header -->
 <div class="quote-header-card mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
     <div>
-        <h4 class="mb-1 fw-bold" style="background: linear-gradient(45deg, var(--primary-color), #20c997); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Quotations Available ({{ results|length }})</h4>
+        <h4 class="mb-1 fw-bold"
+            style="background: linear-gradient(45deg, var(--primary-color), #20c997); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Quotations Available ({{ results|length }})</h4>
         <div class="text-secondary small d-flex align-items-center gap-3">
-            <span><i class="bi bi-geo-alt text-primary"></i> <strong class="text-body">{{ query.origin }}</strong></span>
+            <span><i class="bi bi-geo-alt text-primary"></i> <strong class="text-body">{{ query.origin
+                    }}</strong></span>
+
+            <!-- Route logic update -->
+            {% if results and results[0].api_quote.sailings and results[0].api_quote.sailings[0].pod.unLocode and
+            results[0].api_quote.sailings[0].pod.unLocode != query.destination %}
+            <span class="text-muted"><i class="bi bi-arrow-right"></i></span>
+            <span class="badge bg-secondary bg-opacity-10 text-body border">Via {{
+                results[0].api_quote.sailings[0].pod.unLocode }}</span>
+            {% endif %}
+
             <i class="bi bi-arrow-right"></i>
-            <span><i class="bi bi-geo text-danger"></i> <strong class="text-body">{{ query.destination }}</strong></span>
-            <span class="border-start border-secondary ps-3"><i class="bi bi-box-seam"></i> Vol: <strong>{{ query.volume }} CBM</strong></span>
-            <span class="border-start border-secondary ps-3"><i class="bi bi-ship"></i> Service: <strong>{{ query.service_type }}</strong></span>
-            <span class="border-start border-secondary ps-3"><i class="bi bi-calendar-check"></i> Valid Until: <strong>{{ (results[0].rate.validity_end if results else None) or '30 Days' }}</strong></span>
+            <span><i class="bi bi-geo text-danger"></i> <strong class="text-body">{{ query.destination
+                    }}</strong></span>
+            <span class="border-start border-secondary ps-3"><i class="bi bi-box-seam"></i> Vol: <strong>{{ query.volume
+                    }} CBM</strong></span>
+            <span class="border-start border-secondary ps-3"><i class="bi bi-ship"></i> Service: <strong>{{
+                    query.service_type }}</strong></span>
+            <span class="border-start border-secondary ps-3"><i class="bi bi-calendar-check"></i> Valid Until:
+                <strong>{{ (results[0].rate.validity_end if results else None) or '30 Days' }}</strong></span>
         </div>
     </div>
-    
+
     <div class="text-end">
         <div class="d-flex justify-content-end">
-            <button class="view-toggle-btn active" id="btnTableView" onclick="toggleView('table')"><i class="bi bi-list-task"></i> Table View</button>
-            <button class="view-toggle-btn" id="btnCardView" onclick="toggleView('card')"><i class="bi bi-grid"></i> Card View</button>
+            <button class="view-toggle-btn active" id="btnTableView" onclick="toggleView('table')"><i
+                    class="bi bi-list-task"></i> Table View</button>
+            <button class="view-toggle-btn" id="btnCardView" onclick="toggleView('card')"><i class="bi bi-grid"></i>
+                Card View</button>
         </div>
     </div>
 </div>
 
 <div class="mb-4 d-flex justify-content-center">
-    <div class="rounded d-flex align-items-center" id="viewHintText" style="background: var(--glass-bg); color: var(--text-primary); padding: 0.4rem 1rem; box-shadow: 0 0 12px rgba(0,0,0,0.12); font-size: 0.875rem; font-weight: 500; min-width: 700px;">
-        <div style="display: flex; width: 1.75em; height: 1.75em; margin-right: 0.75rem; border: 0.2em solid var(--border-color); border-radius: 50%; color: var(--primary-color); align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; font-family: sans-serif;">i</div>
+    <div class="rounded d-flex align-items-center" id="viewHintText"
+        style="background: var(--glass-bg); color: var(--text-primary); padding: 0.4rem 1rem; box-shadow: 0 0 12px rgba(0,0,0,0.12); font-size: 0.875rem; font-weight: 500; min-width: 700px;">
+        <div
+            style="display: flex; width: 1.75em; height: 1.75em; margin-right: 0.75rem; border: 0.2em solid var(--border-color); border-radius: 50%; color: var(--primary-color); align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; font-family: sans-serif;">
+            i</div>
         <span>Click on a row to expand detailed breakdown</span>
     </div>
 </div>
@@ -195,80 +271,127 @@
 
 <!-- ================= TABLE VIEW ================= -->
 <div id="tableViewContainer">
-    <!-- Headers -->
-    <div class="d-none d-md-flex text-muted small fw-bold text-uppercase px-4 mb-2">
-        <div style="width: 35%">Carrier / Routing</div>
-        <div style="width: 20%">Service & Frequency</div>
-        <div style="width: 15%">Transit Time</div>
-        <div style="width: 15%">Validity</div>
-        <div style="width: 15%" class="text-end">Total Price</div>
-        <div style="width: 15%" class="text-center">Actions</div>
-    </div>
-
     {% for res in results %}
-    <div class="mb-4 quote-list-card shadow-sm rounded-3 border" style="background: var(--glass-bg); border-color: var(--border-color) !important; overflow: hidden;">
-        
+    <div class="mb-4 quote-list-card shadow-sm rounded-3 border"
+        style="background: var(--glass-bg); border-color: var(--border-color) !important; overflow: hidden;">
+
         <!-- Master Row -->
-        <div class="d-flex align-items-center px-4 py-3 quote-master-row" onclick="toggleAccordion('breakdown-{{ loop.index }}')" style="cursor: pointer; transition: background 0.2s ease;">
-            <div style="width: 35%" class="d-flex align-items-center">
-                <i class="bi bi-building fs-2 text-primary me-3"></i>
+        <div class="d-flex quote-master-row"
+            style="cursor: pointer; transition: background 0.2s ease; min-height: 140px;">
+            <!-- Left Panel (Pricing & Save) -->
+            <div class="p-4 d-flex flex-column justify-content-between"
+                style="width: 220px; border-right: 2px solid #20c997; background: var(--glass-bg);">
                 <div>
-                    <div class="fw-bold fs-5" style="color: var(--primary-color);">{{ res.rate.nvocc_name }}</div>
-                    {% if query.service_type == 'Less than a container load' %}
-                        <small class="text-muted fw-bold text-primary">FTL Consolidated Service</small>
-                    {% else %}
-                        <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
-                    {% endif %}
-                    {% if res.ui_tag %}
-                    <span class="badge bg-primary text-white ms-2" style="font-size: 0.65rem;">{{ res.ui_tag }}</span>
-                    {% endif %}
+                    <div class="text-muted small">Total</div>
+                    <div class="fs-3 fw-bold" style="color: #00a676;">{{
+                        res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}
+                    </div>
+                    <div class="text-muted mt-3" style="font-size: 0.75rem;"><i class="bi bi-calendar-event"></i> Valid
+                        Until: <strong>{{ res.rate.validity_end }}</strong></div>
                 </div>
-            </div>
-            
-            <div style="width: 20%">
-                <div class="fw-bold text-body">{{ query.service_type }}</div>
-                <small class="text-muted">{{ res.frequency or 'Weekly' }}</small>
-            </div>
-            
-            <div style="width: 15%">
-                <div class="fw-bold text-primary"><i class="bi bi-clock"></i> {{ res.transit_days }} Days</div>
-                <div class="small mt-1 text-muted">
-                    {% if loop.index % 2 == 0 %}
-                        <span class="badge bg-secondary bg-opacity-10 text-body border"><i class="bi bi-arrow-left-right"></i> Via SG SIN</span>
-                    {% else %}
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="bi bi-lightning-fill"></i> Direct Routing</span>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div style="width: 15%">
-                <div class="text-muted small">Valid thru<br><strong class="text-body">{{ res.rate.validity_end }}</strong></div>
-            </div>
-            
-            <div style="width: 15%" class="text-end">
-                <div class="fs-4 fw-bold" style="color: var(--primary-color);">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</div>
-                <small class="text-muted">Total</small>
-            </div>
-            <div style="width: 15%" class="text-center d-flex flex-column gap-2 px-2" onclick="event.stopPropagation();">
-                <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0">
+                <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0 mt-3"
+                    onclick="event.stopPropagation();">
                     <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
                     <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
                     <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
-                    <button class="btn btn-sm btn-outline-secondary fw-bold w-100"><i class="bi bi-bookmark"></i> Save</button>
-                </form>
-                <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0">
-                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                    <input type="hidden" name="volume" value="{{ query.volume }}">
-                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                    <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                    <button type="submit" class="btn btn-sm btn-primary w-100 fw-bold">Book</button>
+                    <button class="btn btn-sm btn-outline-secondary fw-bold w-100 py-2" style="font-size: 0.85rem;"><i
+                            class="bi bi-bookmark"></i> Save</button>
                 </form>
             </div>
+
+            <!-- Right Panel (Details) -->
+            <div class="p-4 flex-grow-1 d-flex flex-column justify-content-between" style="background: var(--glass-bg);"
+                onclick="toggleAccordion('breakdown-{{ loop.index }}')">
+                <!-- Top Row: Carrier & Route & Badges -->
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex align-items-center gap-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded d-flex align-items-center justify-content-center"
+                                style="width: 32px; height: 32px;">
+                                <i class="bi bi-ship"></i>
+                            </div>
+                            <span class="fw-bold fs-5" style="color: #00a676;">{{ res.rate.nvocc_name }}</span>
+                        </div>
+                        <div class="text-body fw-bold d-flex align-items-center gap-3" style="font-size: 0.85rem;">
+                            <span class="text-muted d-flex align-items-center gap-1"><i class="bi bi-geo-alt"
+                                    style="color: #00a676;"></i> Antwerp (BEANR)</span>
+                            <span class="text-muted" style="font-size: 0.7rem;"><i class="bi bi-arrow-right"></i></span>
+                            <span class="text-muted d-flex align-items-center gap-1"><i class="bi bi-geo"
+                                    style="color: #dc3545;"></i> Singapore (SGSIN)</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        {% if loop.index % 2 != 0 %}
+                        <span class="badge rounded-pill bg-success text-white px-3 py-1 fw-bold"
+                            style="background-color: #20c997 !important; font-size: 0.7rem;"><i
+                                class="bi bi-lightning-fill"></i> Direct Routing</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-secondary text-white px-3 py-1 fw-bold"
+                            style="font-size: 0.7rem;"><i class="bi bi-arrow-left-right"></i> Indirect Routing</span>
+                        {% endif %}
+                        <span class="fw-bold" style="color: #00a676; font-size: 0.9rem;"><i class="bi bi-clock"></i> {{
+                            res.transit_days }} Days</span>
+                    </div>
+                </div>
+
+                <!-- Middle Row: Charges & Next Closing -->
+                <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+                    <div class="d-flex gap-5">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-square-fill" style="color: #00a676;"></i>
+                            <span class="text-body fw-bold" style="font-size: 0.85rem;">Origin Port Charges</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border-0 px-2 py-1">Included</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-square-fill" style="color: #00a676;"></i>
+                            <span class="text-body fw-bold" style="font-size: 0.85rem;">Freight & Surcharges</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border-0 px-2 py-1">Included</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-x-square-fill text-danger"></i>
+                            <span class="text-body fw-bold" style="font-size: 0.85rem;">Destination Port Charges</span>
+                            <span class="badge bg-danger text-white border-0 px-2 py-1">Excluded</span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold" style="color: #00a676; font-size: 0.85rem;">NEXT CLOSING</span>
+                            <span class="text-muted fw-bold" style="font-size: 0.85rem;">{{ res.next_closing or
+                                '2026-07-31' }}</span>
+                        </div>
+                        <a href="#" class="d-inline-block small text-dark fw-bold mt-1"
+                            style="text-decoration: underline; font-size: 0.75rem;"
+                            onclick="openSchedulesModal(event, 'schedulesModal-{{ loop.index }}')">View more...</a>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Actions -->
+                <div class="d-flex justify-content-between align-items-end mt-auto">
+                    <a href="#" class="small text-primary fw-bold d-flex align-items-center gap-1"
+                        style="text-decoration: none;" onclick="event.stopPropagation();"><i
+                            class="bi bi-file-earmark-text"></i> View terms & conditions <i
+                            class="bi bi-box-arrow-up-right" style="font-size: 0.7rem;"></i></a>
+
+                    <div class="text-muted small fw-bold" style="cursor: pointer;"><i class="bi bi-chevron-down"></i>
+                        View rate breakdown</div>
+
+                    <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0"
+                        onclick="event.stopPropagation();">
+                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                        <input type="hidden" name="volume" value="{{ query.volume }}">
+                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                        <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                        <button type="submit" class="btn btn-success fw-bold px-5 py-2"
+                            style="background-color: #00a676; border: none;">Book</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        
+
         <!-- Breakdown Accordion Row -->
-        <div id="breakdown-{{ loop.index }}" class="quote-breakdown-row p-4 border-top" style="display: none; background: var(--bg-gray); border-color: var(--border-color) !important;">
-            
+        <div id="breakdown-{{ loop.index }}" class="quote-breakdown-row p-4 border-top"
+            style="display: none; background: var(--bg-gray); border-color: var(--border-color) !important;">
+
             <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-receipt"></i> Quotation Breakdown</h6>
             <table class="detail-table">
                 <thead>
@@ -293,58 +416,116 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted">No line items provided in API.</td>
+                        <td colspan="6" class="text-center text-muted">No line items provided.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            
+
             <div class="summary-bar mt-4">
-                    <span class="fs-4 fw-bold" style="color: var(--primary-color);">USD {{ "%.2f"|format(res.total_cost) }}</span>
+                <span class="fs-4 fw-bold" style="color: var(--primary-color);">USD {{ "%.2f"|format(res.total_cost)
+                    }}</span>
+            </div>
+        </div>
+
+        <!-- Action -->
+        <div class="mt-3 text-end">
+            <form action="{{ url_for('customer.finalize_booking') }}" method="POST">
+                <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                <input type="hidden" name="volume" value="{{ query.volume }}">
+                <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                <button type="submit" class="btn btn-primary fw-bold px-4 text-white">Proceed to Booking <i
+                        class="bi bi-chevron-right"></i></button>
+            </form>
+        </div>
+
+
+    </div>
+
+    <!-- Schedules Modal for this Quote -->
+    {% if res.next_closing %}
+    <div class="modal fade" id="schedulesModal-{{ loop.index }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" style="background: var(--glass-bg); border-radius: 12px;">
+                <div class="modal-header border-bottom-0" style="background: var(--bg-gray);">
+                    <h5 class="modal-title fw-bold text-primary"><i class="bi bi-calendar3"></i> Available Sailing
+                        Schedules</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-4">Schedules for {{ query.origin }} to {{ query.destination }}</p>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Vessel / Voyage</th>
+                                    <th>Closing Date</th>
+                                    <th>ETD</th>
+                                    <th>ETA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sailing in res.api_quote.sailings %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-body">{{ sailing.vessel }}</div>
+                                        <small class="text-muted">Voyage: {{ sailing.voyage }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary text-white">{{ (sailing.pol.closingLcl or
+                                            sailing.pol.closing)[:10] if (sailing.pol.closingLcl or sailing.pol.closing)
+                                            else 'N/A' }}</span>
+                                    </td>
+                                    <td>{{ sailing.pol.etd[:10] if sailing.pol.etd else 'N/A' }}</td>
+                                    <td>{{ sailing.pod.eta[:10] if sailing.pod.eta else 'N/A' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No schedules available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Action -->
-            <div class="mt-3 text-end">
-                <form action="{{ url_for('customer.finalize_booking') }}" method="POST">
-                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                    <input type="hidden" name="volume" value="{{ query.volume }}">
-                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                    <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                    <button type="submit" class="btn btn-primary fw-bold px-4 text-white">Proceed to Booking <i class="bi bi-chevron-right"></i></button>
-                </form>
-            </div>
-            
         </div>
     </div>
-    {% endfor %}
+    {% endif %}
+
+</div>
+{% endfor %}
 </div>
 
 <!-- ================= CARD VIEW ================= -->
-<div id="cardViewContainer" class="card-view-container row">
+<div id="cardViewContainer" class="card-view-container row ms-3">
     {% for res in results %}
-    <div class="col-md-4 mb-4">
+    <div class="col-md-4 mb-4" style="min-width: 350px;">
         <div class="card h-100 glass-card quote-card" onclick="openModal('modal-{{ loop.index }}')">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
-                        <h5 class="card-title fw-bold mb-0" style="color: var(--primary-color);">{{ res.rate.nvocc_name }}</h5>
+                        <h5 class="card-title fw-bold mb-0" style="color: var(--primary-color);">{{ res.rate.nvocc_name
+                            }}</h5>
                         {% if query.service_type == 'Less than a container load' %}
                         <small class="text-muted fw-bold text-primary">FTL Consolidated Service</small>
-                    {% else %}
+                        {% else %}
                         <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
-                    {% endif %}
+                        {% endif %}
                     </div>
                     {% if res.ui_tag %}
-                        <span class="badge bg-primary rounded-pill">{{ res.ui_tag }}</span>
+                    <span class="badge bg-primary rounded-pill">{{ res.ui_tag }}</span>
                     {% endif %}
                 </div>
-                
-                <div class="display-6 mb-1 text-primary fw-bold">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</div>
+
+                <div class="display-6 mb-1 text-primary fw-bold">{{
+                    res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</div>
                 <div class="text-muted small mb-3">
                     (Includes all Quotation Line Items)
                 </div>
-                
+
                 <hr>
 
                 <div class="mb-4">
@@ -352,9 +533,9 @@
                         <span class="text-muted small">Transit Time</span>
                         <span class="fw-bold text-body">{{ res.transit_days }} Days
                             {% if loop.index % 2 == 0 %}
-                                <br><small class="text-muted">(Via SG SIN)</small>
+                            <br><small class="text-muted">(Via SG SIN)</small>
                             {% else %}
-                                <br><small class="text-success">(Direct Routing)</small>
+                            <br><small class="text-success">(Direct Routing)</small>
                             {% endif %}
                         </span>
                     </div>
@@ -362,21 +543,34 @@
                         <span class="text-muted small">Frequency</span>
                         <span class="fw-bold text-body">{{ res.frequency or 'Weekly' }}</span>
                     </div>
+                    {% if res.next_closing %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Next Closing</span>
+                        <div class="text-end">
+                            <span class="fw-bold text-primary">{{ res.next_closing }}</span>
+                            <br><a href="#" class="small"
+                                onclick="openSchedulesModal(event, 'schedulesModal-{{ loop.index }}')"
+                                style="text-decoration: underline;">View more...</a>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="d-flex justify-content-between">
                         <span class="text-muted small">Valid Until</span>
                         <span class="fw-bold text-body">{{ res.rate.validity_end }}</span>
                     </div>
                 </div>
-                
+
                 <div class="text-center mb-3">
-                    <span class="text-primary small fw-bold"><i class="bi bi-arrows-angle-expand"></i> Click card for detailed breakdown</span>
+                    <span class="text-primary small fw-bold"><i class="bi bi-arrows-angle-expand"></i> Click card for
+                        detailed breakdown</span>
                 </div>
                 <div class="d-flex gap-2" onclick="event.stopPropagation();">
                     <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0 flex-grow-1">
                         <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
                         <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
                         <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
-                        <button class="btn btn-outline-secondary w-100 fw-bold"><i class="bi bi-bookmark"></i> Save</button>
+                        <button class="btn btn-outline-secondary w-100 fw-bold"><i class="bi bi-bookmark"></i>
+                            Save</button>
                     </form>
                     <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0 flex-grow-1">
                         <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
@@ -389,35 +583,40 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Modal for Card View -->
     <div class="modal fade" id="modal-{{ loop.index }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content shadow-lg border-0" style="background: var(--glass-bg); border-radius: 16px;">
                 <div class="modal-header border-bottom-0 rounded-top-3" style="background: var(--bg-gray);">
                     <div>
-                        <h5 class="modal-title fw-bold mb-0" style="color: var(--primary-color);">{{ res.rate.nvocc_name }} Detailed Quote</h5>
-                        <small class="fw-bold" style="color: var(--text-secondary);">{{ query.origin }} to {{ query.destination }}</small>
+                        <h5 class="modal-title fw-bold mb-0 text-primary">Detailed Quote</h5>
+                        <small class="fw-bold" style="color: var(--text-secondary);">{{ query.origin }} to {{
+                            query.destination }}</small>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    
+
                     <!-- Quote Metadata inside Modal -->
                     <div class="row g-3 mb-4 bg-gray p-3 rounded-3" style="background: var(--bg-gray);">
                         <div class="col-md-4">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Route Particulars</small>
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Route
+                                Particulars</small>
                             <span class="fw-bold text-body d-block">{{ query.origin }}</span>
                             <span class="fw-bold text-body d-block">{{ query.destination }}</span>
                         </div>
                         <div class="col-md-4">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Cargo & Service</small>
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Cargo &
+                                Service</small>
                             <span class="fw-bold text-body d-block">Vol: {{ query.volume }} CBM</span>
                             <span class="fw-bold text-body d-block">Service: {{ query.service_type }}</span>
                         </div>
                         <div class="col-md-4">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Transit & Validity</small>
-                            <span class="fw-bold text-primary d-block">{{ res.transit_days }} Days ({{ res.frequency or 'Weekly' }})</span>
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Transit &
+                                Validity</small>
+                            <span class="fw-bold text-primary d-block">{{ res.transit_days }} Days ({{ res.frequency or
+                                'Weekly' }})</span>
                             <span class="fw-bold text-body d-block">Valid: {{ res.rate.validity_end }}</span>
                         </div>
                     </div>
@@ -447,20 +646,23 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted">No line items provided in API.</td>
+                                <td colspan="6" class="text-center text-muted">No line items provided.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                    
+
                     <div class="summary-bar mt-4">
                         <div>
-                            <span class="d-block small text-muted text-uppercase fw-bold mb-1"><i class="bi bi-calculator"></i> Summary</span>
+                            <span class="d-block small text-muted text-uppercase fw-bold mb-1"><i
+                                    class="bi bi-calculator"></i> Summary</span>
                             <span class="text-body" style="font-size: 0.85rem;">Official API Quotation Total</span>
                         </div>
                         <div class="text-end">
                             <span class="me-3 text-muted" style="font-size: 0.9rem;">Total Price</span>
-                            <span class="fs-4 fw-bold" style="color: var(--primary-color);">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</span>
+                            <span class="fs-4 fw-bold" style="color: var(--primary-color);">{{
+                                res.api_quote.tariff.quotationCurrency|default('USD') }} {{
+                                "%.2f"|format(res.total_cost) }}</span>
                         </div>
                     </div>
                 </div>
@@ -470,7 +672,8 @@
                         <input type="hidden" name="volume" value="{{ query.volume }}">
                         <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
                         <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 text-white">Proceed to Booking <i class="bi bi-chevron-right"></i></button>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 text-white">Proceed to Booking
+                            <i class="bi bi-chevron-right"></i></button>
                     </form>
                 </div>
             </div>
@@ -486,28 +689,28 @@
         // Update Buttons
         document.getElementById('btnTableView').classList.toggle('active', view === 'table');
         document.getElementById('btnCardView').classList.toggle('active', view === 'card');
-        
+
         // Update Containers
         document.getElementById('tableViewContainer').style.display = (view === 'table') ? 'block' : 'none';
         document.getElementById('cardViewContainer').style.display = (view === 'card') ? 'flex' : 'none';
-        
+
         // Update Hint Text
         const hintSpan = document.querySelector('#viewHintText span');
-        hintSpan.innerHTML = (view === 'table') 
-            ? 'Click on a row to expand detailed breakdown' 
+        hintSpan.innerHTML = (view === 'table')
+            ? 'Click on a row to expand detailed breakdown'
             : 'Click on a card for detailed breakdown';
     }
-    
+
     function toggleAccordion(rowId) {
         const row = document.getElementById(rowId);
         // Optional: Close others
         document.querySelectorAll('.quote-breakdown-row').forEach(r => {
-            if(r.id !== rowId) {
+            if (r.id !== rowId) {
                 r.style.display = 'none';
                 r.classList.remove('active');
             }
         });
-        
+
         if (row.classList.contains('active')) {
             row.style.display = 'none';
             row.classList.remove('active');
@@ -516,29 +719,23 @@
             row.classList.add('active');
         }
     }
-    
+
     function openModal(modalId) {
         const modalElement = document.getElementById(modalId);
         const modal = new bootstrap.Modal(modalElement);
         modal.show();
     }
 
-    // Autosave cheapest quote if user leaves without booking
-    let isBooking = false;
-    document.querySelectorAll('form').forEach(f => f.addEventListener('submit', () => isBooking = true));
-    
-    window.addEventListener('beforeunload', function (e) {
-        if (isBooking) return;
-        let history = JSON.parse(localStorage.getItem('ftl_search_history') || '[]');
-        history.unshift({
-            date: new Date().toLocaleString(),
-            origin: "{{ query.origin }}",
-            destination: "{{ query.destination }}",
-            service: "{{ query.service_type }}",
-            details: "Auto-saved (Cheapest Quote)"
-        });
-        localStorage.setItem('ftl_search_history', JSON.stringify(history.slice(0, 15)));
-    });
+    function openSchedulesModal(event, modalId) {
+        event.stopPropagation();
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+    }
+
+
 </script>
 
 

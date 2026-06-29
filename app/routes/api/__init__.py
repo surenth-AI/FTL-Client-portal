@@ -330,6 +330,9 @@ def api_sync():
 
     db.session.commit()
 
+    if data.get('status') and data.get('status').lower() in ['active', 'activated']:
+        return jsonify({"success": True, "message": "User account has been successfully activated."}), 200
+
     return jsonify({"success": True, "message": "User sync completed successfully."}), 200
 
 
