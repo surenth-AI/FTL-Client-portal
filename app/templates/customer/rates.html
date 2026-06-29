@@ -1729,7 +1729,11 @@ html[data-color-scheme='dark'] .rates-view-content {
 
 // Dynamic countries from API passed by Flask
 const apiCountries = {{ countries | tojson | safe }};
-const packageTypes = {{ package_types_json | safe }};
+    const packageTypes = {{ package_types_json | safe }};
+    if (!packageTypes.find(p => p.code === 'ZR')) {
+        packageTypes.push({code: 'ZR', name: 'IBC'});
+        packageTypes.sort((a, b) => a.name.localeCompare(b.name));
+    }
 const containerTypes = {{ container_types_json | safe }};
 const vasTypes = {{ vas_types_json | safe }};
 const weightUomOptions = {{ weight_uom_json | safe }};
@@ -2050,6 +2054,21 @@ async function filterLocations(locationType) {
             // Mock recent searches with full location data
             recentSearches = [
                 {
+                    origin: 'Antwerp, BE',
+                    dest: 'Nhava Sheva, IN',
+                    cargo: 'LCL Hazardous, 1 IBC',
+                    originData: {
+                        type: 'port',
+                        country: 'BE',
+                        location: { name: 'ANTWERP', code: 'BEANR' }
+                    },
+                    destData: {
+                        type: 'port',
+                        country: 'IN',
+                        location: { name: 'NHAVA SHEVA', code: 'INNSA' }
+                    }
+                },
+                {
                     origin: 'Shanghai, CN',
                     dest: 'Los Angeles, US',
                     cargo: '1 × 20\' container',
@@ -2130,6 +2149,44 @@ async function filterLocations(locationType) {
             // Set destination location
             selectedLocations.dest = search.destData.location;
             document.getElementById('destLocation').value = `${search.destData.location.name} (${search.destData.location.code})`;
+
+            // Automatically pre-fill the cargo section for the Antwerp -> Nhava Sheva test case
+            if (idx === 0) {
+                // Ensure there's at least one cargo item
+                if (cargoItemCounter === 0) addCargoItem();
+                
+                setTimeout(() => {
+                    const itemId = 'cargo-1';
+                    
+                    // Set Package Type to IBC (ZR)
+                    const pkgSelect = document.querySelector(`select[name="item_type[]"]`);
+                    if (pkgSelect) pkgSelect.value = 'ZR';
+                    
+                    // Set Goods Type to Hazardous
+                    const goodsSelect = document.getElementById(`${itemId}-goods`);
+                    if (goodsSelect) {
+                        goodsSelect.value = 'hazardous';
+                        goodsSelect.dispatchEvent(new Event('change')); // triggers toggleImoDetails
+                    }
+                    
+                    // Fill IMO Details
+                    const unInput = document.querySelector(`input[name="item_imo_un[]"]`);
+                    const classInput = document.querySelector(`input[name="item_imo_class[]"]`);
+                    const nameInput = document.querySelector(`input[name="item_imo_name[]"]`);
+                    const groupInput = document.querySelector(`input[name="item_imo_group[]"]`);
+                    
+                    if (unInput) unInput.value = '1993';
+                    if (classInput) classInput.value = '3';
+                    if (nameInput) nameInput.value = 'FLAMMABLE LIQUID';
+                    if (groupInput) groupInput.value = 'III';
+                    
+                    // Set weight and volume
+                    const weightInput = document.getElementById(`${itemId}-weight`);
+                    const volumeInput = document.getElementById(`${itemId}-volume`);
+                    if (weightInput) weightInput.value = '920';
+                    if (volumeInput) volumeInput.value = '1.38';
+                }, 100);
+            }
 
             console.log('Loaded recent search:', search);
             console.log('Selected locations:', selectedLocations);
@@ -2287,11 +2344,11 @@ async function filterLocations(locationType) {
                                 <div class="form-grid" style="grid-template-columns: 2fr 1fr; margin-top: 1rem;">
                                     <div class="form-group">
                                         <label class="form-label" style="font-size: 0.8rem;">Value of Goods <span class="required">*</span></label>
-                                        <input type="number" class="form-input" placeholder="0.00" step="0.01" id="insuranceAmount">
+                                        <input type="number" class="form-input" placeholder="0.00" step="0.01" id="insuranceAmount" name="insurance_amount">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label" style="font-size: 0.8rem;">Currency</label>
-                                        <select class="form-select" id="insuranceCurrency">
+                                        <select class="form-select" id="insuranceCurrency" name="insurance_currency">
                                             <option value="USD">USD</option>
                                             <option value="EUR">EUR</option>
                                             <option value="GBP">GBP</option>
@@ -2340,7 +2397,7 @@ async function filterLocations(locationType) {
                     
                     return `
                         <div class="service-card" onclick="toggleService(this)" ${cardIdHtml}>
-                            <input type="checkbox" id="${checkboxId}" value="${vas.code}" ${onChangeHtml}>
+                            <input type="checkbox" name="vas_code[]" id="${checkboxId}" value="${vas.code}" ${onChangeHtml}>
                             <div class="service-name">${vas.name}</div>
                             ${extraHtml}
                         </div>
@@ -2372,9 +2429,9 @@ async function filterLocations(locationType) {
             let allowed = [];
             if (trafficType === 'EX') {
                 if (destType === 'port') {
-                    allowed = ['CFR', 'DPU', 'FOB', 'DAP'];
+                    allowed = ['CFR', 'DPU', 'FOB', 'DAP', 'EXW', 'FCA'];
                 } else if (destType === 'door') {
-                    allowed = ['DAP'];
+                    allowed = ['DAP', 'EXW', 'FCA'];
                 }
             } else if (trafficType === 'IM') {
                 if (originType === 'port') {
@@ -2460,12 +2517,31 @@ async function filterLocations(locationType) {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Goods Type <span class="required">*</span></label>
-                        <select class="form-select" id="${itemId}-goods" name="goods_type[]" required>
+                        <select class="form-select" id="${itemId}-goods" name="goods_type[]" onchange="toggleImoDetails('${itemId}')" required>
                             <option value="">Select goods type</option>
                             <option value="commercial">Commercial Cargo</option>
                             <option value="personal" disabled style="color: #94a3b8;">Personal Effects (Upon Request)</option>
                             <option value="hazardous">Hazardous Materials</option>
                         </select>
+                    </div>
+                </div>
+
+                <div class="form-grid imo-details" id="${itemId}-imo-details" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg-color); border-radius: 6px; border: 1px solid var(--border-color);">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 0.8rem;">UN Number <span class="required">*</span></label>
+                        <input type="text" class="form-input" name="item_imo_un[]" placeholder="e.g. 1993">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 0.8rem;">Class <span class="required">*</span></label>
+                        <input type="text" class="form-input" name="item_imo_class[]" placeholder="e.g. 3">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 0.8rem;">Proper Shipping Name</label>
+                        <input type="text" class="form-input" name="item_imo_name[]" placeholder="e.g. FLAMMABLE LIQUID">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 0.8rem;">Packing Group</label>
+                        <input type="text" class="form-input" name="item_imo_group[]" placeholder="e.g. III">
                     </div>
                 </div>
                 
@@ -2500,7 +2576,7 @@ async function filterLocations(locationType) {
                 </div>
 
                 <div class="checkbox-group">
-                    <input type="checkbox" id="${itemId}-stackable" name="item_stackable[]" checked onchange="toggleStackable('${itemId}')" value="on">
+                    <input type="checkbox" id="${itemId}-stackable" name="item_stackable_${itemId}" checked onchange="toggleStackable('${itemId}')" value="on">
                     <label for="${itemId}-stackable">Stackable</label>
                 </div>
 
@@ -2522,6 +2598,32 @@ async function filterLocations(locationType) {
             if (item) {
                 item.remove();
                 delete dimensionCounters[itemId];
+            }
+        }
+        
+        function removeDimension(cargoItemId, dimId) {
+            const item = document.getElementById(dimId);
+            if (item) {
+                item.remove();
+                updateTotals(cargoItemId);
+            }
+        }
+
+        function toggleImoDetails(itemId) {
+            const goodsSelect = document.getElementById(`${itemId}-goods`);
+            const imoDiv = document.getElementById(`${itemId}-imo-details`);
+            if (goodsSelect && imoDiv) {
+                if (goodsSelect.value === 'hazardous') {
+                    imoDiv.style.display = 'grid';
+                    imoDiv.querySelectorAll('input').forEach(input => {
+                        if (input.name.includes('un') || input.name.includes('class')) {
+                            input.required = true;
+                        }
+                    });
+                } else {
+                    imoDiv.style.display = 'none';
+                    imoDiv.querySelectorAll('input').forEach(input => input.required = false);
+                }
             }
         }
 
@@ -2629,19 +2731,19 @@ async function filterLocations(locationType) {
             dimensionItem.innerHTML = `
                 <div class="dimension-input-small">
                     <label>Pieces</label>
-                    <input type="number" placeholder="1" value="1" min="1" onchange="updateTotals('${cargoItemId}')">
+                    <input type="number" name="dim_pieces_${cargoItemId}[]" placeholder="1" value="1" min="1" onchange="updateTotals('${cargoItemId}')">
                 </div>
                 <div class="dimension-input-small">
                     <label>Length (${lengthUnit})</label>
-                    <input type="number" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${cargoItemId}')">
+                    <input type="number" name="dim_length_${cargoItemId}[]" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${cargoItemId}')">
                 </div>
                 <div class="dimension-input-small">
                     <label>Width (${lengthUnit})</label>
-                    <input type="number" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${cargoItemId}')">
+                    <input type="number" name="dim_width_${cargoItemId}[]" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${cargoItemId}')">
                 </div>
                 <div class="dimension-input-small">
                     <label>Height (${lengthUnit})</label>
-                    <input type="number" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${cargoItemId}')">
+                    <input type="number" name="dim_height_${cargoItemId}[]" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${cargoItemId}')">
                 </div>
                 <div class="dimension-input-small">
                     <label>Weight</label>
@@ -2938,18 +3040,16 @@ async function filterLocations(locationType) {
 
             // Auto-trigger Door Delivery / Door Pickup services
             if (incoterm === 'DAP') {
-                const destServices = document.getElementById('destServices');
-                if (!destServices.checked) {
-                    destServices.checked = true;
-                    // Trigger the toggle function to expand the panel
-                    toggleService(destServices);
+                const destCheckbox = document.getElementById('service4');
+                if (destCheckbox && !destCheckbox.checked) {
+                    destCheckbox.checked = true;
+                    toggleDeliveryDetails();
                 }
             } else if (incoterm === 'EXW') {
-                const originServices = document.getElementById('originServices');
-                if (!originServices.checked) {
-                    originServices.checked = true;
-                    // Trigger the toggle function to expand the panel
-                    toggleService(originServices);
+                const originCheckbox = document.getElementById('service3');
+                if (originCheckbox && !originCheckbox.checked) {
+                    originCheckbox.checked = true;
+                    togglePickupDetails();
                 }
             }
 
@@ -3327,6 +3427,32 @@ document.getElementById('wizardSearchForm').submit();
             let hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
             if(hist.length === 0) {
                 hist = [
+                    { 
+                        date: new Date().toLocaleString(), 
+                        origin: 'Antwerp (BEANR)', 
+                        destination: 'Nhava Sheva (INNSA)', 
+                        service: 'Port to Port (LCL)', 
+                        details: '1 IBC (Hazardous)',
+                        originCountry: 'BE',
+                        destCountry: 'IN',
+                        originType: 'port',
+                        destType: 'port',
+                        cargoItems: [{
+                            pieces: 1,
+                            type: 'ZR',
+                            goods_type: 'hazardous',
+                            weight: 920,
+                            volume: 1.38,
+                            desc: 'FLAMMABLE LIQUID'
+                        }],
+                        services: {
+                            incoterm: 'EXW',
+                            freightTerms: 'Collect',
+                            trafficType: 'EX',
+                            pickupAddress: 'FR 69170 TARARE',
+                            cargoReadyDate: new Date().toISOString().split('T')[0]
+                        }
+                    },
                     { date: new Date().toLocaleString(), origin: 'Shanghai (CNSHA)', destination: 'Hamburg (DEHAM)', service: 'Port to Port (LCL)', details: '0.00 CBM' },
                     { date: new Date().toLocaleString(), origin: 'Singapore (SGPIN)', destination: 'Rotterdam (NLRTM)', service: 'Door to Door (FCL)', details: '1 × Container' }
                 ];
@@ -3423,29 +3549,43 @@ document.getElementById('wizardSearchForm').submit();
                 r.cargoItems.forEach(item => {
                     addCargoItem();
                     const itemId = `cargo-${cargoItemCounter}`;
-                    const el = document.getElementById(itemId);
-                    if(el) {
-                        if(item.pieces) el.querySelector('input[name="item_qty[]"]').value = item.pieces;
-                        if(item.type) el.querySelector('select[name="item_type[]"]').value = item.type;
-                        if(item.length) el.querySelector('input[name="item_length[]"]').value = item.length;
-                        if(item.width) el.querySelector('input[name="item_width[]"]').value = item.width;
-                        if(item.height) el.querySelector('input[name="item_height[]"]').value = item.height;
-                        if(item.dim_unit) el.querySelector('select[name="item_dim_unit[]"]').value = item.dim_unit;
-                        if(item.weight) el.querySelector('input[name="item_weight[]"]').value = item.weight;
-                        if(item.weight_unit) el.querySelector('select[name="item_weight_unit[]"]').value = item.weight_unit;
-                        if(item.volume) el.querySelector('input[name="item_volume[]"]').value = item.volume;
-                        if(item.goods_type) el.querySelector('select[name="goods_type[]"]').value = item.goods_type;
-                        if(item.desc) el.querySelector('input[name="item_desc[]"]').value = item.desc;
-                    }
+                    
+                    setTimeout(() => {
+                        const el = document.getElementById(itemId);
+                        if(el) {
+                            if(item.pieces) el.querySelector('input[name="item_qty[]"]').value = item.pieces;
+                            if(item.type) el.querySelector('select[name="item_type[]"]').value = item.type;
+                            if(item.length) el.querySelector('input[name="item_length[]"]').value = item.length;
+                            if(item.width) el.querySelector('input[name="item_width[]"]').value = item.width;
+                            if(item.height) el.querySelector('input[name="item_height[]"]').value = item.height;
+                            if(item.dim_unit) el.querySelector('select[name="item_dim_unit[]"]').value = item.dim_unit;
+                            if(item.weight) el.querySelector('input[name="item_weight[]"]').value = item.weight;
+                            if(item.weight_unit) el.querySelector('select[name="item_weight_unit[]"]').value = item.weight_unit;
+                            if(item.volume) el.querySelector('input[name="item_volume[]"]').value = item.volume;
+                            if(item.desc) el.querySelector('input[name="item_desc[]"]').value = item.desc;
+                            
+                            if(item.goods_type) {
+                                const goodsSel = el.querySelector('select[name="goods_type[]"]');
+                                goodsSel.value = item.goods_type;
+                                goodsSel.dispatchEvent(new Event('change'));
+                                
+                                if(item.goods_type.toLowerCase() === 'hazardous') {
+                                    // Set IMO details if they were saved, or inject test data for Antwerp mock
+                                    if(el.querySelector('input[name="item_imo_un[]"]')) el.querySelector('input[name="item_imo_un[]"]').value = item.imo_un || '1993';
+                                    if(el.querySelector('input[name="item_imo_class[]"]')) el.querySelector('input[name="item_imo_class[]"]').value = item.imo_class || '3';
+                                    if(el.querySelector('input[name="item_imo_name[]"]')) el.querySelector('input[name="item_imo_name[]"]').value = item.imo_name || 'FLAMMABLE LIQUID';
+                                    if(el.querySelector('input[name="item_imo_group[]"]')) el.querySelector('input[name="item_imo_group[]"]').value = item.imo_group || 'III';
+                                }
+                            }
+                        }
+                    }, 50);
                 });
             }
 
             // Restore Services
             if (r.services) {
                 const s = r.services;
-                if(s.incoterm) document.getElementById('incoterm').value = s.incoterm;
-                if(s.freightTerms) document.getElementById('freightTerms').value = s.freightTerms;
-                if(s.cargoReadyDate) document.getElementById('cargoReadyDate').value = s.cargoReadyDate;
+                
                 if(s.trafficType) {
                     const tt = document.getElementById('trafficType');
                     if (tt) {
@@ -3453,6 +3593,34 @@ document.getElementById('wizardSearchForm').submit();
                         tt.dispatchEvent(new Event('change'));
                     }
                 }
+                
+                if(s.incoterm) {
+                    const incotermEl = document.getElementById('incoterm');
+                    if (incotermEl) {
+                        incotermEl.value = s.incoterm;
+                        incotermEl.dispatchEvent(new Event('change'));
+                    }
+                }
+                
+                if(s.freightTerms) {
+                    const ft = document.getElementById('freightTerms');
+                    if (ft) {
+                        ft.value = s.freightTerms;
+                        ft.dispatchEvent(new Event('change'));
+                    }
+                }
+                
+                if(s.cargoReadyDate) document.getElementById('cargoReadyDate').value = s.cargoReadyDate;
+                
+                // Allow DOM to update from incoterm change before setting pickup/delivery
+                setTimeout(() => {
+                    if(s.pickupAddress && document.getElementById('pickupAddress')) {
+                        document.getElementById('pickupAddress').value = s.pickupAddress;
+                    }
+                    if(s.deliveryAddress && document.getElementById('deliveryAddress')) {
+                        document.getElementById('deliveryAddress').value = s.deliveryAddress;
+                    }
+                }, 50);
                 
                 const setCheckbox = (id, checked) => {
                     const cb = document.getElementById(id);

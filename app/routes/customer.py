@@ -265,7 +265,7 @@ def rates():
         import requests
         
         service_type = request.form.get('service_type', 'LCL').upper()
-        goods_types = request.form.getlist('goods_type[]')
+        goods_types = [g.strip().upper() for g in request.form.getlist('goods_type[]')]
         
         # Extract IDs from User Profile mappings
         branch_id = 1
@@ -306,15 +306,44 @@ def rates():
         m_pod = re.search(r'\(([^)]+)\)$', dest_str.strip())
         if m_pod: pod_locode = m_pod.group(1).strip()
 
+        # --- API Mapping Rules ---
+        # Map UI strings to Realnexus internal lookup codes
+        t_mode_val = request.form.get("transport_mode", "").lower()
+        t_mode_map = {"ocean": "10", "sea": "10", "air": "40", "road": "30", "rail": "20"}
+        mapped_mode = t_mode_map.get(t_mode_val, "10")
+        
+        svc_val = service_type.upper()
+        # ERP expects "10CN" (Container) as the equipment type for both FCL and LCL ocean freight
+        mapped_svc = "10CN" 
+        
+        mov_val = request.form.get("movement_type", "PORT_TO_PORT").upper()
+        # Map to ERP standard routing codes (2 = LCL/LCL Port-to-Port, 3 = FCL/FCL)
+        mov_map = {
+            "DOOR_TO_DOOR": "11",
+            "DOOR_TO_PORT": "13",
+            "PORT_TO_DOOR": "31",
+            "PORT_TO_PORT": "2" if svc_val == "LCL" else "3"
+        }
+        mapped_mov = mov_map.get(mov_val, "2")
+
+        vas_codes = request.form.getlist('vas_code[]')
+        vas_list = []
+        for code in vas_codes:
+            vas = {"serviceCode": code}
+            if code == "INR" or code == "INS": 
+                vas["insuredValue"] = float(request.form.get("insurance_amount") or 0.0)
+                vas["insuredCurrency"] = request.form.get("insurance_currency", "USD")
+            vas_list.append(vas)
+
         payload = {
             "branchId": branch_id,
             "customerId": customer_id,
             "accountContactId": current_user.id,
             "customerReference": request.form.get("customer_reference") or "WEB-QUOTE",
             "trafficType": traffic_type,
-            "freightTransportMode": request.form.get("transport_mode", ""),
-            "freightTransportType": service_type,
-            "movementType": request.form.get("movement_type", "PORT_TO_PORT") or "PORT_TO_PORT",
+            "freightTransportMode": mapped_mode,
+            "freightTransportType": mapped_svc,
+            "movementType": mapped_mov,
             "cargoClassification": "11" if "HAZARDOUS" in goods_types else "12",
             "incoterm": request.form.get("freight_terms", ""),
             "validOn": valid_from,
@@ -340,7 +369,7 @@ def rates():
             "haulageOriginNeeded": bool(request.form.get("pickup_address")),
             "haulageDestinationNeeded": bool(request.form.get("place_of_delivery")),
             "cargo": [],
-            "valueAddedServices": []
+            "valueAddedServices": vas_list
         }
 
         if service_type == 'LCL':
@@ -350,8 +379,27 @@ def rates():
             item_volumes = request.form.getlist('item_volume[]')
             item_descs = request.form.getlist('item_desc[]')
             
+            item_imo_uns = request.form.getlist('item_imo_un[]')
+            item_imo_classes = request.form.getlist('item_imo_class[]')
+            item_imo_names = request.form.getlist('item_imo_name[]')
+            item_imo_groups = request.form.getlist('item_imo_group[]')
+            
             for i in range(len(item_qtys)):
                 is_haz = (goods_types[i] == 'HAZARDOUS') if i < len(goods_types) else False
+                
+                # Fetch dimensions for this specific item (taking first entered dim if any)
+                dim_pieces = request.form.getlist(f'dim_pieces_cargo-{i+1}[]')
+                dim_lengths = request.form.getlist(f'dim_length_cargo-{i+1}[]')
+                dim_widths = request.form.getlist(f'dim_width_cargo-{i+1}[]')
+                dim_heights = request.form.getlist(f'dim_height_cargo-{i+1}[]')
+                
+                dim_amt = int(dim_pieces[0]) if dim_pieces and dim_pieces[0] else 0
+                dim_len = float(dim_lengths[0]) if dim_lengths and dim_lengths[0] else 0.0
+                dim_wid = float(dim_widths[0]) if dim_widths and dim_widths[0] else 0.0
+                dim_hgt = float(dim_heights[0]) if dim_heights and dim_heights[0] else 0.0
+                
+                is_stackable = request.form.get(f'item_stackable_cargo-{i+1}') == "on"
+
                 cargo_item = {
                     "packageType": item_types[i] if i < len(item_types) else "",
                     "packageTypeDescription": item_types[i] if i < len(item_types) else "",
@@ -359,13 +407,16 @@ def rates():
                     "commodityDescription": item_descs[i] if i < len(item_descs) else "",
                     "weight": float(item_weights[i]) if i < len(item_weights) and item_weights[i] else 0.0,
                     "volume": float(item_volumes[i]) if i < len(item_volumes) and item_volumes[i] else 0.0,
-                    "stackable": True,
-                    "dimensions": {"amount": 0, "length": 0, "width": 0, "height": 0},
+                    "stackable": is_stackable,
+                    "dimensions": {"amount": dim_amt, "length": dim_len, "width": dim_wid, "height": dim_hgt},
                     "isHazardous": is_haz
                 }
                 if is_haz:
                     cargo_item["imo"] = {
-                        "un": "UNKNOWN", "class": "UNKNOWN", "properShippingName": "UNKNOWN", "packingGroup": "UNKNOWN"
+                        "un": item_imo_uns[i] if i < len(item_imo_uns) and item_imo_uns[i] else "UNKNOWN", 
+                        "class": item_imo_classes[i] if i < len(item_imo_classes) and item_imo_classes[i] else "UNKNOWN", 
+                        "properShippingName": item_imo_names[i] if i < len(item_imo_names) and item_imo_names[i] else "UNKNOWN", 
+                        "packingGroup": item_imo_groups[i] if i < len(item_imo_groups) and item_imo_groups[i] else "UNKNOWN"
                     }
                 payload["cargo"].append(cargo_item)
         else:
@@ -398,6 +449,14 @@ def rates():
             headers = {'accept': 'application/json', 'x-api-key': '1', 'Content-Type': 'application/json'}
             api_resp = requests.post('http://realnexus.comit.cloud:5000/api/Quotations/request', json=payload, headers=headers, timeout=10)
             
+            print("\\n" + "="*50)
+            print("REQUEST PAYLOAD:")
+            import json as _json
+            print(_json.dumps(payload, indent=2))
+            print("\\nRAW API RESPONSE:")
+            print(api_resp.text)
+            print("="*50 + "\\n")
+            
             if api_resp.status_code in [200, 201]:
                 data = api_resp.json()
                 
@@ -420,6 +479,7 @@ def rates():
                     'quote_id': quo_id,
                     'api_quotation_id': header_data.get('quotationId', '')
                 }
+                session['last_api_response'] = data
                 return redirect(url_for('customer.rate_results'))
             else:
                 print("Constructed Payload:", json.dumps(payload, indent=2))
@@ -634,13 +694,27 @@ def rate_results():
     api_id = query.get('api_quotation_id')
     results = []
     
-    if api_id:
+    # Try to use the cached API response if no api_id was provided (or even if it was)
+    cached_data = session.get('last_api_response')
+    
+    if api_id or cached_data:
         import requests
-        headers = {'accept': 'application/json', 'x-api-key': '1'}
-        try:
-            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json().get('quotation', {})
+        data = None
+        
+        if api_id:
+            headers = {'accept': 'application/json', 'x-api-key': '1'}
+            try:
+                resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json().get('quotation', {})
+            except Exception as e:
+                flash(f"Error communicating with API: {str(e)}", "danger")
+        
+        if not data and cached_data:
+            data = cached_data.get('quotation', {}) if 'quotation' in cached_data else cached_data
+            
+        if data:
+            try:
                 
                 header = data.get('header', {})
                 sailings = data.get('sailings', [])
@@ -698,10 +772,10 @@ def rate_results():
                     },
                     'breakdown': lines
                 }]
-            else:
-                flash(f"Failed to fetch official quotation details. API returned {resp.status_code}.", "danger")
-        except Exception as e:
-            flash(f"Error communicating with API: {str(e)}", "danger")
+            except Exception as e:
+                flash(f"Error processing API quotation data: {str(e)}", "danger")
+        else:
+            flash("Failed to fetch official quotation details. No valid quotation data found.", "danger")
 
     return render_template('customer/rate_results.html', results=results, query=query)
 
