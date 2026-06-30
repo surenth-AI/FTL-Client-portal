@@ -479,7 +479,18 @@ def rates():
                     'quote_id': quo_id,
                     'api_quotation_id': header_data.get('quotationId', '')
                 }
-                session['last_api_response'] = data
+                
+                # Store the large payload in a temp file instead of the 4KB-limited session cookie
+                import json as _json
+                import os
+                import tempfile
+                temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
+                try:
+                    with open(temp_file, 'w', encoding='utf-8') as f:
+                        _json.dump(data, f)
+                except Exception as e:
+                    print(f"Could not write temp session file: {e}")
+                
                 return redirect(url_for('customer.rate_results'))
             else:
                 print("Constructed Payload:", json.dumps(payload, indent=2))
@@ -694,8 +705,18 @@ def rate_results():
     api_id = query.get('api_quotation_id')
     results = []
     
-    # Try to use the cached API response if no api_id was provided (or even if it was)
-    cached_data = session.get('last_api_response')
+    # Try to use the cached API response from the file system
+    cached_data = None
+    import json as _json
+    import os
+    import tempfile
+    temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
+    try:
+        if os.path.exists(temp_file):
+            with open(temp_file, 'r', encoding='utf-8') as f:
+                cached_data = _json.load(f)
+    except Exception as e:
+        print(f"Failed to load cached API data: {e}")
     
     if api_id or cached_data:
         import requests
