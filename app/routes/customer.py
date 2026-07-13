@@ -247,6 +247,44 @@ def save_quote():
     api_id = query.get('api_quotation_id', '')
     quote_number = query.get('quote_id', api_id or f"QUOTE-{datetime.now().strftime('%M%S')}")
 
+    # POST to Quotations API to get the real quotation number
+    import os
+    import tempfile
+    import requests
+    temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
+    try:
+        if os.path.exists(temp_file):
+            with open(temp_file, 'r', encoding='utf-8') as f:
+                cached_data = json.load(f)
+                
+                # Format payload properly for saving the quote
+                q_payload = cached_data.get('quotation', cached_data)
+                header = q_payload.get('header', q_payload)
+                
+                # Fix dates to avoid "validUntil must be after validFrom" error
+                now = datetime.utcnow()
+                from datetime import timedelta
+                header['validFrom'] = now.isoformat() + "Z"
+                header['validUntil'] = (now + timedelta(days=30)).isoformat() + "Z"
+
+                headers = {'accept': 'application/json', 'x-api-key': '1', 'Content-Type': 'application/json'}
+                save_resp = requests.post('http://realnexus.comit.cloud:5000/api/Quotations', json=q_payload, headers=headers, timeout=10)
+                if save_resp.status_code in [200, 201]:
+                    r_data = save_resp.json()
+                    new_id = r_data.get('quotationId')
+                    if new_id:
+                        p1 = r_data.get('quoPrefix1', 'QUO')
+                        p2 = r_data.get('quoPrefix2', '2026')
+                        quote_number = f"{p1}-{p2}-{new_id}"
+                        # Update the session with the new real quote ID
+                        query['quote_id'] = quote_number
+                        query['api_quotation_id'] = new_id
+                        session['search_query'] = query
+                else:
+                    print(f"Failed to save quote via API: {save_resp.status_code} - {save_resp.text}")
+    except Exception as e:
+        print(f"Error calling POST /api/Quotations: {e}")
+
     booking = Booking(
         user_id=current_user.id,
         origin=origin,
