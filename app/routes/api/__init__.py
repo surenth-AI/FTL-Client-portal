@@ -372,17 +372,88 @@ def api_deactivate():
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"success": False, "message": "User not found."}), 404
+        return jsonify({"success": False, "message": "User not found"}), 404
 
     user.status = 'deactivated'
-    user.deactivation_reason = data.get('deactivation_reason', 'Deactivated via API')
-    db.session.commit()
+    user.deactivation_reason = data.get('reason', 'Deactivated via API')
+    
+    try:
+        db.session.commit()
+        return jsonify({"success": True, "message": "User deactivated successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
 
-    return jsonify({"success": True, "message": "User successfully deactivated."}), 200
+@api_bp.route('/users/active', methods=['GET'])
+def get_active_users():
+    """
+    List all currently activated users in the portal.
+    ---
+    tags:
+      - User Management API
+    responses:
+      200:
+        description: List of active users returned successfully.
+    """
+    active_users = User.query.filter_by(status='activated').all()
+    user_data = []
+    for user in active_users:
+        user_data.append({
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "department": user.department
+        })
+    
+    return jsonify({
+        "success": True,
+        "active_users": user_data
+    }), 200
 
+@api_bp.route('/users/<int:user_id>/activate', methods=['POST'])
+def activate_user(user_id):
+    """
+    Activate a specific user account.
+    ---
+    tags:
+      - User Management API
+    parameters:
+      - in: path
+        name: user_id
+        required: true
+        type: integer
+    responses:
+      200:
+        description: User activated successfully.
+      404:
+        description: User not found.
+    """
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"success": False, "message": "User not found"}), 404
+
+    user.status = 'activated'
+    # Automatically clear any prior rejection or deactivation reasons when activated
+    user.deactivation_reason = None
+    user.rejection_reason = None
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            "success": True, 
+            "message": f"User {user.name} has been successfully activated.",
+            "user": {
+                "id": user.id,
+                "status": user.status
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
 
 # ══════════════════════════════════════════════════════════════
-# SECTION 3 — TENANT REGISTRATION WORKFLOW (new, raw pyodbc)
+# SECTION 2 — REGISTRATIONS (Tenant workflow via raw pyodbc)
 # ══════════════════════════════════════════════════════════════
 
 @api_bp.route('/Registrations', methods=['POST'])
