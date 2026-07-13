@@ -3,50 +3,516 @@
 {% block title %}My Quotes{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0 fw-bold">My Quotes</h3>
-    <a href="{{ url_for('customer.rates') }}" class="btn btn-primary shadow-sm rounded-pill px-4 py-2">
-        <i class="bi bi-plus-lg me-2"></i> New Quote
-    </a>
-</div>
+<style>
+    /* Scoped Variables and Base */
+    .mq-container {
+        --mq-primary-blue: #2563eb;
+        --mq-primary-blue-dark: #1d4ed8;
+        --mq-primary-green: #059669;
+        --mq-primary-green-dark: #047857;
+        --mq-green-bg: #ecfdf5;
+        --mq-text-primary: #0f172a;
+        --mq-text-secondary: #64748b;
+        --mq-text-muted: #94a3b8;
+        --mq-border-color: #e2e8f0;
+        --mq-bg-gray: #f8fafc;
+        --mq-bg-white: #ffffff;
+        --mq-success-green: #10b981;
+        --mq-error-red: #ef4444;
+        --mq-amber: #f59e0b;
+        --mq-amber-bg: #fffbeb;
+        --mq-hover-bg: #f1f5f9;
 
-{% if quotes %}
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-    {% for q in quotes %}
-        <div class="col">
-            <div class="card glass-card h-100 border-0 shadow-sm">
-                <div class="card-body position-relative">
-                    <span class="badge bg-primary position-absolute top-0 end-0 m-3 rounded-pill px-3 py-2">Saved Quote</span>
-                    <h5 class="card-title fw-bold text-dark mb-1">{{ q.origin }} <i class="bi bi-arrow-right text-muted mx-2"></i> {{ q.destination }}</h5>
-                    <p class="card-text text-muted small mb-3">Service: <span class="fw-semibold text-secondary">{{ q.service_type }}</span> &bull; Carrier: <span class="fw-semibold text-secondary">{{ q.selected_nvocc }}</span></p>
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--mq-text-primary);
+        line-height: 1.4;
+        font-size: 13px;
+        width: 100%;
+        padding: 0.75rem 1.5rem 3rem;
+    }
+
+    /* Page header */
+    .page-header-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.875rem;
+    }
+    .mq-title { font-size: 1.25rem; font-weight: 700; color: var(--mq-text-primary); margin-bottom: 0.15rem; }
+    .mq-subtitle { font-size: 0.8rem; color: var(--mq-text-secondary); }
+
+    .mq-btn { padding: 0.6rem 1rem; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap; text-decoration: none; }
+    .mq-btn-book { background: var(--mq-primary-green); color: white; }
+    .mq-btn-book:hover { background: var(--mq-primary-green-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); color: white;}
+    .mq-btn-outline { background: var(--mq-bg-white); color: var(--mq-text-secondary); border: 1px solid var(--mq-border-color); }
+    .mq-btn-outline:hover { border-color: var(--mq-primary-blue); color: var(--mq-primary-blue); }
+    .mq-btn-view-booking { background: var(--mq-primary-blue); color: white; }
+    .mq-btn-view-booking:hover { background: var(--mq-primary-blue-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); color: white;}
+
+    /* Toolbar */
+    .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        background: var(--mq-bg-white);
+        border: 1px solid var(--mq-border-color);
+        border-radius: 10px;
+        padding: 0.7rem 0.9rem;
+        margin-bottom: 0.625rem;
+    }
+    .sort-group { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .sort-label { font-size: 0.75rem; font-weight: 600; color: var(--mq-text-secondary); }
+    .sort-chip {
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid var(--mq-border-color);
+        background: var(--mq-bg-white);
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--mq-text-secondary);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .sort-chip:hover { border-color: var(--mq-primary-green); color: var(--mq-primary-green-dark); }
+    .sort-chip.active { background: var(--mq-text-primary); border-color: var(--mq-text-primary); color: white; }
+
+    .search-box { position: relative; min-width: 240px; }
+    .search-box input {
+        width: 100%;
+        padding: 0.5rem 0.75rem 0.5rem 2rem;
+        border: 1px solid var(--mq-border-color);
+        border-radius: 7px;
+        font-size: 0.82rem;
+        font-family: inherit;
+        background: var(--mq-bg-gray);
+    }
+    .search-box input:focus { outline: none; border-color: var(--mq-primary-blue); background: var(--mq-bg-white); }
+    .search-box::before {
+        content: '🔍';
+        position: absolute;
+        left: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.75rem;
+        opacity: 0.6;
+    }
+
+    .results-count { font-size: 0.78rem; color: var(--mq-text-secondary); }
+
+    /* Offer / quote card */
+    .offers-list { display: flex; flex-direction: column; gap: 0.875rem; }
+
+    .offer-card {
+        background: var(--mq-bg-white);
+        border: 1px solid var(--mq-border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    }
+    .offer-card:hover { box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
+    .offer-card.expired { opacity: 0.72; }
+
+    .offer-badge-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.6rem 1.25rem 0;
+        flex-wrap: wrap;
+    }
+    .ref-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: var(--mq-text-secondary);
+        background: var(--mq-bg-gray);
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .ref-eyebrow:hover { background: var(--mq-hover-bg); }
+    .ref-eyebrow.copied { background: var(--mq-green-bg); color: var(--mq-primary-green-dark); }
+    .ref-eyebrow .ref-code { font-weight: 700; color: var(--mq-text-primary); }
+    .ref-eyebrow.copied .ref-code { color: var(--mq-primary-green-dark); }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 0.22rem 0.6rem;
+        border-radius: 5px;
+    }
+    .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .status-pill.active { background: var(--mq-green-bg); color: var(--mq-primary-green-dark); }
+    .status-pill.active .dot { background: var(--mq-success-green); }
+    .status-pill.expiring { background: var(--mq-amber-bg); color: #92400e; }
+    .status-pill.expiring .dot { background: var(--mq-amber); }
+    .status-pill.booked { background: #eff6ff; color: var(--mq-primary-blue-dark); }
+    .status-pill.booked .dot { background: var(--mq-primary-blue); }
+    .status-pill.expired { background: var(--mq-bg-gray); color: var(--mq-text-muted); }
+    .status-pill.expired .dot { background: var(--mq-text-muted); }
+
+    .offer-main {
+        display: grid;
+        grid-template-columns: 200px 1fr 220px;
+        gap: 1rem;
+        padding: 0.75rem 1.25rem 1rem;
+        align-items: center;
+    }
+
+    .offer-price-block { display: flex; flex-direction: column; gap: 0.4rem; }
+    .price-label { font-size: 0.72rem; color: var(--mq-text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+    .price-amount { font-size: 1.5rem; font-weight: 800; color: var(--mq-primary-green-dark); line-height: 1.1; }
+    .offer-card.expired .price-amount { color: var(--mq-text-muted); }
+    .price-amount .currency { font-size: 0.85rem; font-weight: 600; color: var(--mq-text-secondary); margin-right: 0.2rem; }
+    .price-valid { font-size: 0.72rem; color: var(--mq-text-muted); }
+    .price-valid.warn { color: #b45309; font-weight: 600; }
+    .price-valid.bad { color: var(--mq-error-red); font-weight: 600; }
+
+    .offer-details { min-width: 0; }
+    .carrier-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .carrier-logo {
+        width: 30px; height: 30px;
+        border-radius: 7px;
+        background: var(--mq-bg-gray);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.7rem; color: var(--mq-primary-green-dark);
+        flex-shrink: 0;
+        border: 1px solid var(--mq-border-color);
+    }
+    .carrier-name { font-weight: 700; font-size: 0.95rem; color: var(--mq-text-primary); }
+    .carrier-text { display: flex; flex-direction: column; gap: 0.05rem; }
+    .service-name { font-size: 0.74rem; color: var(--mq-text-secondary); font-weight: 500; }
+    .route-line { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--mq-text-secondary); }
+    .route-stop { color: var(--mq-text-primary); font-weight: 500; }
+    .route-arrow { color: var(--mq-text-muted); }
+
+    .routing-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.22rem 0.55rem;
+        border-radius: 14px;
+    }
+    .meta-pill.direct { background: var(--mq-green-bg); color: var(--mq-primary-green-dark); }
+    .meta-pill.transship { background: #fff7ed; color: #9a3412; }
+    .meta-pill.time { background: var(--mq-bg-gray); color: var(--mq-text-secondary); }
+    .meta-pill.service { background: #eef2ff; color: #4338ca; }
+
+    .charges-row { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-top: 0.625rem; }
+    .charge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.72rem;
+        font-weight: 500;
+        padding: 0.22rem 0.55rem;
+        border-radius: 14px;
+        border: 1px solid var(--mq-border-color);
+    }
+    .charge-pill .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .charge-pill.included .dot { background: var(--mq-success-green); }
+    .charge-pill.included { color: var(--mq-text-primary); }
+    .charge-pill.excluded .dot { background: var(--mq-error-red); }
+    .charge-pill.excluded { color: var(--mq-text-muted); }
+
+    .offer-actions { display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; }
+    .saved-on { font-size: 0.72rem; color: var(--mq-text-secondary); text-align: right; }
+    .saved-on strong { color: var(--mq-text-primary); }
+    .booking-no { font-size: 0.72rem; color: var(--mq-primary-blue-dark); text-align: right; font-weight: 600; }
+
+    .offer-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1.25rem 0.875rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .footer-links { display: flex; align-items: center; gap: 1.1rem; }
+    .terms-link { font-size: 0.78rem; color: var(--mq-text-secondary); display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none; cursor: pointer; }
+    .terms-link:hover { color: var(--mq-primary-blue); }
+    .remove-link { font-size: 0.78rem; color: var(--mq-text-muted); display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none; cursor: pointer; background: none; border: none; font-family: inherit; }
+    .remove-link:hover { color: var(--mq-error-red); }
+    
+    .download-link { font-size: 0.78rem; color: var(--mq-primary-blue); display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none; cursor: pointer; background: none; border: none; font-family: inherit; font-weight: 600;}
+    .download-link:hover { color: var(--mq-primary-blue-dark); text-decoration: underline;}
+
+    .breakdown-toggle {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--mq-primary-green-dark);
+        background: var(--mq-green-bg);
+        border: none;
+        border-radius: 6px;
+        padding: 0.4rem 0.75rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: background 0.15s ease;
+    }
+    .breakdown-toggle:hover { background: #d1fae5; }
+    .breakdown-toggle .chev { transition: transform 0.2s ease; font-size: 0.65rem; }
+    .breakdown-toggle.open .chev { transform: rotate(180deg); }
+
+    .empty-state {
+        background: var(--mq-bg-white);
+        border: 1px dashed var(--mq-border-color);
+        border-radius: 12px;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        display: none;
+    }
+    .empty-state.show { display: block; }
+    .empty-state .icon { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .empty-state .title { font-size: 0.95rem; font-weight: 700; color: var(--mq-text-primary); margin-bottom: 0.3rem; }
+    .empty-state .desc { font-size: 0.82rem; color: var(--mq-text-secondary); margin-bottom: 1rem; }
+
+    @media (max-width: 900px) {
+        .offer-main { grid-template-columns: 1fr; }
+        .offer-actions { align-items: flex-start; }
+        .saved-on, .booking-no { text-align: left; }
+        .page-header-row { flex-direction: column; }
+        .toolbar { flex-direction: column; align-items: stretch; }
+        .search-box { min-width: 0; }
+    }
+</style>
+
+<div class="mq-container">
+
+    <div class="page-header-row">
+        <div>
+            <h1 class="mq-title">My Quotes</h1>
+            <p class="mq-subtitle">Every quotation you've saved or booked, across all your searches</p>
+        </div>
+        <a href="{{ url_for('customer.rates') }}" class="mq-btn mq-btn-book">+ New Quote Request</a>
+    </div>
+
+    <!-- Status filter + search -->
+    <div class="toolbar">
+        <div class="sort-group">
+            <span class="sort-label">Filter</span>
+            <button class="sort-chip active" data-status="all" onclick="filterStatus('all', this)">All</button>
+            <button class="sort-chip" data-status="active" onclick="filterStatus('active', this)">🟢 Active</button>
+            <button class="sort-chip" data-status="expiring" onclick="filterStatus('expiring', this)">🟡 Expiring Soon</button>
+            <button class="sort-chip" data-status="booked" onclick="filterStatus('booked', this)">🔵 Booked</button>
+            <button class="sort-chip" data-status="expired" onclick="filterStatus('expired', this)">⚪ Expired</button>
+        </div>
+        <div class="search-box">
+            <input type="text" id="mqSearch" placeholder="Search by reference, route or service" oninput="applyFilters()">
+        </div>
+    </div>
+
+    <!-- Sort -->
+    <div class="toolbar">
+        <div class="sort-group">
+            <span class="sort-label">Sort by</span>
+            <button class="sort-chip active" data-sort="recent" onclick="sortQuotes('recent', this)">🕐 Most recently saved</button>
+            <button class="sort-chip" data-sort="expiring" onclick="sortQuotes('expiring', this)">⏳ Expiring soonest</button>
+            <button class="sort-chip" data-sort="price" onclick="sortQuotes('price', this)">💲 Lowest price</button>
+        </div>
+        <div class="results-count" id="resultsCount">Showing {{ quote_data|length }} quotes</div>
+    </div>
+
+    <div class="offers-list" id="offersList">
+        {% for item in quote_data %}
+            {% set q = item.booking %}
+            {% set c_status = item.computed_status %}
+            
+            <div class="offer-card {% if c_status == 'Expired' %}expired{% endif %}" 
+                 data-status="{{ c_status|lower|replace(' ', '') }}" 
+                 data-price="{{ q.total_cost }}" 
+                 data-saved="{{ q.created_at.strftime('%Y-%m-%d') }}" 
+                 data-validuntil="{{ item.valid_until }}" 
+                 data-ref="{{ q.api_booking_ref or 'FTL-QR-' ~ q.id }}" 
+                 data-route="{{ q.origin }} {{ q.destination }}" 
+                 data-service="{{ q.service_type }}">
+                
+                <div class="offer-badge-row">
+                    <div class="ref-eyebrow" onclick="copyRef(this)" data-ref="{{ q.api_booking_ref or 'FTL-QR-' ~ q.id }}">
+                        📌 Ref: <span class="ref-code">{{ q.api_booking_ref or 'FTL-QR-' ~ q.id }}</span> ⧉
+                    </div>
                     
-                    <div class="d-flex justify-content-between align-items-center bg-light rounded p-3 mb-3">
-                        <div>
-                            <span class="d-block text-muted small">Total Cost</span>
-                            <span class="fs-4 fw-bold text-success">${{ "{:,.2f}".format(q.total_cost) }}</span>
+                    {% if c_status == 'Active' %}
+                        <span class="status-pill active"><span class="dot"></span>Active</span>
+                    {% elif c_status == 'Expiring Soon' %}
+                        <span class="status-pill expiring"><span class="dot"></span>Expiring Soon</span>
+                    {% elif c_status == 'Booked' %}
+                        <span class="status-pill booked"><span class="dot"></span>Booked</span>
+                    {% elif c_status == 'Expired' %}
+                        <span class="status-pill expired"><span class="dot"></span>Expired</span>
+                    {% endif %}
+                </div>
+                
+                <div class="offer-main">
+                    <div class="offer-price-block">
+                        <div class="price-label">Total</div>
+                        <div class="price-amount"><span class="currency">USD</span>{{ "{:,.2f}".format(q.total_cost) }}</div>
+                        
+                        {% if c_status == 'Booked' %}
+                            <div class="price-valid">✅ Booked on {{ q.created_at.strftime('%Y-%m-%d') }}</div>
+                        {% elif c_status == 'Expired' %}
+                            <div class="price-valid bad">⚠ Expired on {{ item.valid_until }}</div>
+                        {% elif c_status == 'Expiring Soon' %}
+                            <div class="price-valid warn">⏳ Expires soon · {{ item.valid_until }}</div>
+                        {% else %}
+                            <div class="price-valid">📅 Valid until {{ item.valid_until }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="offer-details">
+                        <div class="carrier-row">
+                            <div class="carrier-logo">FTL</div>
+                            <div class="carrier-text">
+                                <div class="carrier-name">{{ q.selected_nvocc }}</div>
+                                <div class="service-name">{{ q.service_type }}</div>
+                            </div>
                         </div>
-                        <div class="text-end">
-                            <span class="d-block text-muted small">Volume</span>
-                            <span class="fw-semibold">{{ q.volume }} CBM</span>
+                        <div class="route-line">
+                            <span class="route-stop">{{ q.origin }}</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-stop">{{ q.destination }}</span>
+                        </div>
+                        <div class="routing-meta" style="margin-top:0.5rem;">
+                            <span class="meta-pill service">📦 {{ q.service_type }}</span>
+                        </div>
+                        <div class="charges-row">
+                            <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
+                            <span class="charge-pill included"><span class="dot"></span>Freight &amp; Surcharges</span>
+                            <span class="charge-pill excluded"><span class="dot"></span>Destination Port Charges</span>
                         </div>
                     </div>
                     
-                    <div class="d-flex gap-2 mt-auto">
-                        <a href="{{ url_for('customer.quote_detail', quote_id=q.id) }}" class="btn btn-outline-primary flex-grow-1 fw-bold"><i class="bi bi-eye me-1"></i> View Breakdown</a>
+                    <div class="offer-actions">
+                        {% if c_status == 'Booked' %}
+                            <div class="booking-no">Booking No.<br><strong>{{ q.api_booking_ref or 'BK-FTL-' ~ q.id }}</strong></div>
+                            <!-- Assuming you have a route to view booking -->
+                            <a href="#" class="mq-btn mq-btn-view-booking" onclick="alert('View Booking feature pending backend support')">View Booking →</a>
+                        {% elif c_status == 'Expired' %}
+                            <div class="saved-on">Saved on<br><strong>{{ q.created_at.strftime('%Y-%m-%d') }}</strong></div>
+                            <a href="{{ url_for('customer.rates') }}" class="mq-btn mq-btn-outline">Request Updated Quote →</a>
+                        {% else %}
+                            <div class="saved-on">Saved on<br><strong>{{ q.created_at.strftime('%Y-%m-%d') }}</strong></div>
+                            
+                            <!-- The Book Action -->
+                            <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0">
+                                <input type="hidden" name="quote_id" value="{{ q.id }}">
+                                <button type="submit" class="mq-btn mq-btn-book w-100">Book →</button>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
-                <div class="card-footer bg-transparent border-top-0 pt-0 pb-3">
-                    <small class="text-muted"><i class="bi bi-clock me-1"></i> Saved on {{ q.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                
+                <div class="offer-footer">
+                    <div class="footer-links">
+                        <a class="terms-link" href="#">📄 Terms &amp; conditions ↗</a>
+                        <button class="remove-link" onclick="alert('Remove Quote feature pending backend route mapping')">🗑 Remove</button>
+                        
+                        <!-- Requested Feature: PDF / Email Download -->
+                        <span style="color:var(--mq-border-color);">|</span>
+                        <a href="{{ url_for('customer.quote_detail', quote_id=q.id) }}" target="_blank" class="download-link">📄 Download PDF</a>
+                        <button class="download-link" onclick="alert('Email Quote feature coming soon!')">✉ Email Quote</button>
+                    </div>
                 </div>
             </div>
-        </div>
-    {% endfor %}
+        {% endfor %}
     </div>
-{% else %}
-<div class="glass-card p-5 text-center">
-    <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-    <h5 class="text-secondary fw-semibold">No quotes found</h5>
-    <p class="text-muted mb-4">You have not saved any quotes yet.</p>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState" {% if not quote_data %}style="display:block;"{% endif %}>
+        <div class="icon">🔍</div>
+        <div class="title">No quotes match your filters</div>
+        <div class="desc">Try a different status filter or clear your search.</div>
+        <button class="mq-btn mq-btn-outline" onclick="resetFilters()">Clear filters</button>
+    </div>
+
 </div>
-{% endif %}
+
+<script>
+    function copyRef(el) {
+        const ref = el.dataset.ref;
+        navigator.clipboard?.writeText(ref).catch(() => {});
+        el.classList.add('copied');
+        const original = el.innerHTML;
+        el.innerHTML = `✓ Copied <span class="ref-code">${ref}</span>`;
+        setTimeout(() => {
+            el.classList.remove('copied');
+            el.innerHTML = original;
+        }, 1200);
+    }
+
+    let currentStatus = 'all';
+
+    function filterStatus(status, chip) {
+        currentStatus = status;
+        document.querySelectorAll('.sort-chip[data-status]').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const searchTerm = document.getElementById('mqSearch').value.toLowerCase().trim();
+        const cards = document.querySelectorAll('.offer-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const matchesStatus = currentStatus === 'all' || card.dataset.status === currentStatus || (currentStatus === 'expiringsoon' && card.dataset.status === 'expiringsoon');
+            const haystack = (card.dataset.ref + ' ' + card.dataset.route + ' ' + card.dataset.service).toLowerCase();
+            const matchesSearch = !searchTerm || haystack.includes(searchTerm);
+            
+            const show = matchesStatus && matchesSearch;
+            card.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        document.getElementById('resultsCount').textContent = `Showing ${visibleCount} quotes`;
+        document.getElementById('emptyState').classList.toggle('show', visibleCount === 0);
+        document.getElementById('offersList').style.display = visibleCount === 0 ? 'none' : 'flex';
+    }
+
+    function resetFilters() {
+        currentStatus = 'all';
+        document.querySelectorAll('.sort-chip[data-status]').forEach(c => c.classList.remove('active'));
+        document.querySelector('.sort-chip[data-status="all"]').classList.add('active');
+        document.getElementById('mqSearch').value = '';
+        applyFilters();
+    }
+
+    function sortQuotes(criteria, chip) {
+        document.querySelectorAll('.sort-chip[data-sort]').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        const list = document.getElementById('offersList');
+        const cards = Array.from(list.querySelectorAll('.offer-card'));
+
+        cards.sort((a, b) => {
+            if (criteria === 'recent') {
+                return new Date(b.dataset.saved) - new Date(a.dataset.saved);
+            } else if (criteria === 'expiring') {
+                return new Date(a.dataset.validuntil) - new Date(b.dataset.validuntil);
+            } else if (criteria === 'price') {
+                return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+            }
+            return 0;
+        });
+
+        cards.forEach(card => list.appendChild(card));
+    }
+</script>
 {% endblock %}
