@@ -924,13 +924,24 @@ def finalize_booking():
     rate_id = request.form.get('rate_id')
     raw_volume = request.form.get('volume')
     volume = float(raw_volume) if raw_volume else 0.0
-    total_cost = float(request.form.get('total_cost'))
-    service_type = request.form.get('service_type')
-    
-    rate = Rate.query.get_or_404(rate_id)
+    total_cost = float(request.form.get('total_cost') or 0.0)
+    service_type = request.form.get('service_type', 'LCL')
     
     query = session.get('search_query', {})
     
+    class MockRate:
+        pass
+    rate = MockRate()
+    rate.id = rate_id
+    rate.origin = query.get('origin', 'Origin')
+    rate.destination = query.get('destination', 'Destination')
+    rate.nvocc_name = "API Carrier"
+
+    if rate_id and str(rate_id).isdigit():
+        db_rate = Rate.query.get(int(rate_id))
+        if db_rate:
+            rate = db_rate
+            
     return render_template('customer/finalize_booking.html', 
                          rate=rate, 
                          volume=volume, 
