@@ -18,7 +18,7 @@ class Config:
     
     if azure_conn_str:
         # Wrap the raw ODBC string inside SQLAlchemy's query format
-        if not azure_conn_str.startswith('mssql+pyodbc://'):
+        if not azure_conn_str.startswith('mssql+pyodbc://') and not azure_conn_str.startswith('mssql+pymssql://'):
             params = urllib.parse.quote_plus(azure_conn_str)
             SQLALCHEMY_DATABASE_URI = f"mssql+pyodbc:///?odbc_connect={params}"
         else:
