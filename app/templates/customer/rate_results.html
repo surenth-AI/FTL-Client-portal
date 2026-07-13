@@ -486,7 +486,7 @@
         <div class="results-count">Rates valid until {{ (results[0].rate.validity_end if results else None) or '30 Days' }}</div>
     </div>
 
-    <div class="info-banner">
+    <div class="info-banner" id="infoBanner">
         <span>ℹ️</span>
         <span>Click <strong>View rate breakdown</strong> on any offer to see the full charge-by-charge calculation, including the rate of exchange applied to each line.</span>
     </div>
@@ -725,17 +725,20 @@
         const tableBtn = document.getElementById('tableViewBtn');
         const cardWrap = document.getElementById('cardViewWrap');
         const tableWrap = document.getElementById('tableViewWrap');
+        const infoBanner = document.getElementById('infoBanner');
 
         if (mode === 'card') {
             cardBtn.classList.add('active');
             tableBtn.classList.remove('active');
             cardWrap.classList.remove('hidden');
             tableWrap.classList.remove('active');
+            if (infoBanner) infoBanner.style.display = 'flex';
         } else {
             tableBtn.classList.add('active');
             cardBtn.classList.remove('active');
             cardWrap.classList.add('hidden');
             tableWrap.classList.add('active');
+            if (infoBanner) infoBanner.style.display = 'none';
         }
     }
 
