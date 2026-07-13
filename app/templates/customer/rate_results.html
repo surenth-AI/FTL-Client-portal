@@ -553,7 +553,12 @@
                         </div>
                     </div>
                     <div class="offer-actions">
-                        <div class="next-closing">Next closing<br><strong>{{ res.next_closing or '2026-07-31' }}</strong></div>
+                        <div class="next-closing">Next closing<br>
+                            <strong>{{ res.next_closing or '2026-07-31' }}</strong>
+                            {% if res.schedules %}
+                            <br><a href="#" onclick="openSchedulesModal('schedulesModal-{{ loop.index }}'); event.preventDefault();" style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; text-decoration:none;">View more</a>
+                            {% endif %}
+                        </div>
                         <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0 w-100">
                             <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
                             <input type="hidden" name="volume" value="{{ query.volume }}">
@@ -640,7 +645,12 @@
                     <td>{% if loop.index % 2 == 0 %}1 Transshipment{% else %}Direct{% endif %}</td>
                     <td>{{ res.transit_days }} days</td>
                     <td>Origin + Freight</td>
-                    <td>{{ res.next_closing or '2026-07-31' }}</td>
+                    <td>
+                        {{ res.next_closing or '2026-07-31' }}
+                        {% if res.schedules %}
+                        <br><a href="#" onclick="event.stopPropagation(); openSchedulesModal('schedulesModal-{{ loop.index }}'); event.preventDefault();" style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; text-decoration:none;">View more</a>
+                        {% endif %}
+                    </td>
                     <td class="price-cell">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</td>
                     <td style="display:flex; gap:0.5rem; align-items:center; justify-content: flex-end;" onclick="event.stopPropagation();">
                         <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0">
@@ -811,5 +821,45 @@
             console.error('Error saving quote:', err);
         });
     }
+
+    function openSchedulesModal(id) {
+        document.getElementById(id).style.display = 'flex';
+    }
+    function closeSchedulesModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
 </script>
+
+<!-- Modals for Schedules -->
+{% for res in results %}
+{% if res.schedules %}
+<div id="schedulesModal-{{ loop.index }}" class="sched-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="sched-modal-content" style="background:#fff; padding:2rem; border-radius:12px; width:90%; max-width:650px; max-height:80vh; overflow-y:auto; position:relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <button onclick="closeSchedulesModal('schedulesModal-{{ loop.index }}')" style="position:absolute; right:1.2rem; top:1.2rem; border:none; background:#f1f5f9; border-radius:50%; width:30px; height:30px; font-size:1.2rem; cursor:pointer; color:var(--text-secondary); display:flex; align-items:center; justify-content:center; transition:background 0.2s;">&times;</button>
+        <h3 style="margin-top:0; color:var(--primary-green-dark); font-size:1.2rem; margin-bottom:1rem;">Available Schedules</h3>
+        <table class="offers-table" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>Vessel</th>
+                    <th>Voyage</th>
+                    <th>ETD</th>
+                    <th>ETA</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in res.schedules %}
+                <tr>
+                    <td style="font-weight:600; color:var(--text-primary);">{{ s.vesselName or s.vessel or 'TBA' }}</td>
+                    <td>{{ s.voyageNumber or s.voyage or 'TBA' }}</td>
+                    <td>{{ (s.estimatedTimeOfDeparture or s.etd or '')[:10] }}</td>
+                    <td>{{ (s.estimatedTimeOfArrival or s.eta or '')[:10] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
 {% endblock %}

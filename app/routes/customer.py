@@ -190,8 +190,37 @@ def my_quotes():
     if current_user.role not in ['customer', 'agent']:
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
-    quotes = Booking.query.filter_by(user_id=current_user.id, status='Saved Quote').order_by(Booking.created_at.desc()).all()
-    return render_template('customer/my_quotes.html', quotes=quotes)
+        
+    from sqlalchemy import or_
+    from datetime import timedelta
+    
+    quotes = Booking.query.filter(
+        Booking.user_id == current_user.id,
+        or_(Booking.status == 'Saved Quote', Booking.status == 'Booked')
+    ).order_by(Booking.created_at.desc()).all()
+    
+    quote_data = []
+    now = datetime.utcnow()
+    
+    for q in quotes:
+        valid_until = q.created_at + timedelta(days=30)
+        
+        if q.status == 'Booked':
+            computed_status = 'Booked'
+        elif valid_until < now:
+            computed_status = 'Expired'
+        elif (valid_until - now).days <= 2:
+            computed_status = 'Expiring Soon'
+        else:
+            computed_status = 'Active'
+            
+        quote_data.append({
+            'booking': q,
+            'computed_status': computed_status,
+            'valid_until': valid_until.strftime('%Y-%m-%d')
+        })
+        
+    return render_template('customer/my_quotes.html', quote_data=quote_data)
 
 @customer.route('/save-quote', methods=['POST'])
 @login_required
@@ -209,10 +238,14 @@ def save_quote():
     destination = query.get('destination', 'Unknown')
     volume = query.get('volume', 0.0)
     
-    rate = Rate.query.get(rate_id) if rate_id else None
+    rate = None
+    if rate_id and str(rate_id).isdigit():
+        rate = Rate.query.get(int(rate_id))
+        
     nvocc_name = rate.nvocc_name if rate else 'API Quote'
 
     api_id = query.get('api_quotation_id', '')
+    quote_number = query.get('quote_id', api_id or f"QUOTE-{datetime.now().strftime('%M%S')}")
 
     booking = Booking(
         user_id=current_user.id,
@@ -222,12 +255,15 @@ def save_quote():
         selected_nvocc=nvocc_name,
         total_cost=float(total_cost) if total_cost else 0.0,
         service_type=service_type,
-        api_booking_ref=api_id,
+        api_booking_ref=quote_number,
         status='Saved Quote'
     )
     db.session.add(booking)
     db.session.commit()
     
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+        return jsonify({'status': 'success', 'quote_number': quote_number})
+        
     flash('Quote successfully saved!', 'success')
     return redirect(url_for('customer.my_quotes'))
 
@@ -765,9 +801,46 @@ def rate_results():
                 carrier_name = branch_name if is_lcl else (sailing.get('linerName') or 'Standard Carrier')
                 nvocc_name = carrier_name
                 
-                # Extract Next Closing
+                # Fetch Schedules for Next Closing & Modal
+                pol_locode = ""
+                m_pol = re.search(r'\(([^)]+)\)$', query.get('origin', '').strip())
+                if m_pol: pol_locode = m_pol.group(1).strip()
+                
+                pod_locode = ""
+                m_pod = re.search(r'\(([^)]+)\)$', query.get('destination', '').strip())
+                if m_pod: pod_locode = m_pod.group(1).strip()
+
+                schedules = []
                 next_closing = None
-                if pol:
+                
+                if pol_locode and pod_locode:
+                    try:
+                        sched_url = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol_locode}&portOfDischarge={pod_locode}"
+                        sched_resp = requests.get(sched_url, headers={'accept': 'application/json', 'x-api-key': '1'}, timeout=5)
+                        if sched_resp.status_code == 200:
+                            schedules = sched_resp.json()
+                            if not isinstance(schedules, list):
+                                schedules = []
+                    except Exception as e:
+                        print(f"Failed to fetch schedules: {e}")
+
+                # Sort schedules and get earliest ETD
+                def get_etd(s):
+                    return str(s.get('etd') or s.get('estimatedTimeOfDeparture') or '')
+
+                if schedules:
+                    # Filter out schedules with no ETD
+                    schedules = [s for s in schedules if get_etd(s)]
+                    schedules.sort(key=get_etd)
+                    if schedules:
+                        first_etd = get_etd(schedules[0])
+                        try:
+                            next_closing = datetime.datetime.strptime(first_etd[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
+                        except:
+                            next_closing = first_etd[:10]
+
+                # Fallback to Quotation POL if Schedules API fails/is empty
+                if not next_closing and pol:
                     closing_val = pol.get('closingLcl') if is_lcl else pol.get('closing')
                     if not closing_val:
                         closing_val = pol.get('closing')
@@ -786,6 +859,7 @@ def rate_results():
                     'frequency': 'API Specific',
                     'ui_tag': 'Official API Quote',
                     'next_closing': next_closing,
+                    'schedules': schedules,
                     'rate': {
                         'nvocc_name': nvocc_name,
                         'validity_end': header.get('validUntil', 'N/A'),
