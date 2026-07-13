@@ -64,7 +64,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     if azure_conn_str or db_server:
         SQLALCHEMY_ENGINE_OPTIONS = {
-            'connect_args': {'use_setinputsizes': False},
             'pool_size': 10,
             'max_overflow': 20,
             'pool_recycle': 1800,
