@@ -18,6 +18,7 @@ python-dotenv
 gunicorn
 flasgger
 pyodbc
+pymssql
 cachetools
 
 flask-talisman
