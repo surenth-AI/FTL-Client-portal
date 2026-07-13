@@ -1,742 +1,817 @@
 {% extends 'base.html' %}
-{% block title %}Compare Rates{% endblock %}
+{% block title %}Quotations Available - Fast Transit Line{% endblock %}
 
 {% block content %}
 <style>
-    /* Ensure Bootstrap text classes respect custom theme variables in both dark and light modes */
-    .text-body {
-        color: var(--text-primary) !important;
+    /* -----------------------------------------------------
+       MERGED STYLES FROM OFFERLIST (1) (1).HTML
+       ----------------------------------------------------- */
+    :root {
+        --primary-blue: #2563eb;
+        --primary-blue-dark: #1d4ed8;
+        --primary-green: #059669;
+        --primary-green-dark: #047857;
+        --green-bg: #ecfdf5;
+        --text-primary: #0f172a;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --border-color: #e2e8f0;
+        --bg-gray: #f8fafc;
+        --bg-white: #ffffff;
+        --success-green: #10b981;
+        --error-red: #ef4444;
+        --amber: #f59e0b;
+        --amber-bg: #fffbeb;
+        --hover-bg: #f1f5f9;
+    }
+    
+    html[data-color-scheme='dark'] {
+        --bg-gray: #0f172a;
+        --bg-white: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --border-color: #334155;
+        --hover-bg: #334155;
+        --green-bg: rgba(5, 150, 105, 0.2);
     }
 
-    .text-muted {
-        color: var(--text-secondary) !important;
+    .offerlist-container {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--text-primary);
+        line-height: 1.4;
+        font-size: 13px;
+        width: 100%; 
+        padding: 0.75rem 1.5rem 3rem;
     }
 
-    .text-dark {
-        color: var(--text-primary) !important;
-    }
-
-    .bg-light {
-        background-color: var(--bg-gray) !important;
-    }
-
-    .text-primary {
-        color: var(--primary-color) !important;
-    }
-
-    .text-success {
-        color: #20c997 !important;
-    }
-
-    .border-success {
-        border-color: rgba(32, 201, 151, 0.3) !important;
-    }
-
-    .bg-success {
-        background-color: #20c997 !important;
-    }
-
-    /* Fix modal close button in dark mode */
-    html[data-color-scheme='dark'] .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
-        opacity: 0.8;
-    }
-
-    /* Custom Styling for Quotes Redesign */
-    .quote-header-card {
-        background: var(--glass-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1.25rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-
-    .view-toggle-btn {
-        background: var(--bg-gray);
-        border: 1px solid var(--border-color);
-        color: var(--text-secondary);
-        padding: 0.4rem 1rem;
-        font-size: 0.85rem;
+    .modify-search {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.8rem;
         font-weight: 600;
+        color: var(--primary-blue);
+        text-decoration: none;
+        margin-bottom: 0.625rem;
         cursor: pointer;
-        transition: all 0.2s ease;
     }
+    .modify-search:hover { text-decoration: underline; }
 
-    .view-toggle-btn.active {
-        background: var(--primary-color);
-        color: var(--button-text, #ffffff);
-        border-color: var(--primary-color);
-    }
-
-    .view-toggle-btn:first-child {
-        border-radius: 6px 0 0 6px;
-    }
-
-    .view-toggle-btn:last-child {
-        border-radius: 0 6px 6px 0;
-    }
-
-    /* Table View Styles */
-    .quote-table {
-        width: 100%;
-        background: var(--glass-bg);
-        border-radius: 8px;
-        overflow: hidden;
+    /* Summary card */
+    .summary-card {
+        background: var(--bg-white);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 0.875rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.875rem;
         border: 1px solid var(--border-color);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     }
-
-    .quote-table th {
-        background: var(--bg-gray);
-        color: var(--text-muted);
-        font-weight: 600;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        padding: 1rem;
-        border-bottom: 2px solid var(--border-color);
-    }
-
-    .quote-master-row {
-        cursor: pointer;
-        transition: background 0.2s ease;
-    }
-
-    .quote-master-row:hover {
-        background: var(--bg-gray);
-    }
-
-    .quote-master-row td {
-        padding: 1.25rem 1rem;
-        vertical-align: middle;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .carrier-logo-placeholder {
-        font-size: 1.5rem;
-        color: var(--primary-color);
-        margin-right: 0.75rem;
-    }
-
-    .price-col {
-        font-size: 1.25rem;
+    .summary-left h1 {
+        font-size: 1.15rem;
         font-weight: 700;
-        color: var(--text-primary);
+        color: var(--primary-green-dark);
+        margin-bottom: 0.3rem;
     }
-
-    /* Breakdown Shutter/Accordion */
-    .quote-breakdown-row {
-        display: none;
-        background: var(--bg-gray);
+    .summary-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
     }
+    .summary-meta .divider { color: var(--border-color); }
+    .summary-meta strong { color: var(--text-primary); font-weight: 600; }
+    .route-pill { display: inline-flex; align-items: center; gap: 0.3rem; }
 
-    .quote-breakdown-row.active {
-        display: table-row;
-    }
-
-    .breakdown-container {
-        padding: 1.5rem;
-        border-bottom: 2px solid var(--border-color);
-    }
-
-    /* Breakdown Detailed Table */
-    .detail-table {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-
-    .detail-table th {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        color: var(--text-muted);
-        padding: 0.5rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .detail-table td {
-        padding: 0.75rem 0.5rem;
-        font-size: 0.85rem;
-        border-bottom: 1px solid var(--border-color);
-        color: var(--text-primary);
-    }
-
-    /* Summary Bar */
-    .summary-bar {
-        background: var(--bg-gray);
-        color: var(--text-primary);
+    .view-toggle { display: flex; gap: 0.5rem; flex-shrink: 0; }
+    .view-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: 7px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
         border: 1px solid var(--border-color);
-        padding: 1.25rem 1.5rem;
+        background: var(--bg-white);
+        color: var(--text-secondary);
+        transition: all 0.15s ease;
+    }
+    .view-btn.active { background: var(--primary-green); border-color: var(--primary-green); color: white; }
+    .view-btn:not(.active):hover { background: var(--hover-bg); }
+
+    /* Toolbar: sort + filter chips */
+    .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.875rem;
+    }
+    .sort-group { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .sort-label { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+    .sort-chip {
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-white);
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .sort-chip:hover { border-color: var(--primary-green); color: var(--primary-green-dark); }
+    .sort-chip.active { background: var(--text-primary); border-color: var(--text-primary); color: white; }
+
+    .results-count { font-size: 0.78rem; color: var(--text-secondary); }
+
+    .info-banner {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
+        padding: 0.625rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.875rem;
+    }
+
+    /* Offer card */
+    .offers-list { display: flex; flex-direction: column; gap: 0.875rem; }
+
+    .offer-card {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .offer-card:hover { box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
+    .offer-card.best { border-color: var(--primary-green); box-shadow: 0 0 0 1px var(--primary-green); }
+
+    .offer-badge-row {
+        display: flex;
+        gap: 0.4rem;
+        padding: 0.5rem 1.25rem 0;
+    }
+    .offer-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 0.2rem 0.55rem;
+        border-radius: 5px;
+    }
+    .offer-tag.cheapest { background: var(--green-bg); color: var(--primary-green-dark); }
+    .offer-tag.fastest { background: #eff6ff; color: var(--primary-blue-dark); }
+    .offer-tag.recommended { background: #fef3c7; color: #92400e; }
+
+    .offer-main {
+        display: grid;
+        grid-template-columns: 200px 1fr 220px;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        align-items: center;
+    }
+
+    .offer-price-block { display: flex; flex-direction: column; gap: 0.5rem; }
+    .price-label { font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+    .price-amount { font-size: 1.5rem; font-weight: 800; color: var(--primary-green-dark); line-height: 1.1; }
+    .price-amount .currency { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-right: 0.2rem; }
+    .price-valid { font-size: 0.72rem; color: var(--text-muted); }
+    .save-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.4rem 0.7rem;
+        cursor: pointer;
+        width: fit-content;
+        transition: all 0.15s ease;
+    }
+    .save-btn:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+    .save-btn.saved { background: #eff6ff; border-color: var(--primary-blue); color: var(--primary-blue-dark); }
+
+    .quote-ref {
+        display: none;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.72rem;
+        color: var(--primary-blue-dark);
+        background: #eff6ff;
+        border: 1px dashed #bfdbfe;
+        border-radius: 6px;
+        padding: 0.35rem 0.55rem;
+        cursor: pointer;
+        width: fit-content;
+        transition: background 0.15s ease;
+    }
+    .quote-ref:hover { background: #dbeafe; }
+    .quote-ref .ref-code { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .quote-ref .copy-icon { font-size: 0.7rem; color: var(--text-muted); }
+    .quote-ref.copied { background: var(--green-bg); border-color: #a7f3d0; color: var(--primary-green-dark); }
+
+    .offer-details { min-width: 0; }
+    .carrier-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .carrier-logo {
+        width: 30px; height: 30px;
+        border-radius: 7px;
+        background: var(--bg-gray);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.7rem; color: var(--primary-green-dark);
+        flex-shrink: 0;
+        border: 1px solid var(--border-color);
+    }
+    .carrier-text { display: flex; flex-direction: column; }
+    .carrier-name { font-weight: 700; font-size: 0.95rem; }
+    .service-name { font-size: 0.72rem; color: var(--text-secondary); }
+
+    .route-line {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .route-arrow { color: var(--text-muted); font-size: 0.75rem; }
+
+    .routing-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.875rem; }
+    .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: var(--bg-gray);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+    .meta-pill.service { background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; }
+    .meta-pill.direct { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .meta-pill.transship { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+    .charges-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .charge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid var(--border-color);
+    }
+    .charge-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .charge-pill.included { background: var(--bg-white); color: var(--text-primary); }
+    .charge-pill.included .dot { background: var(--success-green); }
+    .charge-pill.excluded { background: var(--bg-white); color: var(--text-secondary); }
+    .charge-pill.excluded .dot { background: var(--error-red); }
+
+    .offer-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+    .next-closing { font-size: 0.75rem; color: var(--text-secondary); text-align: right; }
+    .next-closing strong { color: var(--text-primary); font-size: 0.85rem; }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        border: none;
+        outline: none;
+    }
+    .btn-book {
+        background: var(--primary-green);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        width: 100%;
+        font-size: 0.95rem;
+    }
+    .btn-book:hover { background: var(--primary-green-dark); }
+    .btn-book:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .compare-checkbox-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 0.25rem;
+    }
+    .compare-checkbox-wrap:hover { color: var(--text-primary); }
+    .compare-checkbox-wrap input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--primary-green); }
+
+    .offer-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 1.25rem;
+        background: var(--bg-gray);
+        border-top: 1px solid var(--border-color);
+    }
+    .footer-links { display: flex; gap: 1rem; }
+    .terms-link { font-size: 0.75rem; color: var(--primary-blue); text-decoration: none; font-weight: 500; }
+    .terms-link:hover { text-decoration: underline; }
+
+    .breakdown-toggle {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .breakdown-toggle:hover { color: var(--primary-blue); }
+    .breakdown-toggle .chev { transition: transform 0.2s ease; }
+    .breakdown-toggle.open .chev { transform: rotate(180deg); }
+
+    .breakdown-panel {
+        display: none;
+        background: var(--bg-white);
+        border-top: 1px solid var(--border-color);
+        padding: 1.25rem;
+    }
+    .breakdown-panel.open { display: block; }
+    .breakdown-inner { width: 100%; margin: 0 auto; }
+    .breakdown-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-primary); }
+
+    .breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+        font-size: 0.78rem;
+    }
+    .breakdown-table th, .breakdown-table td {
+        padding: 0.6rem;
+        border-bottom: 1px solid var(--border-color);
+        text-align: left;
+    }
+    .breakdown-table th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; font-size: 0.68rem; }
+    .breakdown-table .num { text-align: right; }
+    .code-cell { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .base-cell { background: var(--bg-gray); padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.65rem; border: 1px solid var(--border-color); }
+    .fx-cell { color: var(--text-muted); font-size: 0.7rem; }
+    .final-cell { font-weight: 600; color: var(--text-primary); }
+
+    .breakdown-total-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-weight: 600;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+        padding: 0.75rem 0.6rem;
+        background: var(--green-bg);
+        border-radius: 6px;
+        font-weight: 700;
+        color: var(--primary-green-dark);
+        margin-bottom: 1rem;
+    }
+    .breakdown-total-row .amount { font-size: 1.1rem; }
+
+    .fx-note { font-size: 0.7rem; color: var(--text-muted); }
+    .breakdown-cta { margin-top: 1.5rem; text-align: right; }
+    .breakdown-cta .btn-book { width: auto; padding: 0.6rem 1.2rem; font-size: 0.85rem; }
+
+    /* Table view */
+    .table-view-wrap { display: none; }
+    .table-view-wrap.active { display: block; }
+    .card-view-wrap.hidden { display: none; }
+
+    .offers-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--bg-white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .offers-table thead th {
+        text-align: left;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--text-muted);
+        padding: 0.7rem 1rem;
+        background: var(--bg-gray);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .offers-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.82rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+    .offers-table tbody tr:last-child td { border-bottom: none; }
+    .offers-table tbody tr:hover { background: var(--hover-bg); }
+    .offers-table .price-cell { font-weight: 800; color: var(--primary-green-dark); font-size: 0.95rem; }
+    .offers-table .carrier-cell { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+
+    /* Empty / footer note */
+    .results-footer-note {
+        text-align: center;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 1rem;
     }
 
-    /* Card View Styles */
-    .card-view-container {
-        display: none;
+    @media (max-width: 900px) {
+        .offer-main { grid-template-columns: 1fr; }
+        .offer-actions { align-items: flex-start; }
+        .next-closing { text-align: left; }
+        .breakdown-table { display: block; overflow-x: auto; }
     }
-
-    .quote-card {
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .quote-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Modal Override */
-    .modal-content {
-        border-radius: 16px;
-        border: none;
-    }
-
-    .modal-header {
-        border-radius: 16px 16px 0 0;
-    }
-
-    .modal.show {
-        backdrop-filter: blur(4px);
-    }
-
-    /* Optional subtle blur if backdrop is false */
 </style>
 
-<div class="mb-3">
-    <a href="{{ url_for('customer.new_booking') }}" class="text-decoration-none small fw-bold">
-        <i class="bi bi-arrow-left"></i> Modify Search
-    </a>
-</div>
+<div class="offerlist-container">
+    <a href="{{ url_for('customer.new_booking') }}" class="modify-search">← Modify Search</a>
 
-<!-- Premium Header -->
-<div class="quote-header-card mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-    <div>
-        <h4 class="mb-1 fw-bold"
-            style="background: linear-gradient(45deg, var(--primary-color), #20c997); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            Quotations Available ({{ results|length }})</h4>
-        <div class="text-secondary small d-flex align-items-center gap-3">
-            <span><i class="bi bi-geo-alt text-primary"></i> <strong class="text-body">{{ query.origin
-                    }}</strong></span>
-
-            <!-- Route logic update -->
-            {% if results and results[0].api_quote.sailings and results[0].api_quote.sailings[0].pod.unLocode and
-            results[0].api_quote.sailings[0].pod.unLocode != query.destination %}
-            <span class="text-muted"><i class="bi bi-arrow-right"></i></span>
-            <span class="badge bg-secondary bg-opacity-10 text-body border">Via {{
-                results[0].api_quote.sailings[0].pod.unLocode }}</span>
-            {% endif %}
-
-            <i class="bi bi-arrow-right"></i>
-            <span><i class="bi bi-geo text-danger"></i> <strong class="text-body">{{ query.destination
-                    }}</strong></span>
-            <span class="border-start border-secondary ps-3"><i class="bi bi-box-seam"></i> Vol: <strong>{{ query.volume
-                    }} CBM</strong></span>
-            <span class="border-start border-secondary ps-3"><i class="bi bi-ship"></i> Service: <strong>{{
-                    query.service_type }}</strong></span>
-            <span class="border-start border-secondary ps-3"><i class="bi bi-calendar-check"></i> Valid Until:
-                <strong>{{ (results[0].rate.validity_end if results else None) or '30 Days' }}</strong></span>
-        </div>
-    </div>
-
-    <div class="text-end">
-        <div class="d-flex justify-content-end">
-            <button class="view-toggle-btn active" id="btnTableView" onclick="toggleView('table')"><i
-                    class="bi bi-list-task"></i> Table View</button>
-            <button class="view-toggle-btn" id="btnCardView" onclick="toggleView('card')"><i class="bi bi-grid"></i>
-                Card View</button>
-        </div>
-    </div>
-</div>
-
-<div class="mb-4 d-flex justify-content-center">
-    <div class="rounded d-flex align-items-center" id="viewHintText"
-        style="background: var(--glass-bg); color: var(--text-primary); padding: 0.4rem 1rem; box-shadow: 0 0 12px rgba(0,0,0,0.12); font-size: 0.875rem; font-weight: 500; min-width: 700px;">
-        <div
-            style="display: flex; width: 1.75em; height: 1.75em; margin-right: 0.75rem; border: 0.2em solid var(--border-color); border-radius: 50%; color: var(--primary-color); align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; font-family: sans-serif;">
-            i</div>
-        <span>Click on a row to expand detailed breakdown</span>
-    </div>
-</div>
-
-{% if not results %}
-<div class="alert alert-warning text-center my-5 py-5 shadow-sm rounded-3">
-    <i class="bi bi-exclamation-triangle display-4 d-block mb-3"></i>
-    <h5 class="fw-bold text-body">No Rates Found</h5>
-    <p class="text-body">We couldn't find any rates matching your exact route. Please try modifying your search.</p>
-</div>
-{% else %}
-
-<!-- ================= TABLE VIEW ================= -->
-<div id="tableViewContainer">
-    {% for res in results %}
-    <div class="mb-4 quote-list-card shadow-sm rounded-3 border"
-        style="background: var(--glass-bg); border-color: var(--border-color) !important; overflow: hidden;">
-
-        <!-- Master Row -->
-        <div class="d-flex quote-master-row"
-            style="cursor: pointer; transition: background 0.2s ease; min-height: 140px;">
-            <!-- Left Panel (Pricing & Save) -->
-            <div class="p-4 d-flex flex-column justify-content-between"
-                style="width: 220px; border-right: 2px solid #20c997; background: var(--glass-bg);">
-                <div>
-                    <div class="text-muted small">Total</div>
-                    <div class="fs-3 fw-bold" style="color: #00a676;">{{
-                        res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}
-                    </div>
-                    <div class="text-muted mt-3" style="font-size: 0.75rem;"><i class="bi bi-calendar-event"></i> Valid
-                        Until: <strong>{{ res.rate.validity_end }}</strong></div>
-                </div>
-                <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0 mt-3"
-                    onclick="event.stopPropagation();">
-                    <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                    <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                    <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
-                    <button class="btn btn-sm btn-outline-secondary fw-bold w-100 py-2" style="font-size: 0.85rem;"><i
-                            class="bi bi-bookmark"></i> Save</button>
-                </form>
+    <!-- Summary -->
+    <div class="summary-card">
+        <div class="summary-left">
+            <h1>Quotations Available ({{ results|length }})</h1>
+            <div class="summary-meta">
+                <span class="route-pill">📍 {{ query.origin }}</span>
+                <span>→</span>
+                <span class="route-pill">📍 {{ query.destination }}</span>
+                <span class="divider">|</span>
+                <span>Vol: <strong>{{ query.volume }} CBM</strong></span>
+                <span class="divider">|</span>
+                <span>📅 Valid Until: <strong>{{ (results[0].rate.validity_end if results else None) or '30 Days' }}</strong></span>
             </div>
+        </div>
+        <div class="view-toggle">
+            <button class="view-btn active" id="cardViewBtn" onclick="setView('card')">▦ Card View</button>
+            <button class="view-btn" id="tableViewBtn" onclick="setView('table')">☰ Table View</button>
+        </div>
+    </div>
 
-            <!-- Right Panel (Details) -->
-            <div class="p-4 flex-grow-1 d-flex flex-column justify-content-between" style="background: var(--glass-bg);"
-                onclick="toggleAccordion('breakdown-{{ loop.index }}')">
-                <!-- Top Row: Carrier & Route & Badges -->
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="d-flex align-items-center gap-4">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-primary bg-opacity-10 text-primary rounded d-flex align-items-center justify-content-center"
-                                style="width: 32px; height: 32px;">
-                                <i class="bi bi-ship"></i>
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="sort-group">
+            <span class="sort-label">Sort by</span>
+            <button class="sort-chip active" data-sort="price" onclick="sortOffers('price', this)">💲 Lowest price</button>
+            <button class="sort-chip" data-sort="transit" onclick="sortOffers('transit', this)">⚡ Fastest transit</button>
+            <button class="sort-chip" data-sort="closing" onclick="sortOffers('closing', this)">📅 Next closing</button>
+        </div>
+        <div class="results-count">Rates valid until {{ (results[0].rate.validity_end if results else None) or '30 Days' }}</div>
+    </div>
+
+    <div class="info-banner">
+        <span>ℹ️</span>
+        <span>Click <strong>View rate breakdown</strong> on any offer to see the full charge-by-charge calculation, including the rate of exchange applied to each line.</span>
+    </div>
+
+    <!-- CARD VIEW -->
+    <div class="card-view-wrap" id="cardViewWrap">
+        <div class="offers-list" id="offersList">
+            {% for res in results %}
+            <div class="offer-card {% if loop.first %}best{% endif %}" data-price="{{ res.total_cost }}" data-transit="{{ res.transit_days }}" data-closing="{{ res.next_closing or '2026-07-31' }}">
+                <div class="offer-badge-row">
+                    {% if loop.index == 1 %}
+                    <span class="offer-tag cheapest">💲 Cheapest</span>
+                    {% elif loop.index == 2 %}
+                    <span class="offer-tag recommended">★ Recommended</span>
+                    {% elif loop.index == 3 %}
+                    <span class="offer-tag fastest">⚡ Fastest</span>
+                    {% endif %}
+                </div>
+                <div class="offer-main">
+                    <div class="offer-price-block">
+                        <div class="price-label">Total</div>
+                        <div class="price-amount"><span class="currency">{{ res.api_quote.tariff.quotationCurrency|default('USD') }}</span>{{ "%.2f"|format(res.total_cost) }}</div>
+                        <div class="price-valid">📅 Valid until {{ res.rate.validity_end }}</div>
+                        <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0" onsubmit="event.preventDefault(); submitSaveQuote(this, 'card-{{ loop.index }}');">
+                            <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                            <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                            <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
+                            <button type="submit" class="save-btn" id="saveBtn-card-{{ loop.index }}">🔖 Save</button>
+                        </form>
+                    </div>
+                    <div class="offer-details">
+                        <div class="carrier-row">
+                            <div class="carrier-logo">FTL</div>
+                            <div class="carrier-text">
+                                <div class="carrier-name">{{ res.rate.nvocc_name }}</div>
+                                <div class="service-name">{{ res.carrier or 'Standard Carrier' }}</div>
                             </div>
-                            <span class="fw-bold fs-5" style="color: #00a676;">{{ res.rate.nvocc_name }}</span>
                         </div>
-                        <div class="text-body fw-bold d-flex align-items-center gap-3" style="font-size: 0.85rem;">
-                            <span class="text-muted d-flex align-items-center gap-1"><i class="bi bi-geo-alt"
-                                    style="color: #00a676;"></i> {{ query.origin }}</span>
-                            <span class="text-muted" style="font-size: 0.7rem;"><i class="bi bi-arrow-right"></i></span>
-                            <span class="text-muted d-flex align-items-center gap-1"><i class="bi bi-geo"
-                                    style="color: #dc3545;"></i> {{ query.destination }}</span>
+                        <div class="route-line">
+                            <span class="route-stop">{{ query.origin }}</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-stop">{{ query.destination }}</span>
                         </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-3">
-                        {% if loop.index % 2 != 0 %}
-                        <span class="badge rounded-pill bg-success text-white px-3 py-1 fw-bold"
-                            style="background-color: #20c997 !important; font-size: 0.7rem;"><i
-                                class="bi bi-lightning-fill"></i> Direct Routing</span>
-                        {% else %}
-                        <span class="badge rounded-pill bg-secondary text-white px-3 py-1 fw-bold"
-                            style="font-size: 0.7rem;"><i class="bi bi-arrow-left-right"></i> Indirect Routing</span>
-                        {% endif %}
-                        <span class="fw-bold" style="color: #00a676; font-size: 0.9rem;"><i class="bi bi-clock"></i> {{
-                            res.transit_days }} Days</span>
-                    </div>
-                </div>
-
-                <!-- Middle Row: Charges & Next Closing -->
-                <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
-                    <div class="d-flex gap-5">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-check-square-fill" style="color: #00a676;"></i>
-                            <span class="text-body fw-bold" style="font-size: 0.85rem;">Origin Port Charges</span>
-                            <span class="badge bg-success bg-opacity-10 text-success border-0 px-2 py-1">Included</span>
+                        <div class="routing-meta" style="margin-top:0.5rem;">
+                            <!-- LCL conditionally rendered if service_type implies LCL, else FCL -->
+                            {% if query.get('service_type', 'LCL') in ['Less than a container load', 'LCL'] %}
+                            <span class="meta-pill service">📦 LCL</span>
+                            {% else %}
+                            <span class="meta-pill service">📦 FCL</span>
+                            {% endif %}
+                            
+                            {% if loop.index % 2 == 0 %}
+                            <span class="meta-pill transship">⇄ 1 Transshipment</span>
+                            {% else %}
+                            <span class="meta-pill direct">⚡ Direct routing</span>
+                            {% endif %}
+                            
+                            <span class="meta-pill time">🕐 {{ res.transit_days }} days</span>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-check-square-fill" style="color: #00a676;"></i>
-                            <span class="text-body fw-bold" style="font-size: 0.85rem;">Freight & Surcharges</span>
-                            <span class="badge bg-success bg-opacity-10 text-success border-0 px-2 py-1">Included</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-x-square-fill text-danger"></i>
-                            <span class="text-body fw-bold" style="font-size: 0.85rem;">Destination Port Charges</span>
-                            <span class="badge bg-danger text-white border-0 px-2 py-1">Excluded</span>
+                        <div class="charges-row">
+                            <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
+                            <span class="charge-pill included"><span class="dot"></span>Freight &amp; Surcharges</span>
+                            <span class="charge-pill excluded"><span class="dot"></span>Destination Port Charges</span>
                         </div>
                     </div>
-                    <div class="text-end">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold" style="color: #00a676; font-size: 0.85rem;">NEXT CLOSING</span>
-                            <span class="text-muted fw-bold" style="font-size: 0.85rem;">{{ res.next_closing or
-                                '2026-07-31' }}</span>
-                        </div>
-                        <a href="#" class="d-inline-block small text-dark fw-bold mt-1"
-                            style="text-decoration: underline; font-size: 0.75rem;"
-                            onclick="openSchedulesModal(event, 'schedulesModal-{{ loop.index }}')">View more...</a>
+                    <div class="offer-actions">
+                        <div class="next-closing">Next closing<br><strong>{{ res.next_closing or '2026-07-31' }}</strong></div>
+                        <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0 w-100">
+                            <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                            <input type="hidden" name="volume" value="{{ query.volume }}">
+                            <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                            <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                            <button type="submit" class="btn btn-book w-100">Book →</button>
+                        </form>
+                        <div class="quote-ref" id="quoteIdDisplay-card-{{ loop.index }}" onclick="copyRef(this)"></div>
                     </div>
                 </div>
-
-                <!-- Bottom Row: Actions -->
-                <div class="d-flex justify-content-between align-items-end mt-auto">
-                    <a href="#" class="small text-primary fw-bold d-flex align-items-center gap-1"
-                        style="text-decoration: none;" onclick="event.stopPropagation();"><i
-                            class="bi bi-file-earmark-text"></i> View terms & conditions <i
-                            class="bi bi-box-arrow-up-right" style="font-size: 0.7rem;"></i></a>
-
-                    <div class="text-muted small fw-bold" style="cursor: pointer;"><i class="bi bi-chevron-down"></i>
-                        View rate breakdown</div>
-
-                    <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0"
-                        onclick="event.stopPropagation();">
-                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                        <input type="hidden" name="volume" value="{{ query.volume }}">
-                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                        <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                        <button type="submit" class="btn btn-success fw-bold px-5 py-2"
-                            style="background-color: #00a676; border: none;">Book</button>
-                    </form>
+                <div class="offer-footer">
+                    <div class="footer-links">
+                        <a class="terms-link" href="#">📄 View terms &amp; conditions ↗</a>
+                    </div>
+                    <button class="breakdown-toggle" onclick="toggleBreakdown(this, 'bd-{{ loop.index }}')">View rate breakdown <span class="chev">▾</span></button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Breakdown Accordion Row -->
-        <div id="breakdown-{{ loop.index }}" class="quote-breakdown-row p-4 border-top"
-            style="display: none; background: var(--bg-gray); border-color: var(--border-color) !important;">
-
-            <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-receipt"></i> Quotation Breakdown</h6>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Name</th>
-                        <th>Calculation</th>
-                        <th>Units</th>
-                        <th>Unit Price</th>
-                        <th class="text-end">Final Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for line in res.breakdown %}
-                    <tr>
-                        <td>{{ line.articleCode }}</td>
-                        <td>{{ line.articleName }}</td>
-                        <td>{{ line.calcCodeBase }}</td>
-                        <td>{{ "%.2f"|format(line.appliedQty) }}</td>
-                        <td>{{ line.currency }} {{ "%.2f"|format(line.appliedRate) }}</td>
-                        <td class="text-end fw-bold">{{ line.currency }} {{ "%.2f"|format(line.amount) }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">No line items provided.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-            <div class="summary-bar mt-4">
-                <span class="fs-4 fw-bold" style="color: var(--primary-color);">USD {{ "%.2f"|format(res.total_cost)
-                    }}</span>
-            </div>
-        </div>
-
-        <!-- Action -->
-        <div class="mt-3 text-end">
-            <form action="{{ url_for('customer.finalize_booking') }}" method="POST">
-                <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                <input type="hidden" name="volume" value="{{ query.volume }}">
-                <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                <button type="submit" class="btn btn-primary fw-bold px-4 text-white">Proceed to Booking <i
-                        class="bi bi-chevron-right"></i></button>
-            </form>
-        </div>
-
-
-    </div>
-
-    <!-- Schedules Modal for this Quote -->
-    {% if res.next_closing %}
-    <div class="modal fade" id="schedulesModal-{{ loop.index }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0" style="background: var(--glass-bg); border-radius: 12px;">
-                <div class="modal-header border-bottom-0" style="background: var(--bg-gray);">
-                    <h5 class="modal-title fw-bold text-primary"><i class="bi bi-calendar3"></i> Available Sailing
-                        Schedules</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <p class="text-muted mb-4">Schedules for {{ query.origin }} to {{ query.destination }}</p>
-
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
+                <div class="breakdown-panel" id="bd-{{ loop.index }}">
+                    <div class="breakdown-inner">
+                        <div class="breakdown-title">🧾 Quotation Breakdown</div>
+                        <table class="breakdown-table">
+                            <thead>
                                 <tr>
-                                    <th>Vessel / Voyage</th>
-                                    <th>Closing Date</th>
-                                    <th>ETD</th>
-                                    <th>ETA</th>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Base</th>
+                                    <th class="num">Units</th>
+                                    <th class="num">Unit Price</th>
+                                    <th class="num">Rate of Exchange</th>
+                                    <th class="num">Final Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for sailing in res.api_quote.sailings %}
-                                <tr>
-                                    <td>
-                                        <div class="fw-bold text-body">{{ sailing.vessel }}</div>
-                                        <small class="text-muted">Voyage: {{ sailing.voyage }}</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary text-white">{{ (sailing.pol.closingLcl or
-                                            sailing.pol.closing)[:10] if (sailing.pol.closingLcl or sailing.pol.closing)
-                                            else 'N/A' }}</span>
-                                    </td>
-                                    <td>{{ sailing.pol.etd[:10] if sailing.pol.etd else 'N/A' }}</td>
-                                    <td>{{ sailing.pod.eta[:10] if sailing.pod.eta else 'N/A' }}</td>
-                                </tr>
+                                {% if res.breakdown %}
+                                    {% for line in res.breakdown %}
+                                    <tr>
+                                        <td class="code-cell">{{ line.chargeCode or line.id or 'N/A' }}</td>
+                                        <td>{{ line.chargeName or line.description or 'Standard Charge' }}</td>
+                                        <td><span class="base-cell">{{ line.unitCode or 'ACT' }}</span></td>
+                                        <td class="num">{{ line.quantity|default(1) }}</td>
+                                        <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.amount) }}</td>
+                                        <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD</td>
+                                        <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>
+                                    </tr>
+                                    {% endfor %}
                                 {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted">No schedules available</td>
-                                </tr>
-                                {% endfor %}
+                                    <tr><td colspan="7" class="text-center py-4">No breakdown details available.</td></tr>
+                                {% endif %}
                             </tbody>
                         </table>
+                        <div class="breakdown-total-row">
+                            <span class="label">Total</span>
+                            <span class="amount">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</span>
+                        </div>
+                        <div class="fx-note">ℹ️ Charges are calculated in their original currency and converted using the rate of exchange shown on each line, fixed at quotation time.</div>
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-    </div>
-    {% endif %}
-
-</div>
-{% endfor %}
-</div>
-
-<!-- ================= CARD VIEW ================= -->
-<div id="cardViewContainer" class="card-view-container row ms-3">
-    {% for res in results %}
-    <div class="col-md-4 mb-4" style="min-width: 350px;">
-        <div class="card h-100 glass-card quote-card" onclick="openModal('modal-{{ loop.index }}')">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        <h5 class="card-title fw-bold mb-0" style="color: var(--primary-color);">{{ res.rate.nvocc_name
-                            }}</h5>
-                        {% if query.service_type == 'Less than a container load' %}
-                        <small class="text-muted fw-bold text-primary">FTL Consolidated Service</small>
-                        {% else %}
-                        <small class="text-muted">{{ res.carrier or 'Standard Carrier' }}</small>
-                        {% endif %}
-                    </div>
-                    {% if res.ui_tag %}
-                    <span class="badge bg-primary rounded-pill">{{ res.ui_tag }}</span>
-                    {% endif %}
-                </div>
-
-                <div class="display-6 mb-1 text-primary fw-bold">{{
-                    res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</div>
-                <div class="text-muted small mb-3">
-                    (Includes all Quotation Line Items)
-                </div>
-
-                <hr>
-
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted small">Transit Time</span>
-                        <span class="fw-bold text-body">{{ res.transit_days }} Days
-                            {% if loop.index % 2 == 0 %}
-                            <br><small class="text-muted">(Via SG SIN)</small>
-                            {% else %}
-                            <br><small class="text-success">(Direct Routing)</small>
-                            {% endif %}
-                        </span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted small">Frequency</span>
-                        <span class="fw-bold text-body">{{ res.frequency or 'Weekly' }}</span>
-                    </div>
-                    {% if res.next_closing %}
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted small">Next Closing</span>
-                        <div class="text-end">
-                            <span class="fw-bold text-primary">{{ res.next_closing }}</span>
-                            <br><a href="#" class="small"
-                                onclick="openSchedulesModal(event, 'schedulesModal-{{ loop.index }}')"
-                                style="text-decoration: underline;">View more...</a>
-                        </div>
-                    </div>
-                    {% endif %}
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted small">Valid Until</span>
-                        <span class="fw-bold text-body">{{ res.rate.validity_end }}</span>
-                    </div>
-                </div>
-
-                <div class="text-center mb-3">
-                    <span class="text-primary small fw-bold"><i class="bi bi-arrows-angle-expand"></i> Click card for
-                        detailed breakdown</span>
-                </div>
-                <div class="d-flex gap-2" onclick="event.stopPropagation();">
-                    <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0 flex-grow-1">
-                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                        <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
-                        <button class="btn btn-outline-secondary w-100 fw-bold"><i class="bi bi-bookmark"></i>
-                            Save</button>
-                    </form>
-                    <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0 flex-grow-1">
-                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                        <input type="hidden" name="volume" value="{{ query.volume }}">
-                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                        <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold">Book</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <div class="results-footer-note">That's all the quotations available for this route right now. Rates refresh daily.</div>
     </div>
 
-    <!-- Modal for Card View -->
-    <div class="modal fade" id="modal-{{ loop.index }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content shadow-lg border-0" style="background: var(--glass-bg); border-radius: 16px;">
-                <div class="modal-header border-bottom-0 rounded-top-3" style="background: var(--bg-gray);">
-                    <div>
-                        <h5 class="modal-title fw-bold mb-0 text-primary">Detailed Quote</h5>
-                        <small class="fw-bold" style="color: var(--text-secondary);">{{ query.origin }} to {{
-                            query.destination }}</small>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-
-                    <!-- Quote Metadata inside Modal -->
-                    <div class="row g-3 mb-4 bg-gray p-3 rounded-3" style="background: var(--bg-gray);">
-                        <div class="col-md-4">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Route
-                                Particulars</small>
-                            <span class="fw-bold text-body d-block">{{ query.origin }}</span>
-                            <span class="fw-bold text-body d-block">{{ query.destination }}</span>
+    <!-- TABLE VIEW -->
+    <div class="table-view-wrap" id="tableViewWrap">
+        <table class="offers-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Routing</th>
+                    <th>Transit</th>
+                    <th>Charges Included</th>
+                    <th>Next Closing</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for res in results %}
+                <tr>
+                    <td class="carrier-cell">
+                        <div class="carrier-logo">FTL</div>{{ res.carrier or 'Standard Carrier' }} 
+                        <span class="meta-pill service" style="margin-left:0.4rem;">{{ query.get('service_type', 'LCL') }}</span>
+                    </td>
+                    <td>{% if loop.index % 2 == 0 %}1 Transshipment{% else %}Direct{% endif %}</td>
+                    <td>{{ res.transit_days }} days</td>
+                    <td>Origin + Freight</td>
+                    <td>{{ res.next_closing or '2026-07-31' }}</td>
+                    <td class="price-cell">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</td>
+                    <td style="display:flex; gap:0.5rem; align-items:center;">
+                        <button class="breakdown-toggle" onclick="toggleTableBreakdown(this, 'table-bd-{{ loop.index }}')" style="padding: 0.5rem; border:1px solid var(--border-color); border-radius: 6px; background: var(--bg-white);">Breakdown <span class="chev">▾</span></button>
+                        <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0">
+                            <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                            <input type="hidden" name="volume" value="{{ query.volume }}">
+                            <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                            <input type="hidden" name="service_type" value="{{ query.service_type }}">
+                            <button type="submit" class="btn btn-book" style="padding: 0.5rem 1rem; width: auto;">Book</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr id="table-bd-{{ loop.index }}" class="table-breakdown-row" style="display: none;">
+                    <td colspan="7" style="padding: 0;">
+                        <div class="breakdown-panel open" style="border-top: none; background: var(--hover-bg); padding: 1rem;">
+                            <div class="breakdown-inner">
+                                <table class="breakdown-table" style="background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                    <thead style="background: var(--bg-gray);">
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Name</th>
+                                            <th>Base</th>
+                                            <th class="num">Units</th>
+                                            <th class="num">Unit Price</th>
+                                            <th class="num">Rate of Exchange</th>
+                                            <th class="num">Final Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if res.breakdown %}
+                                            {% for line in res.breakdown %}
+                                            <tr>
+                                                <td class="code-cell">{{ line.chargeCode or line.id or 'N/A' }}</td>
+                                                <td>{{ line.chargeName or line.description or 'Standard Charge' }}</td>
+                                                <td><span class="base-cell">{{ line.unitCode or 'ACT' }}</span></td>
+                                                <td class="num">{{ line.quantity|default(1) }}</td>
+                                                <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.amount) }}</td>
+                                                <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD</td>
+                                                <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr><td colspan="7" class="text-center py-4">No breakdown details available.</td></tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Cargo &
-                                Service</small>
-                            <span class="fw-bold text-body d-block">Vol: {{ query.volume }} CBM</span>
-                            <span class="fw-bold text-body d-block">Service: {{ query.service_type }}</span>
-                        </div>
-                        <div class="col-md-4">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Transit &
-                                Validity</small>
-                            <span class="fw-bold text-primary d-block">{{ res.transit_days }} Days ({{ res.frequency or
-                                'Weekly' }})</span>
-                            <span class="fw-bold text-body d-block">Valid: {{ res.rate.validity_end }}</span>
-                        </div>
-                    </div>
-
-                    <!-- API Quotation Line Items -->
-                    <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-receipt"></i> Quotation Breakdown</h6>
-                    <table class="detail-table">
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>Name</th>
-                                <th>Calculation</th>
-                                <th>Units</th>
-                                <th>Unit Price</th>
-                                <th class="text-end">Final Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for line in res.breakdown %}
-                            <tr>
-                                <td>{{ line.articleCode }}</td>
-                                <td>{{ line.articleName }}</td>
-                                <td>{{ line.calcCodeBase }}</td>
-                                <td>{{ "%.2f"|format(line.appliedQty) }}</td>
-                                <td>{{ line.currency }} {{ "%.2f"|format(line.appliedRate) }}</td>
-                                <td class="text-end fw-bold">{{ line.currency }} {{ "%.2f"|format(line.amount) }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">No line items provided.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-
-                    <div class="summary-bar mt-4">
-                        <div>
-                            <span class="d-block small text-muted text-uppercase fw-bold mb-1"><i
-                                    class="bi bi-calculator"></i> Summary</span>
-                            <span class="text-body" style="font-size: 0.85rem;">Official API Quotation Total</span>
-                        </div>
-                        <div class="text-end">
-                            <span class="me-3 text-muted" style="font-size: 0.9rem;">Total Price</span>
-                            <span class="fs-4 fw-bold" style="color: var(--primary-color);">{{
-                                res.api_quote.tariff.quotationCurrency|default('USD') }} {{
-                                "%.2f"|format(res.total_cost) }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-top-0 rounded-bottom-3" style="background: var(--bg-gray);">
-                    <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="w-100 m-0">
-                        <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
-                        <input type="hidden" name="volume" value="{{ query.volume }}">
-                        <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
-                        <input type="hidden" name="service_type" value="{{ query.service_type }}">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 text-white">Proceed to Booking
-                            <i class="bi bi-chevron-right"></i></button>
-                    </form>
-                </div>
-            </div>
-        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    {% endfor %}
 </div>
-
-{% endif %}
 
 <script>
-    function toggleView(view) {
-        // Update Buttons
-        document.getElementById('btnTableView').classList.toggle('active', view === 'table');
-        document.getElementById('btnCardView').classList.toggle('active', view === 'card');
-
-        // Update Containers
-        document.getElementById('tableViewContainer').style.display = (view === 'table') ? 'block' : 'none';
-        document.getElementById('cardViewContainer').style.display = (view === 'card') ? 'flex' : 'none';
-
-        // Update Hint Text
-        const hintSpan = document.querySelector('#viewHintText span');
-        hintSpan.innerHTML = (view === 'table')
-            ? 'Click on a row to expand detailed breakdown'
-            : 'Click on a card for detailed breakdown';
+    function toggleBreakdown(btn, panelId) {
+        const panel = document.getElementById(panelId);
+        const isOpen = panel.classList.contains('open');
+        if (isOpen) {
+            panel.classList.remove('open');
+            btn.classList.remove('open');
+            btn.innerHTML = 'View rate breakdown <span class="chev">▾</span>';
+        } else {
+            panel.classList.add('open');
+            btn.classList.add('open');
+            btn.innerHTML = 'Hide rate breakdown <span class="chev">▾</span>';
+        }
     }
 
-    function toggleAccordion(rowId) {
+    function toggleTableBreakdown(btn, rowId) {
         const row = document.getElementById(rowId);
-        // Optional: Close others
-        document.querySelectorAll('.quote-breakdown-row').forEach(r => {
-            if (r.id !== rowId) {
-                r.style.display = 'none';
-                r.classList.remove('active');
+        if (row.style.display === 'none') {
+            row.style.display = 'table-row';
+            btn.classList.add('open');
+            btn.innerHTML = 'Hide <span class="chev">▾</span>';
+        } else {
+            row.style.display = 'none';
+            btn.classList.remove('open');
+            btn.innerHTML = 'Breakdown <span class="chev">▾</span>';
+        }
+    }
+
+    function setView(mode) {
+        const cardBtn = document.getElementById('cardViewBtn');
+        const tableBtn = document.getElementById('tableViewBtn');
+        const cardWrap = document.getElementById('cardViewWrap');
+        const tableWrap = document.getElementById('tableViewWrap');
+
+        if (mode === 'card') {
+            cardBtn.classList.add('active');
+            tableBtn.classList.remove('active');
+            cardWrap.classList.remove('hidden');
+            tableWrap.classList.remove('active');
+        } else {
+            tableBtn.classList.add('active');
+            cardBtn.classList.remove('active');
+            cardWrap.classList.add('hidden');
+            tableWrap.classList.add('active');
+        }
+    }
+
+    function sortOffers(criteria, chip) {
+        document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        const list = document.getElementById('offersList');
+        const cards = Array.from(list.querySelectorAll('.offer-card'));
+
+        cards.sort((a, b) => {
+            if (criteria === 'price') {
+                return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+            } else if (criteria === 'transit') {
+                return parseFloat(a.dataset.transit) - parseFloat(b.dataset.transit);
+            } else if (criteria === 'closing') {
+                return new Date(a.dataset.closing) - new Date(b.dataset.closing);
             }
+            return 0;
         });
 
-        if (row.classList.contains('active')) {
-            row.style.display = 'none';
-            row.classList.remove('active');
-        } else {
-            row.style.display = 'block';
-            row.classList.add('active');
-        }
+        cards.forEach(card => list.appendChild(card));
+    }
+    
+    function copyRef(refEl) {
+        if (!refEl.dataset.ref) return;
+        navigator.clipboard?.writeText(refEl.dataset.ref).catch(() => {});
+        refEl.classList.add('copied');
+        const original = refEl.innerHTML;
+        refEl.innerHTML = `✓ Copied <span class="ref-code">${refEl.dataset.ref}</span>`;
+        setTimeout(() => {
+            refEl.classList.remove('copied');
+            refEl.innerHTML = original;
+        }, 1200);
     }
 
-    function openModal(modalId) {
-        const modalElement = document.getElementById(modalId);
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
+    function submitSaveQuote(form, elementId) {
+        const formData = new FormData(form);
+        const saveBtn = document.getElementById('saveBtn-' + elementId);
+        const quoteDisplay = document.getElementById('quoteIdDisplay-' + elementId);
+        
+        saveBtn.innerHTML = 'Saving...';
+        saveBtn.disabled = true;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                saveBtn.innerHTML = '✓ Saved';
+                saveBtn.classList.add('saved');
+                if (quoteDisplay && data.quote_number) {
+                    quoteDisplay.dataset.ref = data.quote_number;
+                    quoteDisplay.innerHTML = `📌 Ref: <span class="ref-code">${data.quote_number}</span> <span class="copy-icon">⧉</span>`;
+                    quoteDisplay.style.display = 'flex';
+                }
+            } else {
+                saveBtn.innerHTML = 'Error';
+                saveBtn.disabled = false;
+            }
+        })
+        .catch(err => {
+            saveBtn.innerHTML = '🔖 Save';
+            saveBtn.disabled = false;
+            console.error('Error saving quote:', err);
+        });
     }
-
-    function openSchedulesModal(event, modalId) {
-        event.stopPropagation();
-        const modalElement = document.getElementById(modalId);
-        if (modalElement) {
-            const modal = new bootstrap.Modal(modalElement);
-            modal.show();
-        }
-    }
-
-
 </script>
-
-
 {% endblock %}
