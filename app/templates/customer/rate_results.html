@@ -861,14 +861,30 @@
             {% for res in results %}
             <div class="offer-card {% if loop.first %}best{% endif %}" data-price="{{ res.total_cost }}"
                 data-transit="{{ res.transit_days }}" data-closing="{{ res.next_closing or '2026-07-31' }}">
-                <div class="offer-badge-row">
-                    {% if loop.index == 1 %}
-                    <span class="offer-tag cheapest">💲 Cheapest</span>
-                    {% elif loop.index == 2 %}
-                    <span class="offer-tag recommended">★ Recommended</span>
-                    {% elif loop.index == 3 %}
-                    <span class="offer-tag fastest">⚡ Fastest</span>
-                    {% endif %}
+                <div class="offer-badge-row" style="justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="display: flex; gap: 0.4rem;">
+                        {% if results|length == 1 %}
+                        <span class="offer-tag cheapest">💲 Cheapest</span>
+                        <span class="offer-tag recommended">★ Recommended</span>
+                        <span class="offer-tag fastest">⚡ Fastest</span>
+                        {% else %}
+                        {% if loop.index == 1 %}
+                        <span class="offer-tag cheapest">💲 Cheapest</span>
+                        {% elif loop.index == 2 %}
+                        <span class="offer-tag recommended">★ Recommended</span>
+                        {% elif loop.index == 3 %}
+                        <span class="offer-tag fastest">⚡ Fastest</span>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 0.4rem;">
+                        {% if loop.index % 2 == 0 %}
+                        <span class="meta-pill transship" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px;">⇄ 1 Transshipment</span>
+                        {% else %}
+                        <span class="meta-pill direct" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px;">⚡ Direct routing</span>
+                        {% endif %}
+                        <span class="meta-pill time" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; background: #f8fafc;">🕐 {{ res.transit_days }} days</span>
+                    </div>
                 </div>
                 <div class="offer-main">
                     <div class="offer-price-block">
@@ -905,14 +921,6 @@
                             {% else %}
                             <span class="meta-pill service">📦 FCL</span>
                             {% endif %}
-
-                            {% if loop.index % 2 == 0 %}
-                            <span class="meta-pill transship">⇄ 1 Transshipment</span>
-                            {% else %}
-                            <span class="meta-pill direct">⚡ Direct routing</span>
-                            {% endif %}
-
-                            <span class="meta-pill time">🕐 {{ res.transit_days }} days</span>
                         </div>
                         <div class="charges-row">
                             <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>

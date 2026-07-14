@@ -422,11 +422,13 @@
                 <div class="offer-footer">
                     <div class="footer-links">
                         <a class="terms-link" href="#">📄 Terms &amp; conditions ↗</a>
-                        <button class="remove-link" onclick="alert('Remove Quote feature pending backend route mapping')">🗑 Remove</button>
                         
+                        <span style="color:var(--mq-border-color);">|</span>
+                        <a href="{{ url_for('customer.quote_detail', quote_id=q.id) }}" class="breakdown-toggle" style="text-decoration: none;">📊 View Breakdown</a>
+
                         <!-- Requested Feature: PDF / Email Download -->
                         <span style="color:var(--mq-border-color);">|</span>
-                        <a href="{{ url_for('customer.quote_detail', quote_id=q.id) }}" target="_blank" class="download-link">📄 Download PDF</a>
+                        <a href="{{ url_for('customer.download_pdf', quote_id=q.id) }}" class="download-link">📄 Download PDF</a>
                         <button class="download-link" onclick="alert('Email Quote feature coming soon!')">✉ Email Quote</button>
                     </div>
                 </div>

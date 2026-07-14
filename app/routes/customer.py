@@ -321,13 +321,99 @@ def quote_detail(quote_id):
         try:
             resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{quote.api_booking_ref}", headers=headers, timeout=10)
             if resp.status_code == 200:
-                data = resp.json().get('quotation', {})
-                tariff = data.get('tariff', {})
+                resp_json = resp.json()
+                data = resp_json.get('quotation', resp_json)
+                tariff = data.get('tariff', data)
+                breakdown = tariff.get('lines', [])
+            else:
+                print(f"API returned {resp.status_code} for {quote.api_booking_ref}: {resp.text}")
+        except Exception as e:
+            print("Failed to fetch quote breakdown:", e)
+
+    # Fallback to cached API response if available
+    if not breakdown:
+        import os
+        import tempfile
+        import json
+        temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
+        try:
+            if os.path.exists(temp_file):
+                with open(temp_file, 'r', encoding='utf-8') as f:
+                    cached_data = json.load(f)
+                    
+                    data = cached_data.get('quotation', cached_data)
+                    header = data.get('header', data)
+                    
+                    # Verify if the cached data is somewhat related, or just fallback safely
+                    quo_id = f"{header.get('quoPrefix1') or 'QUO'}-{header.get('quoPrefix2') or '2026'}-{header.get('quotationId') or ''}"
+                    
+                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
+                        tariff = data.get('tariff', data)
+                        breakdown = tariff.get('lines', [])
+        except Exception as e:
+            print(f"Failed to load cached quote breakdown: {e}")
+
+    return render_template('customer/quote_detail.html', quote=quote, breakdown=breakdown)
+
+@customer.route('/quote/<int:quote_id>/download_pdf')
+@login_required
+def download_pdf(quote_id):
+    if current_user.role not in ['customer', 'agent']:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('index'))
+    
+    quote = Booking.query.filter_by(id=quote_id, user_id=current_user.id, status='Saved Quote').first_or_404()
+    
+    breakdown = []
+    if quote.api_booking_ref:
+        import requests
+        headers = {'accept': 'application/json', 'x-api-key': '1'}
+        try:
+            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{quote.api_booking_ref}", headers=headers, timeout=10)
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                data = resp_json.get('quotation', resp_json)
+                tariff = data.get('tariff', data)
                 breakdown = tariff.get('lines', [])
         except Exception as e:
             print("Failed to fetch quote breakdown:", e)
 
-    return render_template('customer/quote_detail.html', quote=quote, breakdown=breakdown)
+    if not breakdown:
+        import os
+        import tempfile
+        import json
+        temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
+        try:
+            if os.path.exists(temp_file):
+                with open(temp_file, 'r', encoding='utf-8') as f:
+                    cached_data = json.load(f)
+                    data = cached_data.get('quotation', cached_data)
+                    header = data.get('header', data)
+                    quo_id = f"{header.get('quoPrefix1') or 'QUO'}-{header.get('quoPrefix2') or '2026'}-{header.get('quotationId') or ''}"
+                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
+                        tariff = data.get('tariff', data)
+                        breakdown = tariff.get('lines', [])
+        except Exception as e:
+            pass
+
+    from xhtml2pdf import pisa
+    from io import BytesIO
+    from flask import make_response
+
+    html_content = render_template('customer/quote_pdf_template.html', quote=quote, breakdown=breakdown)
+    
+    pdf = BytesIO()
+    pisa_status = pisa.CreatePDF(BytesIO(html_content.encode('utf-8')), dest=pdf)
+    
+    if pisa_status.err:
+        flash('Failed to generate PDF document.', 'danger')
+        return redirect(url_for('customer.quote_detail', quote_id=quote_id))
+        
+    response = make_response(pdf.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=Quotation_{quote.api_booking_ref or quote.id}.pdf'
+    
+    return response
 
 @customer.route('/rates', methods=['GET', 'POST'])
 @login_required
