@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% block title %}Atlas Dashboard{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* CSS Variables for Light Mode */
+:root {
+  --dashboard-bg: transparent;
+  --dashboard-card: #FFFFFF;
+  --dashboard-line: #E2E8F0;
+  --dashboard-text: #1E293B;
+  --dashboard-muted: #64748B;
+  
+  --violet: #8B5CF6;
+  --violet2: #A78BFA;
+  --purple: #C026D3;
+  --cyan: #06B6D4;
+  --cyan2: #22D3EE;
+  --pink: #EC4899;
+  --green: #10B981;
+  --amber: #F59E0B;
+  --red: #EF4444;
+  --r: 16px;
+}
+
+/* CSS Variables for Dark Mode */
+html[data-color-scheme='dark'] {
+  --dashboard-bg: transparent;
+  --dashboard-card: #161326;
+  --dashboard-line: rgba(255,255,255,0.07);
+  --dashboard-text: #EDECF4;
+  --dashboard-muted: #8A87A0;
+  
+  --cyan: #22D3EE;
+  --cyan2: #67E8F9;
+  --green: #34D399;
+  --amber: #FBBF24;
+  --red: #F87171;
+}
+
+/* Rest of the styles adapted for the dashboard */
+.atlas-dashboard {
+  color: var(--dashboard-text);
+  font-family: 'Inter', system-ui, sans-serif;
+  margin-top: -10px; /* Offset for better spacing in base layout */
+}
+
+.atlas-dashboard .top { display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between; align-items:center; margin-bottom:22px; }
+.atlas-dashboard .top h1 { font-size:1.55rem; font-weight:800; letter-spacing:-.02em; margin-bottom: 0;}
+.atlas-dashboard .top p { color:var(--dashboard-muted); font-size:.82rem; margin-top:3px; }
+.atlas-dashboard .top .right { display:flex; gap:10px; align-items:center; }
+.atlas-dashboard select, .atlas-dashboard .btn-atlas { font-family:inherit; font-size:.8rem; font-weight:600; border-radius:12px; padding:9px 14px; cursor:pointer; border:1px solid var(--dashboard-line); outline:none; }
+.atlas-dashboard select { background:var(--dashboard-card); color:var(--dashboard-text); }
+.atlas-dashboard .btn-atlas { background:linear-gradient(135deg,var(--violet),var(--purple)); color:#fff; border:none; box-shadow:0 6px 20px -6px rgba(139,92,246,.7); }
+.atlas-dashboard .btn-atlas:hover { filter:brightness(1.1); }
+
+/* pills */
+.atlas-dashboard .pill { font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; }
+.atlas-dashboard .pill.g { background:rgba(16,185,129,.15); color:var(--green); }
+.atlas-dashboard .pill.a { background:rgba(245,158,11,.14); color:var(--amber); }
+.atlas-dashboard .pill.r { background:rgba(239,68,68,.14); color:var(--red); }
+.atlas-dashboard .pill.v { background:rgba(139,92,246,.18); color:var(--violet); }
+
+/* kpi row */
+.atlas-dashboard .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(235px,1fr)); gap:16px; margin-bottom:16px; }
+.atlas-dashboard .kpi { border-radius:var(--r); padding:18px 20px; position:relative; overflow:hidden; border:1px solid var(--dashboard-line); background:var(--dashboard-card); transition:transform 0.2s; }
+.atlas-dashboard .kpi:hover { transform:translateY(-2px); }
+.atlas-dashboard .kpi .lbl { font-size:.74rem; font-weight:600; color:var(--dashboard-muted); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.atlas-dashboard .kpi .num { font-size:2.15rem; font-weight:800; letter-spacing:-.03em; margin:10px 0 4px; }
+.atlas-dashboard .kpi .num small { font-size:1rem; font-weight:600; color:inherit; opacity:.75; margin-left:2px; }
+.atlas-dashboard .kpi .sub { font-size:.74rem; color:var(--dashboard-muted); }
+.atlas-dashboard .kpi.grad-v { background:linear-gradient(135deg,#7C3AED 0%,#A855F7 55%,#C084FC 100%); border:none; box-shadow:0 14px 34px -12px rgba(139,92,246,.65); }
+.atlas-dashboard .kpi.grad-c { background:linear-gradient(135deg,#0891B2 0%,#22D3EE 60%,#67E8F9 100%); border:none; box-shadow:0 14px 34px -12px rgba(34,211,238,.5); }
+.atlas-dashboard .kpi.grad-v .lbl, .atlas-dashboard .kpi.grad-c .lbl, .atlas-dashboard .kpi.grad-v .sub, .atlas-dashboard .kpi.grad-c .sub { color:rgba(255,255,255,.9); }
+.atlas-dashboard .kpi.grad-v .num, .atlas-dashboard .kpi.grad-c .num { color:#fff; }
+.atlas-dashboard .kpi.grad-v::after, .atlas-dashboard .kpi.grad-c::after { content:""; position:absolute; width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.14); top:-60px; right:-40px; }
+.atlas-dashboard .kpi.grad-v .pill, .atlas-dashboard .kpi.grad-c .pill { background:rgba(255,255,255,.22); color:#fff; }
+
+/* grid */
+.atlas-dashboard .grid-container { display:grid; grid-template-columns:1fr 1fr 330px; gap:16px; }
+.atlas-dashboard .acard { background:var(--dashboard-card); border:1px solid var(--dashboard-line); border-radius:var(--r); padding:18px 20px; min-width:0; box-shadow:0 8px 24px -12px rgba(0,0,0,.08); transition:transform 0.2s;}
+html[data-color-scheme='dark'] .atlas-dashboard .acard { box-shadow:0 10px 30px -18px rgba(0,0,0,.8); }
+.atlas-dashboard .acard h3 { font-size:.92rem; font-weight:700; margin-bottom:0;}
+.atlas-dashboard .acard .hint { font-size:.72rem; color:var(--dashboard-muted); margin:2px 0 14px; }
+.atlas-dashboard .head-row { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.atlas-dashboard .span2 { grid-column:span 2; }
+.atlas-dashboard .rightcol { grid-row:span 3; display:flex; flex-direction:column; gap:16px; }
+@media(max-width:1180px){ .atlas-dashboard .grid-container { grid-template-columns:1fr; } .atlas-dashboard .span2 { grid-column:span 1; } .atlas-dashboard .rightcol { grid-row:auto; } }
+.atlas-dashboard .chartbox { position:relative; height:240px; }
+.atlas-dashboard .chartbox.big { height:280px; }
+.atlas-dashboard .chartbox.small { height:205px; }
+
+/* float badge */
+.atlas-dashboard .float-badge { position:absolute; top:26px; left:44%; background:linear-gradient(135deg,var(--violet),var(--purple)); color:#fff; font-size:.72rem; font-weight:700; padding:5px 11px; border-radius:9px; box-shadow:0 8px 22px -6px rgba(139,92,246,.8); z-index:10;}
+.atlas-dashboard .float-badge::after { content:""; position:absolute; left:50%; bottom:-5px; transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--purple); border-bottom:none; }
+
+/* legend */
+.atlas-dashboard .legend { display:flex; gap:16px; font-size:.72rem; color:var(--dashboard-muted); }
+.atlas-dashboard .legend i { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:1px; }
+
+/* pipeline card */
+.atlas-dashboard .holo { border-radius:var(--r); padding:18px 20px; position:relative; overflow:hidden; color:#fff; background:linear-gradient(150deg,#241B45 0%,#3B2A73 45%,#1B1533 100%); border:1px solid rgba(167,139,250,.28); box-shadow:0 16px 38px -14px rgba(88,58,183,.6); }
+.atlas-dashboard .holo .wave { position:absolute; inset:0; opacity:.5; }
+.atlas-dashboard .holo .lbl { font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.6); }
+.atlas-dashboard .holo .num { font-size:1.9rem; font-weight:800; letter-spacing:-.02em; margin:6px 0 12px; position:relative; }
+.atlas-dashboard .holo .digits { font-size:.86rem; letter-spacing:.22em; color:rgba(255,255,255,.75); position:relative; }
+.atlas-dashboard .holo .foot { display:flex; justify-content:space-between; font-size:.66rem; color:rgba(255,255,255,.55); margin-top:10px; position:relative; }
+
+/* list rows */
+.atlas-dashboard .arow { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--dashboard-line); margin:0;}
+.atlas-dashboard .arow:last-child { border-bottom:none; }
+.atlas-dashboard .arow .ic { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; font-size:15px; flex-shrink:0; }
+.atlas-dashboard .ic.v { background:rgba(139,92,246,.16); color:var(--violet2); }
+html[data-color-scheme='light'] .atlas-dashboard .ic.v { color:var(--violet); }
+.atlas-dashboard .ic.c { background:rgba(6,182,212,.13); color:var(--cyan); }
+html[data-color-scheme='dark'] .atlas-dashboard .ic.c { background:rgba(34,211,238,.13); color:var(--cyan2); }
+.atlas-dashboard .ic.r { background:rgba(239,68,68,.13); color:var(--red); }
+.atlas-dashboard .ic.a { background:rgba(245,158,11,.12); color:var(--amber); }
+.atlas-dashboard .ic.g { background:rgba(16,185,129,.12); color:var(--green); }
+.atlas-dashboard .arow .tx { flex:1; min-width:0; }
+.atlas-dashboard .arow .tx b { font-size:.8rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom: 0;}
+.atlas-dashboard .arow .tx small { font-size:.68rem; color:var(--dashboard-muted); }
+.atlas-dashboard .arow .amt { font-size:.8rem; font-weight:700; text-align:right; white-space:nowrap; margin-bottom: 0;}
+.atlas-dashboard .arow .amt small { display:block; font-weight:500; font-size:.66rem; color:var(--dashboard-muted); }
+
+/* lane rows */
+.atlas-dashboard .lane { display:flex; align-items:center; gap:14px; padding:11px 0; border-bottom:1px solid var(--dashboard-line); }
+.atlas-dashboard .lane:last-child { border-bottom:none; }
+.atlas-dashboard .ring { --p:50; width:44px; height:44px; border-radius:50%; flex-shrink:0; display:grid; place-items:center; background:conic-gradient(var(--rc,#8B5CF6) calc(var(--p)*1%), var(--dashboard-line) 0); position:relative; }
+.atlas-dashboard .ring::before { content:""; position:absolute; inset:5px; border-radius:50%; background:var(--dashboard-card); }
+.atlas-dashboard .ring b { position:relative; font-size:.6rem; margin-bottom: 0;}
+.atlas-dashboard .lane .tx { flex:1; min-width:0; }
+.atlas-dashboard .lane .tx b { font-size:.82rem; display:block; margin-bottom: 0;}
+.atlas-dashboard .lane .tx small { font-size:.68rem; color:var(--dashboard-muted); }
+.atlas-dashboard .lane .v1, .atlas-dashboard .lane .v2 { text-align:right; font-size:.78rem; font-weight:700; min-width:70px; }
+.atlas-dashboard .lane .v1 small, .atlas-dashboard .lane .v2 small { display:block; font-weight:500; font-size:.64rem; color:var(--dashboard-muted); }
+.atlas-dashboard .lane .v2 { color:var(--cyan); }
+html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); }
+
+/* center label */
+.atlas-dashboard .center-lb { position:absolute; inset:0; display:grid; place-items:center; text-align:center; pointer-events:none; }
+.atlas-dashboard .center-lb b { font-size:1.25rem; font-weight:800; display:block; margin-bottom: 0; }
+.atlas-dashboard .center-lb small { font-size:.66rem; color:var(--dashboard-muted); }
+
+/* fade cascade */
+.atlas-dashboard .fade-in { opacity:0; transform:translateY(12px); animation:fadeInDash .5s ease forwards; }
+@keyframes fadeInDash { to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce){ .atlas-dashboard .fade-in { animation:none; opacity:1; transform:none; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="atlas-dashboard container-fluid px-0 pt-2 pb-4">
+    <div class="top fade-in">
+        <div>
+            <h1>Dashboard</h1>
+            <p>Monitor your quotations, bookings and risk in one click</p>
+        </div>
+        <div class="right">
+            <select aria-label="Branch">
+                <option>All branches</option>
+                <option>MAA · Chennai</option>
+                <option>RTM · Rotterdam</option>
+                <option>ANR · Antwerp</option>
+                <option>SIN · Singapore</option>
+            </select>
+            <select aria-label="Period">
+                <option>This quarter</option>
+                <option>Last 30 days</option>
+                <option>Last 12 weeks</option>
+            </select>
+            <button class="btn-atlas">＋ Add widget</button>
+        </div>
+    </div>
+    
+    <!-- KPI TILES -->
+    <div class="kpis">
+      <div class="kpi grad-v fade-in" style="animation-delay:.05s">
+        <div class="lbl">Quoted Pipeline (active)</div>
+        <div class="num">$4.28<small>M</small></div>
+        <div class="sub">128 quotes across 8 corridors</div>
+      </div>
+      <div class="kpi grad-c fade-in" style="animation-delay:.1s">
+        <div class="lbl">Quote → Booking</div>
+        <div class="num">31<small>%</small></div>
+        <div class="sub">Trailing 4 weeks · +2.1 pt</div>
+      </div>
+      <div class="kpi fade-in" style="animation-delay:.15s">
+        <div class="lbl">Booking momentum <span class="pill g">+12%</span></div>
+        <div class="num">146</div>
+        <div class="sub">Bookings last 4 wks vs 130 prior</div>
+      </div>
+      <div class="kpi fade-in" style="animation-delay:.2s">
+        <div class="lbl">Top-5 concentration <span class="pill a">WATCH</span></div>
+        <div class="num">61<small>%</small></div>
+        <div class="sub">Volume held by 5 of 14 accounts</div>
+      </div>
+    </div>
+    
+    <!-- GRID -->
+    <div class="grid-container">
+      <!-- big trend -->
+      <div class="acard span2 fade-in" style="animation-delay:.25s">
+        <div class="head-row">
+          <div><h3>Bookings Overview</h3><div class="hint">Quotes requested vs bookings won · weekly</div></div>
+          <div class="legend"><span><i style="background:var(--violet)"></i>Quotes</span><span><i style="background:var(--cyan)"></i>Bookings</span></div>
+        </div>
+        <div class="chartbox big">
+          <div class="float-badge">W36 · 49 quotes</div>
+          <canvas id="chTrend"></canvas>
+        </div>
+      </div>
+  
+      <!-- right column -->
+      <div class="rightcol">
+        <div class="holo fade-in" style="animation-delay:.3s">
+          <svg class="wave" viewBox="0 0 330 150" preserveAspectRatio="none">
+            <path d="M0 110 C60 70 90 130 150 95 S260 40 330 78" fill="none" stroke="rgba(167,139,250,.8)" stroke-width="2.5"/>
+            <path d="M0 120 C70 90 110 140 170 108 S270 60 330 95" fill="none" stroke="rgba(103,232,249,.5)" stroke-width="2"/>
+          </svg>
+          <div class="lbl">Total pipeline · premium</div>
+          <div class="num">$4,280,400</div>
+          <div class="digits">QT26 •• 4187 •• 0731</div>
+          <div class="foot"><span>ATLAS FREIGHT LINE</span><span>VALID THRU 08/26</span></div>
+        </div>
+  
+        <div class="acard fade-in" style="animation-delay:.35s">
+          <div class="head-row"><h3>Risk radar</h3><span class="pill r">4 alerts</span></div>
+          <div class="hint">Act within 48h – 7d</div>
+          <div class="arow"><div class="ic r">⚠</div><div class="tx"><b>7 quotes expiring ≤ 7d</b><small>Unbooked demand</small></div><div class="amt" style="color:var(--red)">$412K<small>at risk</small></div></div>
+          <div class="arow"><div class="ic a">⏱</div><div class="tx"><b>6 cut-offs ≤ 48h</b><small>VGM / docs / customs open</small></div><div class="amt">6<small>vessels</small></div></div>
+          <div class="arow"><div class="ic v">☣</div><div class="tx"><b>HAZMAT share</b><small>31 of 368 live bookings</small></div><div class="amt">8.4%<small>IMO flagged</small></div></div>
+          <div class="arow"><div class="ic c">✦</div><div class="tx"><b>4 registrations &gt; 5d</b><small>Oldest waiting 11 days</small></div><div class="amt">4<small>pending</small></div></div>
+        </div>
+  
+        <div class="acard fade-in" style="animation-delay:.4s">
+          <div class="head-row"><h3>Expiring quotes</h3><span class="pill v">follow-up</span></div>
+          <div class="hint">Sorted by value at risk</div>
+          <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4187 · NordChem BV</b><small>INMAA → NLRTM</small></div><div class="amt">$96K<small>1d left</small></div></div>
+          <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4194 · Elbe Machinery</b><small>INNSA → BEANR</small></div><div class="amt">$71K<small>2d left</small></div></div>
+          <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4201 · Kaveri Auto</b><small>INMAA → DEHAM</small></div><div class="amt">$58K<small>4d left</small></div></div>
+          <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4215 · Delta Polymers</b><small>INMAA → SGSIN</small></div><div class="amt">$34K<small>6d left</small></div></div>
+        </div>
+      </div>
+  
+      <!-- doughnut: carrier -->
+      <div class="acard fade-in" style="animation-delay:.45s">
+        <div class="head-row"><h3>Carrier mix</h3></div>
+        <div class="hint">Share of sailings · dependence check</div>
+        <div class="chartbox small"><canvas id="chCarrier"></canvas></div>
+        <div class="legend" style="justify-content:center;margin-top:10px;flex-wrap:wrap">
+          <span><i style="background:#8B5CF6"></i>MSC</span><span><i style="background:#06B6D4"></i>Maersk</span>
+          <span><i style="background:#EC4899"></i>CMA</span><span><i style="background:#67E8F9"></i>Hapag</span>
+          <span><i style="background:#A78BFA"></i>ONE</span>
+        </div>
+      </div>
+  
+      <!-- ring: booked vs expired -->
+      <div class="acard fade-in" style="animation-delay:.5s">
+        <div class="head-row"><h3>Quote outcome (30d)</h3></div>
+        <div class="hint">Booked vs expired vs open</div>
+        <div class="chartbox small">
+          <canvas id="chOutcome"></canvas>
+          <div class="center-lb"><div><b>151</b><small>quotes issued</small></div></div>
+        </div>
+        <div class="legend" style="justify-content:center;margin-top:10px">
+          <span><i style="background:#C026D3"></i>Booked 47</span>
+          <span><i style="background:#06B6D4"></i>Open 76</span>
+          <span><i style="background:var(--dashboard-line)"></i>Expired 28</span>
+        </div>
+      </div>
+  
+      <!-- lanes as goal rows -->
+      <div class="acard span2 fade-in" style="animation-delay:.55s">
+        <div class="head-row"><h3>Top trade lanes</h3><span class="pill g">by quoted value</span></div>
+        <div class="hint">Ring = share of corridor capacity quoted this quarter</div>
+        <div class="lane"><div class="ring" style="--p:78;--rc:#8B5CF6"><b>78%</b></div>
+          <div class="tx"><b>INMAA → NLRTM</b><small>Chennai · Rotterdam · weekly MSC + Maersk</small></div>
+          <div class="v1">$918K<small>quoted</small></div><div class="v2">2,140<small>CBM</small></div></div>
+        <div class="lane"><div class="ring" style="--p:64;--rc:var(--cyan)"><b>64%</b></div>
+          <div class="tx"><b>INMAA → DEHAM</b><small>Chennai · Hamburg · Hapag-Lloyd EPIC</small></div>
+          <div class="v1">$742K<small>quoted</small></div><div class="v2">1,730<small>CBM</small></div></div>
+        <div class="lane"><div class="ring" style="--p:52;--rc:#EC4899"><b>52%</b></div>
+          <div class="tx"><b>CNSHA → INMAA</b><small>Shanghai · Chennai · import leg</small></div>
+          <div class="v1">$603K<small>quoted</small></div><div class="v2">1,420<small>CBM</small></div></div>
+        <div class="lane"><div class="ring" style="--p:41;--rc:#A78BFA"><b>41%</b></div>
+          <div class="tx"><b>INNSA → BEANR</b><small>Nhava Sheva · Antwerp · CMA CGM</small></div>
+          <div class="v1">$486K<small>quoted</small></div><div class="v2">1,090<small>CBM</small></div></div>
+      </div>
+  
+      <!-- weekday bars -->
+      <div class="acard fade-in" style="animation-delay:.6s">
+        <div class="head-row"><h3>Bookings / week day</h3></div>
+        <div class="hint">When demand lands · staffing signal</div>
+        <div class="chartbox small"><canvas id="chDays"></canvas></div>
+      </div>
+  
+      <!-- branch bars -->
+      <div class="acard span2 fade-in" style="animation-delay:.65s">
+        <div class="head-row">
+          <div><h3>Branch scorecard</h3><div class="hint">Bookings vs conversion rate</div></div>
+          <div class="legend"><span><i style="background:#8B5CF6"></i>Bookings</span><span><i style="background:var(--cyan)"></i>Conversion %</span></div>
+        </div>
+        <div class="chartbox small"><canvas id="chBranch"></canvas></div>
+      </div>
+  
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const weeks=['W27','W28','W29','W30','W31','W32','W33','W34','W35','W36','W37','W38'];
+    const quotesW=[34,38,36,41,45,43,47,44,46,49,47,51];
+    const bookW  =[10,12,11,13,15,13,16,14,15,17,15,17];
+    
+    // Dynamic theme colors
+    const isDark = document.documentElement.getAttribute('data-color-scheme') === 'dark';
+    
+    Chart.defaults.font.family="'Inter',sans-serif";
+    Chart.defaults.color = isDark ? '#8A87A0' : '#64748B';
+    Chart.defaults.borderColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+    
+    const tt={
+        backgroundColor: isDark ? '#1C1830' : '#FFFFFF',
+        borderColor: isDark ? 'rgba(139,92,246,.4)' : 'rgba(139,92,246,.2)',
+        borderWidth:1,
+        titleColor: isDark ? '#EDECF4' : '#1E293B',
+        bodyColor: isDark ? '#B8B5CC' : '#475569',
+        padding:10,
+        cornerRadius:10,
+        displayColors:false,
+        titleFont: { size: 13, weight: 'bold' }
+    };
+    
+    function vGrad(ctx,c1,c2){
+        const g=ctx.createLinearGradient(0,0,0,300);
+        g.addColorStop(0,c1);
+        g.addColorStop(1,c2);
+        return g;
+    }
+    
+    const cyanMain = isDark ? '#22D3EE' : '#06B6D4';
+    
+    /* 1 · trend: glowing lines + area fills */
+    {
+        const ctx = document.getElementById('chTrend').getContext('2d');
+        new Chart(ctx,{type:'line',data:{labels:weeks,datasets:[
+        {label:'Quotes',data:quotesW,borderColor:'#A78BFA',borderWidth:2.5,tension:.45,
+        pointRadius:(x)=>x.dataIndex===9?5:0,pointBackgroundColor:'#C084FC',pointBorderColor:'#fff',pointBorderWidth:2,
+        fill:true,backgroundColor:vGrad(ctx,'rgba(139,92,246,.30)','rgba(139,92,246,0)')},
+        {label:'Bookings',data:bookW,borderColor:cyanMain,borderWidth:2.5,tension:.45,pointRadius:0,
+        fill:true,backgroundColor:vGrad(ctx, isDark ? 'rgba(34,211,238,.22)' : 'rgba(6,182,212,.22)','rgba(34,211,238,0)')},
+        {label:'Quotes trend',data:quotesW.map(v=>v*0.92),borderColor:'rgba(167,139,250,.35)',borderDash:[5,6],
+        borderWidth:1.5,tension:.45,pointRadius:0}]},
+        options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt},
+        scales:{y:{beginAtZero:true,grid:{drawTicks:false},border:{display:false}},
+                x:{grid:{display:false},border:{display:false}}}}});
+    }
+    
+    /* 2 · carrier doughnut */
+    {
+        const ctx = document.getElementById('chCarrier').getContext('2d');
+        new Chart(ctx,{type:'doughnut',data:{labels:['MSC','Maersk','CMA CGM','Hapag','ONE','Other'],
+        datasets:[{data:[31,24,17,13,9,6],borderWidth:3,borderColor: isDark ? '#161326' : '#FFFFFF',borderRadius:6,
+        backgroundColor:['#8B5CF6',cyanMain,'#EC4899','#67E8F9','#A78BFA', isDark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)']}]},
+        options:{maintainAspectRatio:false,cutout:'68%',
+        plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}}}}});
+    }
+    
+    /* 3 · quote outcome ring */
+    {
+        const ctx = document.getElementById('chOutcome').getContext('2d');
+        new Chart(ctx,{type:'doughnut',data:{labels:['Booked','Open','Expired'],
+        datasets:[{data:[47,76,28],borderWidth:3,borderColor: isDark ? '#161326' : '#FFFFFF',borderRadius:10,
+        backgroundColor:['#C026D3',cyanMain, isDark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)']}]},
+        options:{maintainAspectRatio:false,cutout:'74%',rotation:-100,
+        plugins:{legend:{display:false},tooltip:tt}}});
+    }
+    
+    /* 4 · weekday bars — cyan→violet gradient */
+    {
+        const ctx = document.getElementById('chDays').getContext('2d');
+        const g=vGrad(ctx, isDark ? '#67E8F9' : '#06B6D4','#8B5CF6');
+        new Chart(ctx,{type:'bar',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat'],
+        datasets:[{data:[38,26,31,44,52,18],backgroundColor:g,borderRadius:8,barPercentage:.55}]},
+        options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt},
+        scales:{y:{beginAtZero:true,grid:{drawTicks:false},border:{display:false}},
+                x:{grid:{display:false},border:{display:false}}}}});
+    }
+    
+    /* 5 · branch: bars + conversion line */
+    {
+        const ctx = document.getElementById('chBranch').getContext('2d');
+        new Chart(ctx,{data:{labels:['MAA · Chennai','RTM · Rotterdam','ANR · Antwerp','SIN · Singapore'],datasets:[
+        {type:'bar',label:'Bookings',data:[142,98,71,57],borderRadius:9,barPercentage:.45,
+        backgroundColor:vGrad(ctx,'#A855F7','#4C1D95'),yAxisID:'y'},
+        {type:'line',label:'Conversion %',data:[36,29,41,25],borderColor:cyanMain,borderWidth:2.5,
+        pointRadius:4,pointBackgroundColor:cyanMain,pointBorderColor: isDark ? '#0A0913' : '#FFFFFF',pointBorderWidth:2,yAxisID:'y1'}]},
+        options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt},
+        scales:{y:{beginAtZero:true,grid:{drawTicks:false},border:{display:false}},
+        y1:{position:'right',min:0,max:60,grid:{display:false},border:{display:false},ticks:{callback:v=>v+'%'}},
+        x:{grid:{display:false},border:{display:false}}}}});
+    }
+});
+</script>
+{% endblock %}

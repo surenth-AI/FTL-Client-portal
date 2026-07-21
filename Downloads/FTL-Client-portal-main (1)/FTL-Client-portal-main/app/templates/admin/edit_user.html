@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Edit User{% endblock %}
+{% block content %}
+<div class="row justify-content-center pt-5">
+    <div class="col-md-6">
+        <div class="card glass-card p-5 border-white-10">
+            <div class="text-center mb-5">
+                <div class="h1 text-accent-glow mb-3"><i class="bi bi-pencil-square"></i></div>
+                <h3 class="text-white fw-bold mb-1">Modify User Access</h3>
+                <p class="text-muted small">Update role and department for <strong>{{ user.name }}</strong></p>
+            </div>
+
+            <form method="POST">
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Full Name</label>
+                    <input type="text" name="name" class="form-control bg-white-5 border-white-10 text-white" value="{{ user.name }}" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Access Role</label>
+                    <select name="role" id="role-select" class="form-select bg-white-5 border-white-10 text-white" onchange="toggleDept()">
+                        <option value="customer" {% if user.role == 'customer' %}selected{% endif %} class="bg-dark">Customer</option>
+                        <option value="operation_executive" {% if user.role == 'operation_executive' %}selected{% endif %} class="bg-dark">Operation Executive</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %} class="bg-dark">Admin</option>
+                        <option value="super_admin" {% if user.role == 'super_admin' %}selected{% endif %} class="bg-dark">Super Admin</option>
+                    </select>
+                </div>
+
+                <div class="mb-5" id="dept-section" style="display: {% if user.role == 'operation_executive' %}block{% else %}none{% endif %};">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Department Assignment</label>
+                    <select name="department" class="form-select bg-white-5 border-white-10 text-white">
+                        <option value="export" {% if user.department == 'export' %}selected{% endif %} class="bg-dark">Export</option>
+                        <option value="import" {% if user.department == 'import' %}selected{% endif %} class="bg-dark">Import</option>
+                        <option value="warehouse" {% if user.department == 'warehouse' %}selected{% endif %} class="bg-dark">Warehouse</option>
+                        <option value="finance" {% if user.department == 'finance' %}selected{% endif %} class="bg-dark">Finance</option>
+                    </select>
+                </div>
+
+                <div class="d-grid gap-3">
+                    <button type="submit" class="btn btn-premium py-3 rounded-pill fw-bold text-uppercase tracking-widest shadow-accent">
+                        SAVE CHANGES <i class="bi bi-save ms-2"></i>
+                    </button>
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-link text-muted text-decoration-none small text-center">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDept() {
+    const role = document.getElementById('role-select').value;
+    const deptSection = document.getElementById('dept-section');
+    deptSection.style.display = (role === 'operation_executive') ? 'block' : 'none';
+}
+</script>
+{% endblock %}

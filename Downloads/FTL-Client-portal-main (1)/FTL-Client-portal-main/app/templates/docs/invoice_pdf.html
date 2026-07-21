@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page {
+            size: a4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #222;
+            line-height: 1.3;
+            font-size: 10pt;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .logo {
+            width: 180px;
+        }
+        .invoice-title {
+            font-size: 24pt;
+            color: #004a99;
+            font-weight: bold;
+            text-align: right;
+            margin-bottom: 5px;
+        }
+        .invoice-meta {
+            text-align: right;
+            color: #555;
+        }
+        .section-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .label {
+            font-weight: bold;
+            color: #004a99;
+            text-transform: uppercase;
+            font-size: 8pt;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #004a99;
+        }
+        .info-box {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+        }
+        .charges-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .charges-table th {
+            background-color: #004a99;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 9pt;
+        }
+        .charges-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .totals-table {
+            width: 40%;
+            margin-left: 60%;
+        }
+        .totals-table td {
+            padding: 8px 5px;
+        }
+        .grand-total {
+            background-color: #004a99;
+            color: white;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+        .bank-details {
+            margin-top: 40px;
+            padding: 15px;
+            border: 1px dashed #004a99;
+            background-color: #f0f7ff;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 8pt;
+            color: #888;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td width="50%">
+                <h2 style="color: #004a99; margin: 0;">{{ company.name }}</h2>
+                <p style="margin-top: 10px;">
+                    <strong>{{ company.name }}</strong><br>
+                    {{ company.address }}<br>
+                    VAT ID: {{ company.vat_id }}
+                </p>
+            </td>
+            <td width="50%" valign="top">
+                <div class="invoice-title">TAX INVOICE</div>
+                <div class="invoice-meta">
+                    <strong>Invoice No:</strong> {{ invoice.invoice_number }}<br>
+                    <strong>Date:</strong> {{ invoice.issued_at.strftime('%d %b %Y') }}<br>
+                    <strong>Booking Ref:</strong> AXEGLOBAL-{{ invoice.booking_id }}<br>
+                    <strong>Due Date:</strong> Immediate
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="section-table">
+        <tr>
+            <td width="48%" valign="top">
+                <div class="label">Bill To</div>
+                <div class="info-box">
+                    <strong>{{ invoice.booking.customer.name }}</strong><br>
+                    {{ invoice.booking.customer.email }}<br>
+                    Registered Business Address<br>
+                    Consignee ID: {{ invoice.booking.customer.id }}
+                </div>
+            </td>
+            <td width="4%"></td>
+            <td width="48%" valign="top">
+                <div class="label">Shipment Details</div>
+                <div class="info-box">
+                    <strong>Route:</strong> {{ invoice.booking.origin }} to {{ invoice.booking.destination }}<br>
+                    <strong>Vessel:</strong> {{ invoice.booking.vessel_name or 'TBA' }}<br>
+                    <strong>MBL:</strong> {{ invoice.booking.mbl_number or 'N/A' }}<br>
+                    <strong>Volume:</strong> {{ invoice.booking.volume }} CBM
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="charges-table">
+        <thead>
+            <tr>
+                <th width="70%">Description of Services</th>
+                <th width="30%" style="text-align: right;">Amount ({{ invoice.currency }})</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for charge in invoice.charge_lines %}
+            <tr>
+                <td>{{ charge.description }}</td>
+                <td style="text-align: right;">{{ "%.2f"|format(charge.amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="totals-table">
+        <tr>
+            <td>Subtotal</td>
+            <td style="text-align: right;">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency }}</td>
+        </tr>
+        <tr>
+            <td>VAT (0.00%)</td>
+            <td style="text-align: right;">0.00 {{ invoice.currency }}</td>
+        </tr>
+        <tr class="grand-total">
+            <td>TOTAL AMOUNT</td>
+            <td style="text-align: right;">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency }}</td>
+        </tr>
+    </table>
+
+    <div class="bank-details">
+        <div style="font-weight: bold; color: #004a99; margin-bottom: 5px;">PAYMENT INSTRUCTIONS</div>
+        <table width="100%" style="font-size: 9pt;">
+            <tr>
+                <td width="30%"><strong>Bank Name:</strong></td>
+                <td>{{ company.bank_name }}</td>
+            </tr>
+            <tr>
+                <td><strong>IBAN:</strong></td>
+                <td style="font-family: monospace;">{{ company.iban }}</td>
+            </tr>
+            <tr>
+                <td><strong>SWIFT/BIC:</strong></td>
+                <td style="font-family: monospace;">{{ company.swift }}</td>
+            </tr>
+            <tr>
+                <td><strong>Payment Reference:</strong></td>
+                <td style="color: #d00; font-weight: bold;">{{ invoice.invoice_number }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>{{ company.footer_text }}</p>
+        <p>{{ company.name }} | {{ company.website }} | {{ company.email }}</p>
+    </div>
+</body>
+</html>

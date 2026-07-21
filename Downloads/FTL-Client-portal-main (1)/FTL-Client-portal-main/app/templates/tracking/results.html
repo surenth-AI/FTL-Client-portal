@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Tracking Results - {{ container_no }}{% endblock %}
+
+{% block content %}
+<style>
+    html[data-color-scheme="dark"] {
+        --bg-white: #1e293b;
+        --text-primary: #f8fafc;
+        --text-muted: #94a3b8;
+        --glass-border: rgba(255,255,255,0.1);
+        --bg-gray: rgba(255,255,255,0.05);
+    }
+    
+    .results-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, rgba(37, 99, 235, 0.8) 100%);
+        border-radius: 20px;
+        padding: 2.5rem;
+        color: white;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.15);
+    }
+    
+    .tracking-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-card {
+        background: var(--bg-white, #fff);
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid var(--glass-border, rgba(0,0,0,0.05));
+        height: 100%;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted, #64748b);
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary, #1e293b);
+    }
+
+    .timeline-container {
+        background: var(--bg-white, #fff);
+        border-radius: 16px;
+        padding: 2rem;
+        border: 1px solid var(--glass-border, rgba(0,0,0,0.05));
+    }
+    
+    .timeline-title {
+        font-weight: 700;
+        color: var(--text-primary, #1e293b);
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--glass-border, rgba(0,0,0,0.05));
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tracking-timeline {
+        position: relative;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 2rem;
+    }
+    
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    
+    .timeline-line {
+        position: absolute;
+        left: 11px;
+        top: 24px;
+        bottom: -8px;
+        width: 2px;
+        background: var(--glass-border, rgba(0,0,0,0.1));
+    }
+
+    .timeline-item:last-child .timeline-line {
+        display: none;
+    }
+
+    .timeline-marker {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .marker-completed {
+        background: #10b981;
+        color: white;
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+    }
+    
+    .marker-active {
+        background: var(--primary-color, #2563eb);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+        animation: pulse-ring 2s infinite;
+    }
+    
+    .marker-active::after {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+    }
+    
+    .marker-pending {
+        background: transparent;
+        border: 2px solid var(--glass-border, rgba(0,0,0,0.2));
+    }
+
+    @keyframes pulse-ring {
+        0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+    }
+
+    .timeline-content {
+        flex-grow: 1;
+        padding-top: 2px;
+    }
+    
+    .timeline-activity {
+        font-weight: 700;
+        color: var(--text-primary, #1e293b);
+        margin-bottom: 0.25rem;
+        font-size: 1.05rem;
+    }
+    
+    .timeline-meta {
+        color: var(--text-muted, #64748b);
+        font-size: 0.85rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+</style>
+
+<div class="intel-fade-in">
+    <div class="results-header">
+        <div>
+            <h2 class="fw-bold mb-3 d-flex align-items-center gap-3">
+                <button onclick="window.history.back()" class="btn btn-link text-white p-0 border-0 text-decoration-none d-flex align-items-center" style="font-size: 1.8rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" title="Go Back">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                Tracking Results
+            </h2>
+            <div class="tracking-badge" style="margin-left: 3rem;">
+                <i class="bi bi-box-seam"></i> {{ container_no }}
+            </div>
+        </div>
+        <div>
+            <a href="{{ url_for('tracking.index') }}" class="btn btn-light rounded-pill px-4 fw-bold text-primary">
+                <i class="bi bi-search me-1"></i> Track New
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Container Info Sidebar -->
+        <div class="col-lg-4">
+            <div class="info-card">
+                <h5 class="fw-bold mb-4" style="color: var(--text-primary); border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                    <i class="bi bi-info-circle me-2 text-primary"></i> Shipment Details
+                </h5>
+                
+                <div class="mb-4">
+                    <div class="info-label">Equipment</div>
+                    <div class="info-value">{{ parsed_data.container_info.type }}</div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="info-label">Status</div>
+                    <div class="d-inline-flex align-items-center gap-2 px-3 py-1 mt-1 rounded-pill" style="background: rgba(37, 99, 235, 0.1); color: var(--primary-color); font-weight: 600; font-size: 0.9rem;">
+                        <i class="bi bi-activity"></i> {{ parsed_data.container_info.status }}
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="info-label">Vessel / Carrier</div>
+                    <div class="info-value text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-ship"></i> {{ parsed_data.container_info.vessel }}
+                    </div>
+                </div>
+                
+                <div class="mb-0">
+                    <div class="info-label">Last Known Location</div>
+                    <div class="info-value">{{ parsed_data.container_info.last_location }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracking Timeline -->
+        <div class="col-lg-8">
+            <div class="timeline-container">
+                <h5 class="timeline-title">
+                    <i class="bi bi-map text-primary"></i> Journey Milestones
+                </h5>
+                
+                <div class="tracking-timeline mt-4">
+                    {% for event in parsed_data.journey_milestones %}
+                    <div class="timeline-item d-flex">
+                        <div class="timeline-line"></div>
+                        <div class="timeline-marker 
+                            {% if event.status == 'Completed' %}marker-completed
+                            {% elif event.status == 'Active' %}marker-active
+                            {% else %}marker-pending{% endif %}">
+                            {% if event.status == 'Completed' %}
+                                <i class="bi bi-check" style="font-size: 16px;"></i>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="timeline-content">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h6 class="timeline-activity">{{ event.activity }}</h6>
+                                <span class="badge" style="background: var(--bg-gray, #f1f5f9); color: var(--text-muted);">{{ event.date }}</span>
+                            </div>
+                            <div class="timeline-meta">
+                                <span><i class="bi bi-geo-alt me-1"></i> {{ event.location }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

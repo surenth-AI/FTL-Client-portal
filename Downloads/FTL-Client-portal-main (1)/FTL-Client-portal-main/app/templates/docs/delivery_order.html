@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page {
+            size: a4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #111;
+            line-height: 1.2;
+            font-size: 9pt;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .logo {
+            width: 150px;
+        }
+        .doc-title {
+            font-size: 20pt;
+            color: #d35400;
+            font-weight: bold;
+            text-align: right;
+        }
+        .status-stamp {
+            border: 3px solid #27ae60;
+            color: #27ae60;
+            padding: 10px;
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: inline-block;
+            transform: rotate(-5deg);
+            margin-bottom: 20px;
+        }
+        table.main {
+            width: 100%;
+            border: 1px solid #000;
+            border-collapse: collapse;
+        }
+        table.main td {
+            border: 1px solid #000;
+            padding: 8px;
+            vertical-align: top;
+        }
+        .label {
+            font-weight: bold;
+            font-size: 7pt;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 8pt;
+            text-align: center;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td width="50%">
+                <h2 style="color: #d35400; margin: 0;">{{ company.name }}</h2>
+                <p><strong>{{ company.name }}</strong></p>
+            </td>
+            <td width="50%" align="right">
+                <div class="doc-title">DELIVERY ORDER</div>
+                <p>Order No: DO/{{ booking.id }}/{{ datetime.now().strftime('%Y') }}<br>
+                Date: {{ datetime.now().strftime('%d %b %Y') }}</p>
+            </td>
+        </tr>
+    </table>
+
+    <div style="text-align: center;">
+        <div class="status-stamp text-success">CARGO RELEASED</div>
+    </div>
+
+    <table class="main">
+        <tr>
+            <td width="50%" height="100">
+                <div class="label">Consignee</div>
+                <strong>{{ booking.customer.name }}</strong><br>
+                {{ booking.customer.email }}
+            </td>
+            <td width="50%">
+                <div class="label">Notify Party</div>
+                (Same as Consignee unless otherwise specified)
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="label">Vessel / Voyage</div>
+                {{ booking.vessel_name or 'TBA' }} / {{ booking.voyage_number or 'TBA' }}
+            </td>
+            <td>
+                <div class="label">MBL / HBL Reference</div>
+                MBL: {{ booking.mbl_number or 'N/A' }}<br>
+                HBL: {{ booking.hbl_number or 'N/A' }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="label">Port of Loading</div>
+                {{ booking.origin }}
+            </td>
+            <td>
+                <div class="label">Port of Discharge</div>
+                {{ booking.destination }}
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" height="150">
+                <div class="label">Description of Cargo</div>
+                <table width="100%" style="font-size: 10pt;">
+                    <tr>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Weight</th>
+                        <th>Volume</th>
+                    </tr>
+                    {% for item in booking.cargo_items %}
+                    <tr>
+                        <td>{{ item.description }}</td>
+                        <td>{{ item.quantity }} {{ item.package_type }}</td>
+                        <td>{{ item.weight_kg }} KG</td>
+                        <td>{{ item.volume_cbm }} CBM</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" style="background-color: #eee;">
+                <div class="label">Release Authorization</div>
+                <p><strong>TO THE PORT AUTHORITIES / TERMINAL OPERATOR:</strong></p>
+                <p>Please deliver the above mentioned cargo to the order of the Consignee. All ocean freight and destination charges have been settled with AxeGlobal Logistics. This document serves as a valid <strong>TELEX RELEASE / DELIVERY ORDER</strong>.</p>
+            </td>
+        </tr>
+    </table>
+
+    <div class="footer">
+        <p>Digitally Authorized by {{ company.name }} Release Gate | System ID: {{ booking.id }}</p>
+        <p>This is a computer generated document and does not require a physical signature.</p>
+    </div>
+</body>
+</html>

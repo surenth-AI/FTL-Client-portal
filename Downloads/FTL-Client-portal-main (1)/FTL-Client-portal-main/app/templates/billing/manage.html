@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% block title %}Billing Intelligence Center{% endblock %}
+
+{% block content %}
+<div class="row mb-5 align-items-end">
+    <div class="col-md-6">
+        <h6 class="text-accent-glow text-uppercase fw-bold tracking-widest mb-2">Financial Operations</h6>
+        <h2 class="display-5 fw-bold text-white mb-0">Billing & Payments</h2>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <div class="d-inline-flex gap-3">
+            <div class="glass-card p-3 rounded-4 border-white-10 text-start min-w-150">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Awaiting</div>
+                <div class="h4 fw-bold text-warning mb-0">${{ "%.2f"|format(total_unpaid) }}</div>
+            </div>
+            <div class="glass-card p-3 rounded-4 border-white-10 text-start min-w-150">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Collected</div>
+                <div class="h4 fw-bold text-success mb-0">${{ "%.2f"|format(total_collected) }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Pending Payments Section -->
+    <div class="col-xl-8">
+        <div class="card glass-card border-white-10 rounded-4 shadow-lg h-100">
+            <div class="card-header bg-white-5 border-white-10 p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-white fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Payment Confirmations</h5>
+                    <span class="badge rounded-pill bg-warning text-dark px-3">{{ unpaid|length }} Pending</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-white">
+                        <thead class="bg-white-5 text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4 py-3">Issue Date</th>
+                                <th class="py-3">Revenue Invoice #</th>
+                                <th class="py-3">Booking Reference</th>
+                                <th class="py-3">Amount</th>
+                                <th class="pe-4 py-3 text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            {% for p in unpaid %}
+                            <tr class="border-white-5">
+                                <td class="ps-4 py-3">{{ p.issued_at.strftime('%Y-%m-%d') }}</td>
+                                <td class="py-3"><span class="text-accent-glow fw-bold">#{{ p.id }}</span></td>
+                                <td class="py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box-sm bg-white-5 rounded-circle me-2">
+                                            <i class="bi bi-box-seam small"></i>
+                                        </div>
+                                        <span>AXEGLOBAL-{{ p.booking_id }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 fw-bold text-white">{{ "%.2f"|format(p.total_amount) }} {{ p.currency }}</td>
+                                <td class="pe-4 py-3 text-end">
+                                    <button class="btn btn-sm btn-premium rounded-pill px-4 shadow-accent" data-bs-toggle="modal" data-bs-target="#confirmModal{{ p.id }}">
+                                        CONFIRM RECEIPT
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted italic">
+                                    <i class="bi bi-check2-circle display-4 d-block mb-3 opacity-25"></i>
+                                    All current proformas have been settled.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Released Invoices / History Section -->
+    <div class="col-xl-4">
+        <div class="card glass-card border-white-10 rounded-4 overflow-hidden shadow-lg h-100">
+            <div class="card-header bg-white-5 border-white-10 p-4">
+                <h5 class="mb-0 text-white fw-bold"><i class="bi bi-file-earmark-check me-2 text-success"></i>Recent Releases</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush bg-transparent">
+                    {% for inv in invoices %}
+                    <div class="list-group-item bg-transparent border-white-5 p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <a href="{{ url_for('billing.view_invoice', id=inv.id) }}" class="text-decoration-none">
+                                <span class="text-accent-glow small fw-bold text-uppercase tracking-wide hover-light">{{ inv.invoice_number }}</span>
+                            </a>
+                            <div class="d-flex gap-2 align-items-center">
+                                <a href="{{ url_for('billing.download_invoice', id=inv.id) }}" class="btn btn-sm btn-glass p-1 px-2 rounded-3 text-white-50" title="Download PDF">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <span class="badge bg-success-glow text-success small border border-success-40">PAID</span>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <div>
+                                <h6 class="text-white mb-1">AXEGLOBAL-{{ inv.booking_id }}</h6>
+                                <div class="text-muted small">{{ inv.issued_at.strftime('%b %d, %Y') }}</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="h5 fw-bold text-white mb-1">{{ "%.2f"|format(inv.total_amount) }}</div>
+                                <div class="text-muted small text-uppercase">{{ inv.currency }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="p-5 text-center text-muted">
+                        <i class="bi bi-archive mb-3 d-block display-5 opacity-25"></i>
+                        No finalized invoices found.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% if invoices %}
+            <div class="card-footer bg-white-5 border-white-10 p-4 text-center">
+                <a href="#" class="btn btn-sm btn-glass rounded-pill px-4">VIEW FULL LEDGER</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- MODALS SECTION: Moved outside of the tables to prevent clipping/z-index issues -->
+{% for p in unpaid %}
+<div class="modal fade" id="confirmModal{{ p.id }}" tabindex="-1" aria-hidden="true" style="z-index: 9999;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-white-10 rounded-4 overflow-hidden shadow-2xl">
+            <form action="{{ url_for('billing.confirm_payment', proforma_id=p.id) }}" method="POST">
+                <div class="modal-header border-white-10 p-4 bg-white-5">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box bg-warning-glow-10 rounded-circle me-3">
+                            <i class="bi bi-shield-lock text-warning h4 mb-0"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title text-white fw-bold mb-0">Financial Release Gate</h5>
+                            <p class="text-muted small mb-0">Authorization required for cargo release</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body p-4">
+                    <!-- Transaction Summary Card -->
+                    <div class="p-4 rounded-4 bg-white-5 border border-white-10 mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <div class="text-muted small text-uppercase fw-bold mb-1">Settlement Amount</div>
+                                <div class="h2 fw-bold text-accent-glow mb-0">{{ "%.2f"|format(p.total_amount) }} {{ p.currency }}</div>
+                            </div>
+                            <div class="col-4 text-end">
+                                <div class="badge bg-white-10 text-white-50 p-2 rounded-3">
+                                    <i class="bi bi-hash"></i> {{ p.id }}
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="border-white-10 my-3">
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-white-50">Booking Reference</span>
+                            <span class="text-white fw-bold">AXEGLOBAL-{{ p.booking_id }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Input Field -->
+                    <div class="mb-4">
+                        <label class="form-label text-white-50 small text-uppercase fw-bold mb-2">Payment Reference (SWIFT / TRN)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white-5 border-white-10 text-muted"><i class="bi bi-bank"></i></span>
+                            <input type="text" name="payment_ref" class="form-control bg-white-5 border-white-10 text-white rounded-end-3 py-3" placeholder="Enter bank reference number" required>
+                        </div>
+                        <div class="form-text text-muted x-small mt-2">
+                            <i class="bi bi-info-circle me-1"></i> This action is permanent and will be logged in the audit trail.
+                        </div>
+                    </div>
+
+                    <!-- Verification Checkbox -->
+                    <div class="form-check custom-check p-3 rounded-3 bg-warning-glow-5 border border-warning-20">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="verifyCheck{{ p.id }}" required>
+                        <label class="form-check-label text-warning-50 small fw-bold" for="verifyCheck{{ p.id }}">
+                            I verify that funds have cleared in the bank account and I authorize the release of all cargo documentation.
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-white-10 p-4 bg-white-5">
+                    <button type="button" class="btn btn-link text-white-50 text-decoration-none" data-bs-dismiss="modal">Abort Release</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-accent py-2">
+                        AUTHORIZE & RELEASE <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Manage Shipment #{{ booking.id }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="text-white fw-bold mb-0 text-accent-glow">Manage Shipment #{{ booking.id }}</h3>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-glass rounded-pill px-4">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Status & Tracking -->
+    <div class="col-md-7">
+        <div class="card glass-card border-white-10 mb-4">
+            <div class="card-header bg-white-5 border-white-10 py-3">
+                <h5 class="mb-0 text-white"><i class="bi bi-geo-alt me-2 text-accent"></i>Current Status</h5>
+            </div>
+            <div class="card-body p-4">
+                <form action="{{ url_for('admin.update_tracking', booking_id=booking.id) }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Update Status</label>
+                            <select name="status" class="form-select bg-dark text-white border-white-10">
+                                <option value="Booked" {% if booking.status == 'Booked' %}selected{% endif %}>Booked</option>
+                                <option value="Pre-Alert Received" {% if booking.status == 'Pre-Alert Received' %}selected{% endif %}>Pre-Alert Received</option>
+                                <option value="In Transit" {% if booking.status == 'In Transit' %}selected{% endif %}>In Transit</option>
+                                <option value="Arrived at Port" {% if booking.status == 'Arrived at Port' %}selected{% endif %}>Arrived at Port</option>
+                                <option value="Delivered" {% if booking.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Current Location</label>
+                            <input type="text" name="location" class="form-control bg-dark text-white border-white-10" placeholder="e.g. Hamburg Terminal" required>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-premium rounded-pill px-4">Update Tracking</button>
+                        </div>
+                    </div>
+                </form>
+
+                <hr class="my-4 border-white-10">
+
+                <h6 class="text-white mb-3">Tracking History</h6>
+                <div class="timeline-sm">
+                    {% for event in booking.tracking_events|sort(attribute='timestamp', reverse=True) %}
+                    <div class="d-flex mb-3">
+                        <div class="text-accent me-3 pt-1"><i class="bi bi-dot fs-1"></i></div>
+                        <div>
+                            <div class="text-white fw-bold">{{ event.status }}</div>
+                            <div class="text-muted small">{{ event.location }} | {{ event.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Documents & Actions -->
+    <div class="col-md-5">
+        <!-- Documentation Module -->
+        <div class="card glass-card border-white-10 mb-4">
+            <div class="card-header bg-white-5 border-white-10 py-3">
+                <h5 class="mb-0 text-white"><i class="bi bi-file-earmark-text me-2 text-info"></i>Documentation</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="d-grid gap-3">
+                    <!-- Arrival Notices -->
+                    <div class="document-action p-3 rounded bg-white-5 border-white-10">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-white fw-bold">Arrival Notices</span>
+                            <span class="badge bg-info">{{ booking.arrival_notices|length }} Sent</span>
+                        </div>
+                        <a href="{{ url_for('notices.generate', booking_id=booking.id) }}" class="btn btn-sm btn-outline-info w-100 rounded-pill">
+                            <i class="bi bi-send me-1"></i> Trigger Multi-Party Notices
+                        </a>
+                        {% if booking.arrival_notices %}
+                        <div class="mt-2">
+                            {% for notice in booking.arrival_notices %}
+                            <a href="{{ url_for('notices.view_pdf', notice_id=notice.id) }}" class="text-info small d-block mb-1 text-decoration-none">
+                                <i class="bi bi-file-pdf me-1"></i> {{ notice.recipient_type.capitalize() }} Notice
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Billing -->
+                    <div class="document-action p-3 rounded bg-white-5 border-white-10">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-white fw-bold">Billing Status</span>
+                            <span class="badge {% if booking.payment_status == 'CONFIRMED' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ booking.payment_status }}
+                            </span>
+                        </div>
+                        
+                        {% if not booking.proforma %}
+                        <a href="{{ url_for('billing.issue_proforma', booking_id=booking.id) }}" class="btn btn-sm btn-outline-warning w-100 rounded-pill">
+                            <i class="bi bi-receipt me-1"></i> Issue Revenue Invoice
+                        </a>
+                        {% else %}
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('billing.view_proforma', id=booking.proforma.id) }}" class="btn btn-sm btn-glass flex-grow-1 rounded-pill">
+                                View Revenue Invoice
+                            </a>
+                            {% if booking.payment_status != 'CONFIRMED' %}
+                            <a href="{{ url_for('billing.manage') }}" class="btn btn-sm btn-success flex-grow-1 rounded-pill">
+                                Confirm Pay
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if booking.invoices %}
+                        <div class="mt-2">
+                            <span class="text-success fw-bold small"><i class="bi bi-check-circle-fill me-1"></i> B/L Released</span>
+                            {% for inv in booking.invoices %}
+                            <div class="text-muted small">Inv: {{ inv.invoice_number }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shipment Info -->
+        <div class="card glass-card border-white-10">
+            <div class="card-header bg-white-5 border-white-10 py-3">
+                <h5 class="mb-0 text-white"><i class="bi bi-info-circle me-2 text-white-50"></i>Shipment Info</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-3">
+                    <label class="text-muted small text-uppercase fw-bold d-block">Route</label>
+                    <span class="text-white">{{ booking.origin }} → {{ booking.destination }}</span>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small text-uppercase fw-bold d-block">Cargo</label>
+                    <span class="text-white">{{ booking.volume }} CBM | {{ booking.service_type }}</span>
+                </div>
+                <div class="mb-0">
+                    <label class="text-muted small text-uppercase fw-bold d-block">Customer</label>
+                    <span class="text-white">{{ booking.customer.name }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

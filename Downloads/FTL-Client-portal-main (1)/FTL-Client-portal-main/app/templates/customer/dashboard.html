@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    .kpi-card { transition: all 0.2s ease; cursor: default; }
+    .kpi-card:hover { transform: translateY(-2px); border-color: var(--primary-color) !important; }
+    .kpi-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+
+    .action-card { transition: all 0.2s ease; text-decoration: none !important; display: block; }
+    .action-card:hover .action-inner { transform: translateY(-3px); border-color: var(--primary-color) !important; }
+    .action-inner { transition: all 0.2s ease; border: 1px solid var(--glass-border) !important; }
+    .action-inner.urgent { border-color: rgba(239,68,68,0.4) !important; }
+    .action-inner.urgent:hover { border-color: #EF4444 !important; }
+    .action-icon {
+        width: 44px; height: 44px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .pulse-dot {
+        width: 7px; height: 7px; background: #10b981; border-radius: 50%;
+        display: inline-block; margin-right: 5px;
+        animation: pulseDot 2.5s infinite;
+        box-shadow: 0 0 0 0 rgba(16,185,129,0.7);
+    }
+    @keyframes pulseDot {
+        0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+        70%  { transform: scale(1); box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+
+    /* Light mode badge defaults */
+    .table-badge-primary   { background-color: rgba(37, 99, 235, 0.1) !important; color: #2563eb !important; border-color: rgba(37, 99, 235, 0.2) !important; }
+    .table-badge-success   { background-color: rgba(16, 185, 129, 0.1) !important; color: #10b981 !important; border-color: rgba(16, 185, 129, 0.2) !important; }
+    .table-badge-warning   { background-color: rgba(245, 158, 11, 0.1) !important; color: #d97706 !important; border-color: rgba(245, 158, 11, 0.2) !important; }
+    .table-badge-secondary { background-color: rgba(100, 116, 139, 0.1) !important; color: #475569 !important; border-color: rgba(100, 116, 139, 0.2) !important; }
+
+    /* Dark mode badge overrides */
+    html[data-color-scheme='dark'] .table-badge-primary   { background-color: rgba(59,130,246,0.15) !important; color: #93C5FD !important; border-color: rgba(59,130,246,0.3) !important; }
+    html[data-color-scheme='dark'] .table-badge-success   { background-color: rgba(34,197,94,0.15)  !important; color: #86EFAC !important; border-color: rgba(34,197,94,0.3)  !important; }
+    html[data-color-scheme='dark'] .table-badge-warning   { background-color: rgba(234,179,8,0.15)  !important; color: #FDE047 !important; border-color: rgba(234,179,8,0.3)   !important; }
+    html[data-color-scheme='dark'] .table-badge-secondary { background-color: rgba(100,116,139,0.15)!important; color: #94A3B8 !important; border-color: rgba(100,116,139,0.3)!important; }
+
+    .vector-node {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #1e293b;
+        background-color: #f8fafc;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+        display: inline-flex;
+        align-items: center;
+    }
+    html[data-color-scheme='dark'] .vector-node { color: #CBD5E1 !important; background-color: #263348 !important; border-color: #334155 !important; }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-start mb-4 intel-fade-in">
+    <div>
+        <h4 class="fw-bold mb-1">Welcome back, {{ current_user.name.split(' ')[0] }}</h4>
+        <p class="text-muted small mb-0">{{ today.strftime('%A, %d %B %Y') }}</p>
+    </div>
+
+</div>
+
+<!-- KPI Row -->
+<div class="row g-3 mb-4 intel-fade-in" style="animation-delay: 0.05s;">
+    <div class="col-6 col-md-3">
+        <div class="glass-card kpi-card p-3 h-100">
+            <div class="text-muted fw-bold mb-2 text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">Total Shipments</div>
+            <div class="kpi-value text-dark">{{ total_shipments }}</div>
+            <div class="text-muted small mt-1">All time</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card kpi-card p-3 h-100">
+            <div class="text-muted fw-bold mb-2 text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">In Transit</div>
+            <div class="kpi-value" style="color: var(--primary-color);">{{ in_transit }}</div>
+            <div class="mt-1 d-flex align-items-center">
+                <span class="pulse-dot"></span>
+                <span class="text-success small fw-bold">Live</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card kpi-card p-3 h-100">
+            <div class="text-muted fw-bold mb-2 text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">Pending Review</div>
+            <div class="kpi-value text-warning">{{ pending }}</div>
+            <div class="text-muted small mt-1">Awaiting action</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card kpi-card p-3 h-100">
+            <div class="text-muted fw-bold mb-2 text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.06em;">Delivered</div>
+            <div class="kpi-value text-success">{{ delivered }}</div>
+            <div class="text-muted small mt-1">Completed</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-3 mb-4 intel-fade-in" style="animation-delay: 0.1s;">
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('customer.my_shipments') }}" class="action-card">
+            <div class="glass-card action-inner p-4 text-center h-100">
+                <div class="action-icon bg-success bg-opacity-10 mx-auto">
+                    <i class="bi bi-box-seam text-success fs-5"></i>
+                </div>
+                <div class="fw-bold text-dark small mb-1">My Shipments</div>
+                <div class="text-muted" style="font-size: 0.7rem;">View all bookings</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('customer.rates') }}" class="action-card">
+            <div class="glass-card action-inner p-4 text-center h-100">
+                <div class="action-icon bg-primary bg-opacity-10 mx-auto">
+                    <i class="bi bi-plus-lg text-primary fs-5"></i>
+                </div>
+                <div class="fw-bold text-dark small mb-1">New Booking</div>
+                <div class="text-muted" style="font-size: 0.7rem;">Create new booking</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('tracking.index') }}" class="action-card">
+            <div class="glass-card action-inner p-4 text-center h-100">
+                <div class="action-icon bg-warning bg-opacity-10 mx-auto">
+                    <i class="bi bi-geo-alt text-warning fs-5"></i>
+                </div>
+                <div class="fw-bold text-dark small mb-1">Live Tracking</div>
+                <div class="text-muted" style="font-size: 0.7rem;">Track your cargo</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        {% if si_needed %}
+        <a href="{{ url_for('customer.submit_si', booking_id=si_needed.id) }}" class="action-card">
+            <div class="glass-card action-inner urgent p-4 text-center h-100">
+                <div class="action-icon bg-danger bg-opacity-10 mx-auto">
+                    <i class="bi bi-file-earmark-plus text-danger fs-5"></i>
+                </div>
+                <div class="fw-bold text-dark small mb-1">Submit SI</div>
+                <div class="text-danger fw-bold" style="font-size: 0.7rem;">Action required</div>
+            </div>
+        </a>
+        {% else %}
+        <div class="glass-card action-inner p-4 text-center h-100" style="opacity: 0.5;">
+            <div class="action-icon bg-secondary bg-opacity-10 mx-auto">
+                <i class="bi bi-check-circle text-secondary fs-5"></i>
+            </div>
+            <div class="fw-bold text-dark small mb-1">No Pending SI</div>
+            <div class="text-muted" style="font-size: 0.7rem;">All caught up</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Shipments -->
+<div class="glass-card p-0 overflow-hidden intel-fade-in" style="animation-delay: 0.15s;">
+    <div class="d-flex align-items-center justify-content-between p-3 border-bottom bg-white-5">
+        <h6 class="fw-bold mb-0 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.06em;">
+            <i class="bi bi-clock-history me-2 text-accent"></i>Recent Activity
+        </h6>
+        {% if recent_shipments %}
+        <a href="{{ url_for('customer.my_shipments') }}" class="btn btn-xs btn-light border fw-bold" style="font-size: 0.65rem;">
+            All Shipments <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if recent_shipments %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.82rem;">
+            <thead class="bg-white-5">
+                <tr>
+                    <th class="ps-3 text-muted fw-bold border-bottom-0 py-2" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;">Ref</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-2" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;">Route</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-2" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;">NVOCC</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-2 text-center" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
+                    <th class="text-muted fw-bold border-bottom-0 py-2" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;">Date</th>
+                    <th class="pe-3 border-bottom-0 py-2"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in recent_shipments %}
+                <tr class="border-bottom">
+                    <td class="ps-3 py-3">
+                        <span class="font-monospace fw-bold text-dark" style="font-size: 0.85rem;">#{{ s.id }}</span>
+                    </td>
+                    <td class="py-3">
+                        <div class="d-flex align-items-center">
+                            <span class="vector-node">{{ s.origin }}</span>
+                            <i class="bi bi-arrow-right mx-2 text-muted" style="font-size: 0.75rem;"></i>
+                            <span class="vector-node" style="border-color: #bfdbfe; color: #1d4ed8;">{{ s.destination }}</span>
+                        </div>
+                        <div class="mt-1">
+                            <span class="badge bg-light text-secondary border fw-bold rounded-pill" style="font-size: 0.55rem;">{{ s.service_type }}</span>
+                        </div>
+                    </td>
+                    <td class="py-3"><span class="text-secondary" style="font-size: 0.75rem;">{{ s.selected_nvocc }}</span></td>
+                    <td class="py-3 text-center">
+                        {% if 'Transit' in s.status or 'Dispatched' in s.status %}
+                            <span class="badge rounded-pill border table-badge table-badge-primary fw-bold" style="font-size: 0.58rem;">IN TRANSIT</span>
+                        {% elif s.status == 'Booked' or 'Confirmed' in s.status %}
+                            <span class="badge rounded-pill border table-badge table-badge-success fw-bold" style="font-size: 0.58rem;">BOOKED</span>
+                        {% elif 'Pending' in s.status %}
+                            <span class="badge rounded-pill border table-badge table-badge-warning fw-bold" style="font-size: 0.58rem;">PENDING</span>
+                        {% elif s.status == 'Delivered' %}
+                            <span class="badge rounded-pill bg-success fw-bold px-2" style="font-size: 0.58rem; color: #fff !important;">DELIVERED</span>
+                        {% else %}
+                            <span class="badge rounded-pill border table-badge table-badge-secondary fw-bold" style="font-size: 0.58rem;">{{ s.status|upper }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3">
+                        <span class="text-muted" style="font-size: 0.73rem;">{{ s.created_at.strftime('%d %b %Y') }}</span>
+                    </td>
+                    <td class="pe-3 py-3 text-end">
+                        <a href="{{ url_for('customer.shipment_detail', booking_id=s.id) }}" class="btn btn-sm btn-light border fw-bold" style="font-size: 0.7rem; padding: 0.22rem 0.65rem;">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-5 text-center">
+        <i class="bi bi-inboxes display-5 text-muted opacity-25"></i>
+        <p class="mt-3 text-muted small mb-3">No shipments yet. Create your first booking to get started.</p>
+
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

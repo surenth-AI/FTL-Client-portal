@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Create New User{% endblock %}
+{% block content %}
+<div class="row justify-content-center pt-5">
+    <div class="col-md-6">
+        <div class="card glass-card p-5 border-white-10">
+            <div class="text-center mb-5">
+                <div class="h1 text-accent-glow mb-3"><i class="bi bi-person-plus-fill"></i></div>
+                <h3 class="text-white fw-bold mb-1">Administrative Onboarding</h3>
+                <p class="text-muted small">Create a new system user and assign operational roles.</p>
+            </div>
+
+            <form action="{{ url_for('admin.create_user') }}" method="POST">
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Full Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white-5 border-white-10 text-muted"><i class="bi bi-person"></i></span>
+                        <input type="text" name="name" class="form-control bg-white-5 border-white-10 text-white" placeholder="e.g. John Doe" required>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Email Address</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white-5 border-white-10 text-muted"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" class="form-control bg-white-5 border-white-10 text-white" placeholder="john@example.com" required>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Initial Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white-5 border-white-10 text-muted"><i class="bi bi-shield-lock"></i></span>
+                        <input type="password" name="password" class="form-control bg-white-5 border-white-10 text-white" placeholder="••••••••" required>
+                    </div>
+                    <div class="form-text text-muted smaller">User can change this after their first login.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Access Role</label>
+                    <select name="role" id="role-select" class="form-select bg-white-5 border-white-10 text-white" onchange="toggleDept()">
+                        <option value="customer" class="bg-dark">Customer (Standard Access)</option>
+                        <option value="agent" class="bg-dark">Agent (EDI Management)</option>
+                        <option value="operation_executive" class="bg-dark">Operation Executive (Departmental)</option>
+                        <option value="admin" class="bg-dark">Administrator (Full Control)</option>
+                        {% if current_user.role == 'super_admin' %}
+                            <option value="super_admin" class="bg-dark">Super Admin (System Owner)</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="mb-5" id="dept-section" style="display: none;">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Department Assignment</label>
+                    <select name="department" class="form-select bg-white-5 border-white-10 text-white">
+                        <option value="export" class="bg-dark">Export</option>
+                        <option value="import" class="bg-dark">Import</option>
+                        <option value="warehouse" class="bg-dark">Warehouse</option>
+                        <option value="finance" class="bg-dark">Finance</option>
+                    </select>
+                </div>
+
+                <script>
+                function toggleDept() {
+                    const role = document.getElementById('role-select').value;
+                    const deptSection = document.getElementById('dept-section');
+                    deptSection.style.display = (role === 'operation_executive') ? 'block' : 'none';
+                }
+                </script>
+
+                <div class="d-grid gap-3">
+                    <button type="submit" class="btn btn-premium py-3 rounded-pill fw-bold text-uppercase tracking-widest shadow-accent">
+                        CONFIRM ONBOARDING <i class="bi bi-check2-circle ms-2"></i>
+                    </button>
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-link text-muted text-decoration-none small text-center">
+                        <i class="bi bi-arrow-left me-1"></i> Return to Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Ensure select dropdown looks good on dark theme */
+select.form-select option {
+    background-color: #0f172a;
+    color: white;
+}
+.form-control::placeholder {
+    color: rgba(255,255,255,0.2) !important;
+}
+</style>
+{% endblock %}

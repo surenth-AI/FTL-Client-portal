@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Revenue Invoice #{{ proforma.id }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <!-- Main Revenue Invoice Card -->
+        <div class="card glass-card border-white-10 rounded-4 overflow-hidden shadow-2xl mb-5">
+            <div class="card-body p-5 p-md-6">
+                <!-- Branding & Header -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start mb-5 border-bottom border-white-10 pb-5">
+                    <div class="mb-4 mb-md-0">
+                        <div class="h3 text-white fw-bold mb-0 text-accent-glow"><i class="bi bi-globe me-2"></i>AXEGLOBAL</div>
+                        <h2 class="text-white fw-bold mb-1">REVENUE INVOICE</h2>
+                        <p class="text-muted small text-uppercase tracking-widest">AxeGlobal Logistics — Logistics Solutions</p>
+                    </div>
+                    <div class="text-md-end">
+                        <div class="glass-card px-4 py-3 rounded-4 border-white-10 d-inline-block">
+                            <div class="text-muted small text-uppercase fw-bold mb-1">Invoice Number</div>
+                            <div class="h4 fw-bold text-accent-glow mb-1">#{{ proforma.id }}</div>
+                            <div class="text-white-50 small">Date: {{ proforma.issued_at.strftime('%b %d, %Y') }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billing & Shipment Info -->
+                <div class="row g-4 mb-5">
+                    <div class="col-md-6">
+                        <div class="p-4 rounded-4 bg-white-5 border border-white-10 h-100">
+                            <h6 class="text-muted text-uppercase small fw-bold mb-3 tracking-wide">Bill To:</h6>
+                            <h5 class="text-white fw-bold mb-1">{{ proforma.booking.customer.name }}</h5>
+                            <div class="text-white-50 small mb-0">{{ proforma.booking.customer.email }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-4 rounded-4 bg-white-5 border border-white-10 h-100">
+                            <h6 class="text-muted text-uppercase small fw-bold mb-3 tracking-wide">Shipment Details:</h6>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-white-50 small">Booking Ref:</span>
+                                <span class="text-white fw-bold">AXEGLOBAL-{{ proforma.booking_id }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-white-50 small">Route:</span>
+                                <span class="text-white fw-bold">{{ proforma.booking.origin }} <i class="bi bi-arrow-right mx-1 text-accent-glow"></i> {{ proforma.booking.destination }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charge Items Table -->
+                <div class="table-responsive mb-5 rounded-4 overflow-hidden border border-white-10">
+                    <table class="table table-hover align-middle mb-0 text-white">
+                        <thead class="bg-white-5">
+                            <tr>
+                                <th class="ps-4 py-4 text-muted small text-uppercase">Description</th>
+                                <th class="pe-4 py-4 text-end text-muted small text-uppercase" style="width: 200px;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            {% for line in proforma.charge_lines %}
+                            <tr class="border-white-5">
+                                <td class="ps-4 py-4">
+                                    <div class="fw-bold text-white">{{ line.description }}</div>
+                                </td>
+                                <td class="pe-4 py-4 text-end">
+                                    <span class="fw-bold text-white-50">{{ "%.2f"|format(line.amount) }}</span>
+                                    <span class="text-muted small ms-1">{{ proforma.currency }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="bg-white-5">
+                            <tr>
+                                <td class="ps-4 py-3 text-end text-muted small">Subtotal</td>
+                                <td class="pe-4 py-3 text-end text-white-50">{{ "%.2f"|format(proforma.subtotal) }} {{ proforma.currency }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 py-3 text-end text-muted small">VAT / Taxes (0%)</td>
+                                <td class="pe-4 py-3 text-end text-white-50">{{ "%.2f"|format(proforma.taxes) }} {{ proforma.currency }}</td>
+                            </tr>
+                            <tr class="bg-primary-glow-10">
+                                <td class="ps-4 py-4 text-end text-white h5 mb-0 fw-bold">TOTAL DUE</td>
+                                <td class="pe-4 py-4 text-end text-accent-glow h4 mb-0 fw-bold">{{ "%.2f"|format(proforma.total_amount) }} {{ proforma.currency }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Status Warning -->
+                <div class="alert bg-warning-glow-10 border border-warning-20 rounded-4 p-4 mb-5 d-flex align-items-start">
+                    <i class="bi bi-info-circle-fill text-warning h4 me-3 mt-1"></i>
+                    <div>
+                        <h6 class="text-warning fw-bold mb-1">PROFORMA DOCUMENT</h6>
+                        <p class="text-warning-50 small mb-0">This is a cost estimate for logistics services. A Final Tax Invoice will be issued immediately upon payment confirmation. Payment is required before cargo release.</p>
+                    </div>
+                </div>
+
+                <!-- Bank Details -->
+                <div class="p-5 rounded-4 bg-white-5 border border-white-10">
+                    <h5 class="text-white fw-bold mb-4 d-flex align-items-center">
+                        <i class="bi bi-bank me-2 text-accent-glow"></i> Payment Instructions
+                    </h5>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1">Beneficiary Bank</label>
+                                <div class="text-white">AXEGLOBAL Central Bank</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1">IBAN / Account Number</label>
+                                <div class="text-white font-monospace">DE99 1234 5678 9012 3456 78</div>
+                            </div>
+                            <div>
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1">SWIFT / BIC Code</label>
+                                <div class="text-white font-monospace">AXEGLOBALXXHH</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 border-start border-white-10 ps-md-5">
+                            <div class="mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1">Account Holder</label>
+                                <div class="text-white">AxeGlobal Logistics GmbH</div>
+                            </div>
+                            <div>
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1">Required Payment Reference</label>
+                                <div class="bg-accent-glow-10 border border-accent-glow-30 p-2 rounded text-accent-glow fw-bold text-center">
+                                    AXEGLOBAL-{{ proforma.booking_id }} / #{{ proforma.id }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-footer bg-white-5 border-white-10 p-4 text-center">
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{{ url_for('billing.download_proforma', id=proforma.id) }}" class="btn btn-glass rounded-pill px-4">
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i> DOWNLOAD PDF
+                    </a>
+                    <a href="{{ url_for('customer.dashboard') }}" class="btn btn-primary rounded-pill px-5 fw-bold shadow-accent">
+                        RETURN TO DASHBOARD
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .glass-card { background: white !important; color: black !important; border: 1px solid #ccc !important; }
+        .btn, .text-accent-glow { color: black !important; }
+        body { background: white !important; }
+    }
+</style>
+{% endblock %}

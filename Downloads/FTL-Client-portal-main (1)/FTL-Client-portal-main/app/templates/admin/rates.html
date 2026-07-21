@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% block title %}Rate Ledger{% endblock %}
+
+{% block content %}
+<style>
+    body { background-color: #F4F7F9; }
+    
+    /* Freightos specific header controls */
+    .fuf-header-title {
+        font-size: 1.5rem;
+        color: #334155;
+        font-weight: 500;
+    }
+    .fuf-action-btn {
+        background-color: #3863A9;
+        border: none;
+        color: white;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.9rem;
+    }
+    .fuf-action-btn:hover { background-color: #2B4F8C; color: white; }
+    
+    .fuf-action-icon-btn {
+        background-color: #3863A9;
+        color: white;
+        border-radius: 4px;
+        padding: 0.4rem 0.6rem;
+        margin-left: 4px;
+    }
+    
+    /* Filters tab styling exactly from screenshot */
+    .filters-bar-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 0rem;
+        position: relative;
+        z-index: 2;
+    }
+    .filters-tab {
+        background-color: #333333;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.3rem 2.5rem;
+        border-radius: 20px 20px 0 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Table Density & Coloring matching reference */
+    .fuf-table-container {
+        background: #ffffff;
+        border-top: 2px solid #CCCCCC;
+        border-radius: 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .fuf-table thead th {
+        background-color: #F1F4F6;
+        color: #475569;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-bottom: 1px solid #E2E8F0;
+        border-right: 1px solid #E2E8F0;
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+        line-height: 1.2;
+    }
+    .fuf-table tbody td {
+        font-size: 0.75rem;
+        color: #1E293B;
+        padding: 0.75rem 0.5rem;
+        border-bottom: 1px solid #F1F5F9;
+        border-right: 1px solid transparent;
+    }
+    
+    .status-pill-completed {
+        background-color: #C6F6D5;
+        color: #22543D;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        display: inline-block;
+    }
+    
+    .link-fuf {
+        color: #3863A9;
+        text-decoration: none;
+    }
+    .link-fuf:hover { text-decoration: underline; }
+    
+    .three-dots {
+        color: #3863A9;
+        cursor: pointer;
+        font-size: 1.1rem;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+    <h2 class="fuf-header-title mb-0">Spreadsheet (FUF) imports</h2>
+    <div class="d-flex align-items-center">
+        <a href="{{ url_for('admin.upload_rates') }}" class="btn fuf-action-btn">New</a>
+        <a href="#" class="btn fuf-action-icon-btn"><i class="bi bi-file-earmark-spreadsheet"></i></a>
+    </div>
+</div>
+
+<div class="filters-bar-wrapper">
+    <div class="filters-tab">Filters</div>
+</div>
+
+<div class="fuf-table-container">
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle fuf-table">
+            <thead>
+                <tr>
+                    <th style="width: 20%">File Name</th>
+                    <th style="width: 8%">Status</th>
+                    <th style="width: 6%">Test Only</th>
+                    <th style="width: 8%">Background Only</th>
+                    <th style="width: 18%">Tariffs Created</th>
+                    <th style="width: 10%">Activate In Freightos® Marketplace</th>
+                    <th style="width: 8%">Created Date</th>
+                    <th style="width: 12%">Created By</th>
+                    <th style="width: 8%">Action</th>
+                    <th style="width: 2%"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rate in rates %}
+                <tr>
+                    <td>
+                        <a href="#" class="link-fuf fw-medium">FUF_{{ rate.origin[:3]|upper }}_{{ rate.destination[:3]|upper }}_{{ rate.nvocc_name|replace(' ', '') }}...</a>
+                    </td>
+                    <td><span class="status-pill-completed">Completed</span></td>
+                    <td>No</td>
+                    <td>Yes</td>
+                    <td>
+                        <div class="small text-muted">
+                            <span class="link-fuf d-block" style="font-size:0.7rem;">FUF_{{ rate.nvocc_name }}...</span>
+                            <span class="link-fuf d-block" style="font-size:0.7rem;">FUF_TARIFF_ID{{ rate.id }}...</span>
+                        </div>
+                    </td>
+                    <td>No</td>
+                    <td>2026-05-11</td>
+                    <td>Admin Vector</td>
+                    <td>
+                        <span class="fw-bold text-success">Active</span>
+                    </td>
+                    <td>
+                        <div class="dropdown">
+                            <i class="bi bi-three-dots-vertical three-dots" data-bs-toggle="dropdown"></i>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                <li><a class="dropdown-item small fw-bold text-danger" href="{{ url_for('admin.delete_rate', rate_id=rate.id) }}" onclick="return confirm('Purge tariff record?')"><i class="bi bi-trash me-2"></i>Delete</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" class="text-center py-5 bg-white">
+                        <p class="text-muted mb-0">No spreadsheet imports found. Ingest rate matrix to begin tracking.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- PAGINATION CONTROLLER -->
+{% if pagination and pagination.pages > 1 %}
+<div class="d-flex justify-content-between align-items-center mt-3 bg-white border p-3" style="border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+    <div class="text-muted fw-bold" style="font-size: 0.75rem;">
+        Displaying metrics <span class="text-dark">{{ (pagination.page - 1) * pagination.per_page + 1 }} - {{ [pagination.page * pagination.per_page, pagination.total]|min }}</span> of {{ pagination.total }}
+    </div>
+    <nav>
+        <ul class="pagination pagination-sm mb-0 custom-pagination">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('admin.view_rates', page=pagination.prev_num) if pagination.has_prev else '#' }}"><i class="bi bi-chevron-left"></i></a>
+            </li>
+            
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.view_rates', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('admin.view_rates', page=pagination.next_num) if pagination.has_next else '#' }}"><i class="bi bi-chevron-right"></i></a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<style>
+    /* Custom Visuals for Pagination Anchors */
+    .custom-pagination .page-link {
+        border: 1px solid #E2E8F0;
+        color: #475569;
+        font-weight: 600;
+        font-size: 0.75rem;
+        margin: 0 2px;
+        border-radius: 4px;
+    }
+    .custom-pagination .page-item.active .page-link {
+        background-color: var(--primary-color) !important;
+        border-color: var(--primary-color) !important;
+        color: white !important;
+    }
+    .custom-pagination .page-link:hover:not(.active) {
+        background-color: #F1F5F9;
+        color: var(--primary-color);
+    }
+</style>
+
+<!-- Visual Clean Clear Trigger -->
+<div class="mt-4 text-end">
+    <a href="{{ url_for('admin.clear_rates') }}" class="btn btn-sm btn-outline-secondary border-0 fw-bold text-muted" style="font-size:0.65rem; letter-spacing: 0.02em;" onclick="return confirm('Purge ALL database metrics?')">
+        <i class="bi bi-trash3 me-1"></i> Total Matrix Purge
+    </a>
+</div>
+{% endblock %}

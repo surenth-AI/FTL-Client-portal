@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-lg-5">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="text-white fw-bold mb-0 text-accent-glow">EDI Intelligence Center</h3>
+            <p class="text-muted small mb-0">Automated ingestion stream from global partners.</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if email_connected %}
+            <a href="{{ url_for('edi.sync_email') }}" class="btn btn-sm btn-glass rounded-pill px-4">
+                <i class="bi bi-arrow-repeat me-1"></i> Sync Email Inbox
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.email_login') }}" class="btn btn-sm btn-danger rounded-pill px-4">
+                <i class="bi bi-envelope me-1"></i> Connect Email
+            </a>
+            {% endif %}
+            <div class="badge bg-white-10 text-white rounded-pill px-3 d-flex align-items-center">
+                {{ pre_alerts|length }} Records
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card glass-card p-4 border-white-10 h-100">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Email Connection</div>
+                <div class="h5 mb-0 {% if email_connected %}text-success{% else %}text-danger{% endif %} fw-bold">
+                    <i class="bi bi-circle-fill small me-2"></i>{{ 'ACTIVE' if email_connected else 'INACTIVE' }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-card p-4 border-white-10 h-100">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Total Ingested</div>
+                <div class="text-white h5 mb-0 fw-bold">{{ pre_alerts|length }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-card p-4 border-white-10 h-100">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Auto-Linked</div>
+                <div class="text-accent-glow h5 mb-0 fw-bold">
+                    {{ pre_alerts|selectattr('booking_id')|list|length }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-card p-4 border-white-10 h-100">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Quarantined</div>
+                <div class="text-warning h5 mb-0 fw-bold">
+                    {{ pre_alerts|selectattr('parse_status', 'equalto', 'quarantined')|list|length }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDI Stream Table -->
+    <div class="glass-card overflow-hidden border-white-10 mb-5">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 align-middle">
+                <thead class="bg-white-5">
+                    <tr>
+                        <th class="ps-4 py-3 text-muted small text-uppercase">Received</th>
+                        <th class="py-3 text-muted small text-uppercase">MBL / HBL</th>
+                        <th class="py-3 text-muted small text-uppercase">Vessel / Voyage</th>
+                        <th class="py-3 text-muted small text-uppercase">POL → POD</th>
+                        <th class="py-3 text-muted small text-uppercase">Consignee</th>
+                        <th class="py-3 text-muted small text-uppercase text-center">Source</th>
+                        <th class="py-3 text-muted small text-uppercase text-center">Status</th>
+                        <th class="pe-4 py-3 text-muted small text-uppercase text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in pre_alerts %}
+                    <tr class="border-white-10">
+                        <td class="ps-4 py-3 text-muted small">
+                            {{ alert.created_at.strftime('%Y-%m-%d') }}<br>
+                            {{ alert.created_at.strftime('%H:%M') }}
+                        </td>
+                        <td class="py-3">
+                            <div class="text-white fw-bold">M: {{ alert.mbl_number }}</div>
+                            <div class="text-info small">H: {{ alert.hbl_number }}</div>
+                        </td>
+                        <td class="py-3">
+                            <div class="text-white small">{{ alert.vessel_name or 'TBA' }}</div>
+                            <div class="text-muted smaller">V.{{ alert.voyage_number or '---' }}</div>
+                        </td>
+                        <td class="py-3">
+                            <div class="small">
+                                <span class="text-accent-glow">{{ alert.port_of_loading or '---' }}</span>
+                                <i class="bi bi-arrow-right mx-1 opacity-50"></i>
+                                <span class="text-accent-glow">{{ alert.port_of_discharge or '---' }}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 small text-white">{{ alert.consignee_name or '---' }}</td>
+                        <td class="py-3 text-center">
+                            <div class="badge bg-dark border border-white-20 text-white-50 px-2 py-1">
+                                <i class="bi bi-hdd-network me-1"></i> {{ alert.source_type|upper }}
+                            </div>
+                        </td>
+                        <td class="py-3 text-center">
+                            {% if alert.parse_status == 'parsed' %}
+                                <span class="badge bg-success-glow text-success border border-success-20 rounded-pill px-3 py-2 fw-bold w-100">PARSED</span>
+                            {% elif alert.parse_status == 'quarantined' %}
+                                <span class="badge bg-warning-glow text-warning border border-warning-20 rounded-pill px-3 py-2 fw-bold w-100">QUARANTINED</span>
+                            {% else %}
+                                <span class="badge bg-danger-glow text-danger border border-danger-20 rounded-pill px-3 py-2 fw-bold w-100">ERROR</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 py-3 text-end">
+                            {% if alert.booking_id %}
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('edi.send_notices', id=alert.booking_id) }}" class="btn btn-sm btn-outline-info rounded-pill px-3" title="Send Arrival Notice">
+                                            <i class="bi bi-megaphone me-1"></i> Notify
+                                        </a>
+                                        <a href="{{ url_for('admin.shipment_details', id=alert.booking_id) }}" class="btn btn-sm btn-glass rounded-pill px-3" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                            {% elif alert.parse_status == 'quarantined' %}
+                                <a href="{{ url_for('edi.retry', id=alert.id) }}" class="btn btn-sm btn-premium rounded-pill px-3">
+                                    RETRY MATCH
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                            No EDI pre-alerts found in the system.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

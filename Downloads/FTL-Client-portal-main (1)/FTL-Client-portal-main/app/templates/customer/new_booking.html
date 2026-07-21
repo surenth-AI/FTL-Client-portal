@@ -1,0 +1,2932 @@
+{% extends "base.html" %}
+{% block title %}Create Booking - Fast Transit Line{% endblock %}
+{% block content %}
+<style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #2563eb;
+            --primary-blue-dark: #1d4ed8;
+            --primary-green: #059669;
+            --primary-green-dark: #047857;
+            --green-bg: #ecfdf5;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --bg-gray: #f8fafc;
+            --bg-white: #ffffff;
+            --success-green: #10b981;
+            --error-red: #ef4444;
+            --amber: #f59e0b;
+            --amber-bg: #fffbeb;
+            --hover-bg: #f1f5f9;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gray);
+            color: var(--text-primary);
+            line-height: 1.4;
+            font-size: 13px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary-blue);
+        }
+
+        .logo-subtext {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0.75rem 1rem 3rem;
+        }
+
+        .page-header {
+            margin-bottom: 0.75rem;
+        }
+
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.125rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .btn {
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-blue-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-success {
+            background: var(--primary-green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--primary-green-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-white);
+            color: var(--primary-blue);
+            border: 1px solid var(--primary-blue);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-text {
+            background: none;
+            color: var(--primary-blue);
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-text:hover {
+            background: var(--hover-bg);
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Card shell */
+        .booking-card {
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* Origin-mode tabs (Scratch vs Quote) */
+        .origin-mode-header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.625rem 1rem 0.625rem 1rem;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-option {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 0.375rem 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-family: inherit;
+        }
+
+        .mode-option:hover .mode-text {
+            color: var(--primary-green-dark);
+        }
+
+        .mode-option.active {
+            border-bottom-color: var(--primary-green);
+        }
+
+        .mode-icon-small {
+            font-size: 1.1rem;
+        }
+
+        .mode-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: color 0.2s ease;
+        }
+
+        .mode-option.active .mode-text {
+            color: var(--primary-green-dark);
+            font-weight: 600;
+        }
+
+        /* Unavailable banners/notices (ported from quote form) */
+        .service-unavailable-banner {
+            margin-top: 0.75rem;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+        }
+
+        .banner-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .banner-icon {
+            font-size: 1.25rem;
+        }
+
+        .banner-text {
+            flex: 1;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            min-width: 200px;
+        }
+
+        .service-unavailable-notice {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 1.25rem;
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .notice-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .notice-content {
+            flex: 1;
+        }
+
+        .notice-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+
+        .notice-description {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 0.75rem;
+        }
+
+        .notice-actions {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        /* Cargo type (LCL/FCL) tabs */
+        .cargo-type-section {
+            margin-bottom: 0.875rem;
+        }
+
+        .cargo-type-selector {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .cargo-option {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 0.375rem 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-family: inherit;
+        }
+
+        .cargo-option:hover .cargo-text {
+            color: var(--primary-green-dark);
+        }
+
+        .cargo-option.active {
+            border-bottom-color: var(--primary-green);
+        }
+
+        .cargo-icon-small {
+            font-size: 1rem;
+        }
+
+        .cargo-text {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: color 0.2s ease;
+        }
+
+        .cargo-option.active .cargo-text {
+            color: var(--primary-green-dark);
+            font-weight: 600;
+        }
+
+        /* Quote picker */
+        .quote-picker {
+            padding: 1rem;
+            background: var(--bg-gray);
+            border-bottom: 1px solid var(--border-color);
+            display: none;
+        }
+
+        .quote-picker.show {
+            display: block;
+        }
+
+        .picker-search {
+            margin-bottom: 0.75rem;
+        }
+
+        .picker-search input {
+            width: 100%;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            font-size: 0.82rem;
+            font-family: inherit;
+            background: var(--bg-white);
+        }
+
+        .picker-search input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        .picker-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .picker-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.7rem 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            transition: border-color 0.15s ease;
+        }
+
+        .picker-card:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .picker-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .picker-ref {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            background: var(--bg-gray);
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+            width: fit-content;
+        }
+
+        .picker-route {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .picker-meta {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .picker-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 0.18rem 0.5rem;
+            border-radius: 5px;
+        }
+
+        .picker-status.active {
+            background: var(--green-bg);
+            color: var(--primary-green-dark);
+        }
+
+        .picker-status.expiring {
+            background: var(--amber-bg);
+            color: #92400e;
+        }
+
+        .picker-price {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--primary-green-dark);
+        }
+
+        /* Linked quote banner */
+        .linked-quote-banner {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin: 0.75rem 1rem 0;
+        }
+
+        .linked-quote-banner.show {
+            display: flex;
+        }
+
+        .linked-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .linked-icon {
+            font-size: 1.1rem;
+        }
+
+        .linked-text {
+            font-size: 0.82rem;
+            color: var(--text-primary);
+        }
+
+        .linked-text strong {
+            font-weight: 700;
+        }
+
+        .linked-ref {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--primary-blue-dark);
+            background: var(--bg-white);
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+            border: 1px solid #bfdbfe;
+        }
+
+        .linked-price {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--primary-green-dark);
+        }
+
+        /* Steps Ribbon */
+        .booking-header {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--bg-white);
+            position: relative;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .header-section {
+            flex: 1;
+            min-width: 140px;
+            padding: 0.625rem 1rem;
+            border-right: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .header-section:last-child {
+            border-right: none;
+        }
+
+        .header-section:hover {
+            background: var(--hover-bg);
+        }
+
+        .header-section.active {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .header-section.active .section-label,
+        .header-section.active .section-value,
+        .header-section.active .section-placeholder {
+            color: white;
+        }
+
+        .header-section.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 0.6rem;
+            right: 0.6rem;
+            width: 18px;
+            height: 18px;
+            background: var(--success-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+            font-weight: 700;
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.2rem;
+        }
+
+        .section-value {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .section-placeholder {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Expandable Panel */
+        .panels-container {
+            position: relative;
+            min-height: 50px;
+        }
+
+        .expandable-panel {
+            position: relative;
+            width: 100%;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out;
+            background: var(--bg-gray);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 12px 12px;
+        }
+
+        .expandable-panel.open {
+            max-height: 3000px;
+            overflow: visible;
+        }
+
+        .panel-content {
+            padding: 1rem 1.25rem;
+        }
+
+        .panel-header-with-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            position: sticky;
+            top: 0;
+            background: var(--bg-gray);
+            padding: 0.125rem 0;
+            z-index: 10;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .form-label .required {
+            color: var(--error-red);
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: var(--bg-white);
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .form-help {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .route-section {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .route-section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.625rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .from-quote-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--primary-blue-dark);
+            background: #eff6ff;
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-blue);
+        }
+
+        .checkbox-group label {
+            font-size: 0.85rem;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        /* Cargo items */
+        .cargo-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .cargo-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.9rem;
+        }
+
+        .cargo-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .cargo-item-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 0.88rem;
+        }
+
+        .remove-item-btn {
+            background: none;
+            border: none;
+            color: var(--error-red);
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .remove-item-btn:hover {
+            opacity: 0.7;
+        }
+
+        /* Unit toggle */
+        .unit-toggle {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-gray);
+            padding: 0.25rem;
+            border-radius: 6px;
+            width: fit-content;
+        }
+
+        .unit-option {
+            padding: 0.4rem 1rem;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .unit-option.active {
+            background: var(--bg-white);
+            color: var(--primary-blue);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Dimensions */
+        .dimensions-section {
+            margin-top: 0.625rem;
+            padding-top: 0.625rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .dimensions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .dimensions-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .dimension-item {
+            display: grid;
+            grid-template-columns: 70px repeat(3, 1fr) 1fr auto;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dimension-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .dimension-input-small {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dimension-input-small label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .dimension-input-small input {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-family: inherit;
+        }
+
+        .dimension-weight-toggle {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dimension-weight-toggle button {
+            flex: 1;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.68rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-white);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .dimension-weight-toggle button:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .dimension-weight-toggle button:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .dimension-weight-toggle button.active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+
+        .remove-dim-btn {
+            background: none;
+            border: none;
+            color: var(--error-red);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.4rem;
+        }
+
+        .remove-dim-btn:hover {
+            opacity: 0.7;
+        }
+
+        /* Document upload */
+        .doc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .doc-tile {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            background: var(--bg-white);
+            transition: border-color 0.15s ease;
+        }
+
+        .doc-tile:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .doc-tile .doc-icon {
+            font-size: 1.4rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .doc-tile .doc-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.15rem;
+        }
+
+        .doc-tile .doc-status {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .doc-tile .doc-status.uploaded {
+            color: var(--primary-green-dark);
+            font-weight: 600;
+        }
+
+        .doc-tile button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Sailing selection */
+        .sailing-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+        }
+
+        .sailing-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .sailing-vessel {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .sailing-dates {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .sailing-default-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--primary-green-dark);
+            background: var(--green-bg);
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+            margin-left: 0.5rem;
+        }
+
+        .sailing-picker {
+            margin-top: 0.6rem;
+            display: none;
+        }
+
+        .sailing-picker.show {
+            display: block;
+        }
+
+        /* Hazmat multi-select (lookup) */
+        .hazmat-section {
+            background: var(--amber-bg);
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .hazmat-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hazmat-chips:empty {
+            margin-bottom: 0;
+        }
+
+        .hazmat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.4rem 0.3rem 0.7rem;
+            border: 1px solid #92400e;
+            border-radius: 16px;
+            background: #92400e;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .hazmat-chip button {
+            background: rgba(255, 255, 255, 0.25);
+            border: none;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.65rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hazmat-chip button:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .searchable-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 220px;
+            overflow-y: auto;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 0.25rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            z-index: 100;
+            display: none;
+        }
+
+        .searchable-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 0.6rem 0.85rem;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-bottom: 1px solid var(--bg-gray);
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .dropdown-item-name {
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .dropdown-item-code {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 0.1rem;
+        }
+
+        .dropdown-no-results {
+            padding: 0.85rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Additional services (condensed) */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .service-card {
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .service-card:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .service-card.selected {
+            border-color: var(--primary-blue);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .service-card input[type="checkbox"] {
+            position: absolute;
+            top: 0.8rem;
+            right: 0.8rem;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-blue);
+        }
+
+        .service-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+            font-size: 0.85rem;
+        }
+
+        .service-description {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Review */
+        .review-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .review-block {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.9rem;
+        }
+
+        .review-block-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .review-edit-link {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--primary-blue);
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .review-edit-link:hover {
+            text-decoration: underline;
+        }
+
+        .review-line {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .review-line .lbl {
+            color: var(--text-secondary);
+        }
+
+        .review-empty {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .rate-summary {
+            background: var(--green-bg);
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .rate-summary.unconfirmed {
+            background: var(--amber-bg);
+            border-color: #fde68a;
+        }
+
+        .rate-label {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .rate-amount {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--primary-green-dark);
+        }
+
+        .rate-summary.unconfirmed .rate-amount {
+            color: #92400e;
+            font-size: 0.95rem;
+        }
+
+        .rate-ref {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        .terms-confirm {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+
+        .terms-confirm input {
+            width: 18px;
+            height: 18px;
+            margin-top: 0.15rem;
+            cursor: pointer;
+            accent-color: var(--primary-blue);
+            flex-shrink: 0;
+        }
+
+        .terms-confirm label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .terms-confirm a {
+            color: var(--primary-blue);
+        }
+
+        .panel-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Success state */
+        .success-panel {
+            display: none;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            background: var(--bg-white);
+        }
+
+        .success-panel.show {
+            display: block;
+        }
+
+        .success-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .success-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+
+        .success-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+        }
+
+        .booking-number-box {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            background: var(--green-bg);
+            border: 1px dashed #a7f3d0;
+            border-radius: 10px;
+            padding: 0.9rem 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .booking-number-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--primary-green-dark);
+        }
+
+        .booking-number-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .success-actions {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Custom Alert Modal */
+        .custom-alert-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .custom-alert-overlay.show {
+            display: flex;
+        }
+
+        .custom-alert-box {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-alert-message {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1.25rem;
+            white-space: pre-line;
+        }
+
+        .custom-alert-button {
+            width: 100%;
+            padding: 0.625rem;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .custom-alert-button:hover {
+            background: var(--primary-blue-dark);
+        }
+
+        @media (max-width: 768px) {
+            .booking-header {
+                flex-direction: column;
+            }
+
+            .header-section {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mode-selector {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .mode-option {
+                width: 100%;
+            }
+        }
+    
+</style>
+<div class="container">
+
+        <div class="page-header">
+            <h1 class="page-title">Create Booking</h1>
+            <p class="page-subtitle">Set up a new shipment booking — Ocean or Air freight, or directly from a saved
+                quote</p>
+        </div>
+
+        <div class="booking-card">
+
+            <!-- Origin mode tabs -->
+            <div class="origin-mode-header">
+                <div class="mode-selector">
+                    <button class="mode-option active" id="oceanTabHeader" onclick="selectBookingMode('ocean')">
+                        <span class="mode-icon-small">🚢</span>
+                        <span class="mode-text">Ocean Freight</span>
+                    </button>
+                    <button class="mode-option" id="airTabHeader" onclick="selectBookingMode('air')">
+                        <span class="mode-icon-small">✈️</span>
+                        <span class="mode-text">Air Freight</span>
+                    </button>
+                    <button class="mode-option" id="quoteTabHeader" onclick="window.location.href=`{{ url_for('customer.my_quotes') }}`">
+                        <span class="mode-icon-small">📌</span>
+                        <span class="mode-text">Convert from a Quote</span>
+                    </button>
+                </div>
+
+                <!-- Air Freight Notice -->
+                <div class="service-unavailable-banner" id="airBanner" style="display: none;">
+                    <div class="banner-content">
+                        <span class="banner-icon">ℹ️</span>
+                        <span class="banner-text">Air freight bookings require direct contact with our office for
+                            personalized rates and scheduling.</span>
+                        <button type="button" class="btn btn-secondary btn-small" onclick="contactOffice()">📞 Contact
+                            Us</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quote picker -->
+            <div class="quote-picker" id="quotePicker">
+                <div class="picker-search">
+                    <input type="text" id="pickerSearch" placeholder="Search your quotes by reference or route"
+                        oninput="filterPicker()">
+                </div>
+                <div class="picker-list" id="pickerList">
+                    <div class="picker-card" data-ref="FTL-QR-548213" data-route="Antwerp Nhava Sheva">
+                        <div class="picker-info">
+                            <span class="picker-ref">FTL-QR-548213</span>
+                            <span class="picker-route">Antwerp (BEANR) → Nhava Sheva (INNSA)</span>
+                            <span class="picker-meta">📦 LCL · Direct Service <span
+                                    class="picker-status expiring">Expiring Soon</span></span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <span class="picker-price">USD 71.80</span>
+                            <button class="btn btn-secondary btn-small" onclick="useQuote('FTL-QR-548213')">Use this
+                                quote</button>
+                        </div>
+                    </div>
+                    <div class="picker-card" data-ref="FTL-QR-219804" data-route="Barcelona Shanghai">
+                        <div class="picker-info">
+                            <span class="picker-ref">FTL-QR-219804</span>
+                            <span class="picker-route">Barcelona (ESBCN) → Shanghai (CNSHA)</span>
+                            <span class="picker-meta">📦 LCL · Standard Service <span
+                                    class="picker-status active">Active</span></span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <span class="picker-price">USD 145.30</span>
+                            <button class="btn btn-secondary btn-small" onclick="useQuote('FTL-QR-219804')">Use this
+                                quote</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-help" style="margin-top:0.6rem;">Only Active and Expiring quotes can be converted to a
+                    booking. Booked or expired quotes won't appear here.</div>
+            </div>
+
+            <!-- Linked quote banner -->
+            <div class="linked-quote-banner" id="linkedQuoteBanner">
+                <div class="linked-left">
+                    <span class="linked-icon">📌</span>
+                    <span class="linked-text">Booking linked to quote <span class="linked-ref"
+                            id="linkedRef"></span></span>
+                    <span class="linked-text" id="linkedRouteText"></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <span class="linked-price" id="linkedPrice"></span>
+                    <button class="btn-text" style="padding:0.3rem 0.6rem; font-size:0.78rem;"
+                        onclick="changeQuote()">Change quote</button>
+                </div>
+            </div>
+
+            <!-- Steps Ribbon -->
+            <div class="booking-header" id="stepsRibbon">
+                <div class="header-section" id="routeSection" onclick="togglePanel('route')">
+                    <div class="section-label">Route</div>
+                    <div id="routeValue" class="section-placeholder">Origin → Destination</div>
+                </div>
+                <div class="header-section" id="cargoSection" onclick="togglePanel('cargo')">
+                    <div class="section-label">Cargo</div>
+                    <div id="cargoValue" class="section-placeholder">What are you shipping?</div>
+                </div>
+                <div class="header-section" id="detailsSection" onclick="togglePanel('details')">
+                    <div class="section-label">Services &amp; Instructions</div>
+                    <div id="detailsValue" class="section-placeholder">Services, reference &amp; instructions</div>
+                </div>
+                <div class="header-section" id="partiesSection" onclick="togglePanel('parties')">
+                    <div class="section-label">Parties &amp; Documents</div>
+                    <div id="partiesValue" class="section-placeholder">Optional · shipper, consignee &amp; docs</div>
+                </div>
+                <div class="header-section" id="reviewSection" onclick="togglePanel('review')">
+                    <div class="section-label">Review</div>
+                    <div id="reviewValue" class="section-placeholder">Review &amp; submit</div>
+                </div>
+            </div>
+
+            <div class="panels-container">
+
+                <!-- ROUTE PANEL -->
+                <div class="expandable-panel" id="routePanel">
+                    <div class="panel-content">
+                        <div class="panel-header-with-action">
+                            <h2 class="panel-title">Where is this shipment going?</h2>
+                            <button type="button" class="btn btn-primary" onclick="saveRoute()">Continue</button>
+                        </div>
+
+                        <div class="route-section">
+                            <h3 class="route-section-title">📍 Origin <span class="from-quote-tag"
+                                    id="originFromQuoteTag" style="display:none;">From Quote</span></h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Type <span class="required">*</span></label>
+                                    <select class="form-select" id="originType">
+                                        <option value="door">Door</option>
+                                        <option value="port">Port</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Country <span class="required">*</span></label>
+                                    <select class="form-select" id="originCountry">
+                                        <option value="">Select country</option>
+                                        <option value="US">United States</option>
+                                        <option value="CN">China</option>
+                                        <option value="GB">United Kingdom</option>
+                                        <option value="DE">Germany</option>
+                                        <option value="ES">Spain</option>
+                                        <option value="FR">France</option>
+                                        <option value="NL">Netherlands</option>
+                                        <option value="BE">Belgium</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">City / Port <span class="required">*</span></label>
+                                    <input type="text" class="form-input" id="originLocation"
+                                        placeholder="Search by city name or zip code">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="route-section">
+                            <h3 class="route-section-title">📍 Destination <span class="from-quote-tag"
+                                    id="destFromQuoteTag" style="display:none;">From Quote</span></h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Type <span class="required">*</span></label>
+                                    <select class="form-select" id="destType">
+                                        <option value="door">Door</option>
+                                        <option value="port">Port</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Country <span class="required">*</span></label>
+                                    <select class="form-select" id="destCountry">
+                                        <option value="">Select country</option>
+                                        <option value="US">United States</option>
+                                        <option value="CN">China</option>
+                                        <option value="GB">United Kingdom</option>
+                                        <option value="DE">Germany</option>
+                                        <option value="ES">Spain</option>
+                                        <option value="FR">France</option>
+                                        <option value="NL">Netherlands</option>
+                                        <option value="BE">Belgium</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">City / Port <span class="required">*</span></label>
+                                    <input type="text" class="form-input" id="destLocation"
+                                        placeholder="Search by city name or zip code">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="route-section">
+                            <h3 class="route-section-title">🚢 Sailing</h3>
+                            <div class="sailing-card">
+                                <div class="sailing-info">
+                                    <div class="sailing-vessel" id="sailingVesselText">—</div>
+                                    <div class="sailing-dates" id="sailingDatesText">—</div>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-small"
+                                    onclick="toggleSailingPicker()">Change Sailing</button>
+                            </div>
+                            <div class="sailing-picker" id="sailingPicker">
+                                <div class="picker-list" id="sailingPickerList"></div>
+                            </div>
+                            <div class="form-help">Defaults to the next available sailing. Choose "Change Sailing" to
+                                pick a different vessel or date.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARGO PANEL -->
+                <div class="expandable-panel" id="cargoPanel">
+                    <div class="panel-content">
+                        <div class="panel-header-with-action">
+                            <h2 class="panel-title">What are you shipping? <span class="from-quote-tag"
+                                    id="cargoFromQuoteTag" style="display:none;">From Quote</span></h2>
+                            <button type="button" class="btn btn-primary" onclick="saveCargo()">Continue</button>
+                        </div>
+
+                        <div class="cargo-type-section">
+                            <div class="cargo-type-selector">
+                                <button type="button" class="cargo-option active" id="lclTab"
+                                    onclick="selectCargoType('lcl')">
+                                    <span class="cargo-icon-small">📦</span>
+                                    <span class="cargo-text">Less than Container Load</span>
+                                </button>
+                                <button type="button" class="cargo-option" id="fclTab" onclick="selectCargoType('fcl')">
+                                    <span class="cargo-icon-small">🚢</span>
+                                    <span class="cargo-text">Full Container Load</span>
+                                </button>
+                            </div>
+                            <div class="service-unavailable-notice" id="fclNotice" style="display: none;">
+                                <div class="notice-icon">ℹ️</div>
+                                <div class="notice-content">
+                                    <div class="notice-title">Full Container Load - Contact Our Office</div>
+                                    <div class="notice-description">FCL bookings are not available online at this time.
+                                        Please contact our office for container load rates and booking.</div>
+                                    <div class="notice-actions">
+                                        <button type="button" class="btn btn-secondary" onclick="contactOffice()">📞
+                                            Contact Us</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cargo-items" id="cargoItems"></div>
+
+                        <button type="button" class="btn btn-text" id="addCargoItemBtn" onclick="addCargoItem()">+ Add
+                            Another Cargo Item</button>
+                    </div>
+                </div>
+
+                <!-- BOOKING DETAILS PANEL -->
+                <div class="expandable-panel" id="detailsPanel">
+                    <div class="panel-content">
+                        <div class="panel-header-with-action">
+                            <h2 class="panel-title">Services &amp; Instructions</h2>
+                            <button type="button" class="btn btn-primary" onclick="saveDetails()">Continue</button>
+                        </div>
+
+                        <div class="route-section">
+                            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
+                                <div class="form-group">
+                                    <label class="form-label">Customer Reference / PO Number</label>
+                                    <input type="text" class="form-input" id="customerRef" placeholder="e.g. PO-44213">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Requested Cargo Ready Date <span
+                                            class="required">*</span></label>
+                                    <input type="date" class="form-input" id="cargoReadyDate" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Special Instructions</label>
+                                <textarea class="form-textarea" id="specialInstructions"
+                                    placeholder="Anything our operations team should know about this shipment"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="route-section">
+                            <h3 class="route-section-title">Additional Services (Optional)</h3>
+                            <div class="services-grid">
+                                <div class="service-card" onclick="toggleService(this)">
+                                    <input type="checkbox" id="svcCustoms">
+                                    <div class="service-name">Customs Clearance</div>
+                                    <div class="service-description">We handle all customs documentation and clearance
+                                    </div>
+                                </div>
+                                <div class="service-card" onclick="toggleService(this)">
+                                    <input type="checkbox" id="svcInsurance">
+                                    <div class="service-name">Insurance</div>
+                                    <div class="service-description">Full cargo insurance coverage during transit</div>
+                                </div>
+                                <div class="service-card" onclick="toggleService(this)">
+                                    <input type="checkbox" id="svcPickup">
+                                    <div class="service-name">Door Pickup</div>
+                                    <div class="service-description">We collect your cargo from your location</div>
+                                </div>
+                                <div class="service-card" onclick="toggleService(this)">
+                                    <input type="checkbox" id="svcDelivery">
+                                    <div class="service-name">Door Delivery</div>
+                                    <div class="service-description">We deliver to the final destination</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PARTIES & DOCUMENTS PANEL -->
+                <div class="expandable-panel" id="partiesPanel">
+                    <div class="panel-content">
+                        <div class="panel-header-with-action">
+                            <h2 class="panel-title">Parties &amp; Documents <span class="from-quote-tag"
+                                    style="background: var(--bg-gray); color: var(--text-secondary);">All
+                                    optional</span></h2>
+                            <button type="button" class="btn btn-primary" onclick="saveParties()">Continue</button>
+                        </div>
+
+                        <div class="route-section">
+                            <h3 class="route-section-title">📎 Documents</h3>
+                            <div class="doc-grid">
+                                <div class="doc-tile">
+                                    <div class="doc-icon">🧾</div>
+                                    <div class="doc-name">Commercial Invoice</div>
+                                    <div class="doc-status" id="docInvoiceStatus">Optional</div>
+                                    <button type="button" class="btn btn-secondary btn-small"
+                                        onclick="mockUpload('docInvoiceStatus')">Choose file</button>
+                                </div>
+                                <div class="doc-tile">
+                                    <div class="doc-icon">📋</div>
+                                    <div class="doc-name">Packing List</div>
+                                    <div class="doc-status" id="docPackingStatus">Optional</div>
+                                    <button type="button" class="btn btn-secondary btn-small"
+                                        onclick="mockUpload('docPackingStatus')">Choose file</button>
+                                </div>
+                                <div class="doc-tile" id="docDGDTile">
+                                    <div class="doc-icon">⚠️</div>
+                                    <div class="doc-name">DGD (Dangerous Goods Declaration)</div>
+                                    <div class="doc-status" id="docDGDStatus">Not applicable</div>
+                                    <button type="button" class="btn btn-secondary btn-small" id="docDGDBtn"
+                                        onclick="mockUpload('docDGDStatus')" disabled>Choose file</button>
+                                </div>
+                                <div class="doc-tile" id="docMSDSTile">
+                                    <div class="doc-icon">🧪</div>
+                                    <div class="doc-name">MSDS (Safety Data Sheet)</div>
+                                    <div class="doc-status" id="docMSDSStatus">Not applicable</div>
+                                    <button type="button" class="btn btn-secondary btn-small" id="docMSDSBtn"
+                                        onclick="mockUpload('docMSDSStatus')" disabled>Choose file</button>
+                                </div>
+                                <div class="doc-tile">
+                                    <div class="doc-icon">📎</div>
+                                    <div class="doc-name">Other Documents</div>
+                                    <div class="doc-status" id="docOtherStatus">Optional</div>
+                                    <button type="button" class="btn btn-secondary btn-small"
+                                        onclick="mockUpload('docOtherStatus')">Choose file</button>
+                                </div>
+                            </div>
+                            <div class="form-help" id="docHazardousNote"
+                                style="display:none; color: #b45309; font-weight: 600;">⚠ One or more cargo items are
+                                marked as Hazardous Materials — DGD and MSDS are required before this booking request
+                                can be submitted.</div>
+                            <div class="form-help">Accepted formats: PDF, JPG, PNG. Documents can also be added later
+                                from the booking detail page.</div>
+                        </div>
+
+                        <div class="route-section">
+                            <h3 class="route-section-title">📤 Shipper</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Company Name</label>
+                                    <input type="text" class="form-input" id="shipperCompany"
+                                        placeholder="e.g. Acme Trading BV">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Contact Person</label>
+                                    <input type="text" class="form-input" id="shipperContact" placeholder="Full name">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-input" id="shipperEmail"
+                                        placeholder="name@company.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Phone</label>
+                                    <input type="text" class="form-input" id="shipperPhone"
+                                        placeholder="+1 555 000 0000">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-textarea" id="shipperAddress"
+                                    placeholder="Street, city, postal code, country"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="route-section">
+                            <h3 class="route-section-title">📥 Consignee</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Company Name</label>
+                                    <input type="text" class="form-input" id="consigneeCompany"
+                                        placeholder="e.g. Global Imports Ltd">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Contact Person</label>
+                                    <input type="text" class="form-input" id="consigneeContact" placeholder="Full name">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-input" id="consigneeEmail"
+                                        placeholder="name@company.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Phone</label>
+                                    <input type="text" class="form-input" id="consigneePhone"
+                                        placeholder="+1 555 000 0000">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-textarea" id="consigneeAddress"
+                                    placeholder="Street, city, postal code, country"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="route-section">
+                            <div class="checkbox-group" style="margin-bottom: 0.625rem;">
+                                <input type="checkbox" id="notifySameAsConsignee" checked
+                                    onchange="toggleNotifyParty()">
+                                <label for="notifySameAsConsignee">Notify Party is the same as Consignee</label>
+                            </div>
+                            <div id="notifyPartyFields" style="display:none;">
+                                <h3 class="route-section-title">🔔 Notify Party</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Company Name</label>
+                                        <input type="text" class="form-input" id="notifyCompany"
+                                            placeholder="Company name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-input" id="notifyEmail"
+                                            placeholder="name@company.com">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REVIEW PANEL -->
+                <div class="expandable-panel" id="reviewPanel">
+                    <div class="panel-content" id="reviewPanelContent">
+                        <div class="panel-header-with-action">
+                            <h2 class="panel-title">Review &amp; Submit</h2>
+                        </div>
+
+                        <div class="rate-summary" id="rateSummary">
+                            <div>
+                                <div class="rate-label">Total</div>
+                                <div class="rate-amount" id="rateAmount">Rate to be confirmed</div>
+                                <div class="rate-ref" id="rateRefText">No quote linked — our team will issue a rate
+                                    after reviewing this booking request.</div>
+                            </div>
+                        </div>
+
+                        <div class="review-grid">
+                            <div class="review-block">
+                                <div class="review-block-title">Route <span class="review-edit-link"
+                                        onclick="togglePanel('route')">Edit</span></div>
+                                <div class="review-line" id="reviewRoute"><span class="review-empty">Not completed
+                                        yet</span></div>
+                            </div>
+                            <div class="review-block">
+                                <div class="review-block-title">Cargo <span class="review-edit-link"
+                                        onclick="togglePanel('cargo')">Edit</span></div>
+                                <div class="review-line" id="reviewCargo"><span class="review-empty">Not completed
+                                        yet</span></div>
+                            </div>
+                            <div class="review-block">
+                                <div class="review-block-title">Services &amp; Instructions <span
+                                        class="review-edit-link" onclick="togglePanel('details')">Edit</span></div>
+                                <div class="review-line" id="reviewDetails"><span class="review-empty">Not completed
+                                        yet</span></div>
+                            </div>
+                            <div class="review-block">
+                                <div class="review-block-title">Parties <span class="review-edit-link"
+                                        onclick="togglePanel('parties')">Edit</span></div>
+                                <div class="review-line" id="reviewParties"><span class="review-empty">Not completed
+                                        yet</span></div>
+                            </div>
+                        </div>
+
+                        <div class="terms-confirm">
+                            <input type="checkbox" id="termsCheck">
+                            <label for="termsCheck">I confirm the information provided is accurate and I agree to Fast
+                                Transit Line's <a href="#">Terms &amp; Conditions</a> and <a href="#">Booking
+                                    Policy</a>.</label>
+                        </div>
+
+                        <div class="form-help" style="margin-bottom: 0.75rem;">This submits a booking request — it is
+                            not yet confirmed. Our team will review the details and send you a confirmation once
+                            accepted.</div>
+
+                        <div class="panel-actions" style="justify-content:flex-start;">
+                            <button type="button" class="btn btn-success" onclick="submitBookingRequest()">📨 Submit
+                                Booking Request</button>
+                        </div>
+                    </div>
+
+                    <!-- Success state -->
+                    <div class="success-panel" id="successPanel">
+                        <div class="success-icon">📨</div>
+                        <div class="success-title">Booking Request Submitted</div>
+                        <div class="success-desc" id="successDesc">Your booking request has been sent to our team for
+                            review. You'll receive a confirmation by email once it's accepted.</div>
+                        <div class="booking-number-box">
+                            <span class="booking-number-label">Request Reference</span>
+                            <span class="booking-number-value" id="bookingNumberValue">BR-2026-00000</span>
+                        </div>
+                        <div class="success-actions">
+                            <button class="btn btn-secondary" onclick="showAlert('Opening request status view...')">View
+                                Request Status</button>
+                            <button class="btn btn-text" onclick="showAlert('Redirecting to My Quotes...')">Back to My
+                                Quotes</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div class="custom-alert-overlay" id="customAlertOverlay" onclick="closeCustomAlert()">
+        <div class="custom-alert-box" onclick="event.stopPropagation()">
+            <div class="custom-alert-message" id="customAlertMessage"></div>
+            <button class="custom-alert-button" onclick="closeCustomAlert()">OK</button>
+        </div>
+    </div>
+
+    <script>
+        function showAlert(message) {
+            const overlay = document.getElementById('customAlertOverlay');
+            const messageEl = document.getElementById('customAlertMessage');
+            messageEl.textContent = message;
+            overlay.classList.add('show');
+        }
+
+        function closeCustomAlert() {
+            document.getElementById('customAlertOverlay').classList.remove('show');
+        }
+        window.alert = showAlert;
+        let bookingMode = 'ocean'; // 'ocean' | 'air' | 'quote'
+        let linkedQuote = null;
+        const sailings = [{
+            vessel: 'MSC Anna',
+            voyage: '224W',
+            etd: '2026-07-10',
+            eta: '2026-07-22',
+            transit: '12 days'
+        },
+        {
+            vessel: 'CMA CGM Brest',
+            voyage: '118E',
+            etd: '2026-07-14',
+            eta: '2026-07-27',
+            transit: '13 days'
+        },
+        {
+            vessel: 'Maersk Edinburgh',
+            voyage: '305N',
+            etd: '2026-07-17',
+            eta: '2026-07-30',
+            transit: '13 days'
+        }
+        ];
+        let selectedSailingIndex = 0;
+
+        function renderSailingCard() {
+            const s = sailings[selectedSailingIndex];
+            document.getElementById('sailingVesselText').innerHTML = `${s.vessel} · Voyage ${s.voyage}` + (selectedSailingIndex === 0 ? '<span class="sailing-default-tag">Next Available</span>' : '');
+            document.getElementById('sailingDatesText').textContent = `ETD ${s.etd} → ETA ${s.eta} · ${s.transit} transit`;
+        }
+
+        function toggleSailingPicker() {
+            const picker = document.getElementById('sailingPicker');
+            const show = !picker.classList.contains('show');
+            if (show) renderSailingPickerList();
+            picker.classList.toggle('show', show);
+        }
+
+        function renderSailingPickerList() {
+            const list = document.getElementById('sailingPickerList');
+            list.innerHTML = sailings.map((s, idx) => `
+            <div class="picker-card">
+                <div class="picker-info">
+                    <span class="picker-route">${s.vessel} · Voyage ${s.voyage}${idx === 0 ? ' <span class="picker-status active">Next Available</span>' : ''}</span>
+                    <span class="picker-meta">ETD ${s.etd} → ETA ${s.eta} · ${s.transit} transit</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-small" onclick="selectSailing(${idx})">${idx === selectedSailingIndex ? '✓ Selected' : 'Select'}</button>
+            </div>
+        `).join('');
+        }
+
+        function selectSailing(idx) {
+            selectedSailingIndex = idx;
+            renderSailingCard();
+            document.getElementById('sailingPicker').classList.remove('show');
+        }
+        const quoteData = {
+            'FTL-QR-548213': {
+                route: 'Antwerp (BEANR) → Nhava Sheva (INNSA)',
+                price: 'USD 71.80',
+                originType: 'port',
+                originCountry: 'BE',
+                originLocation: 'Antwerp (BEANR)',
+                destType: 'port',
+                destCountry: 'IN',
+                destLocation: 'Nhava Sheva (INNSA)',
+                pieces: 12,
+                packageType: 'pallets',
+                goodsType: 'commercial',
+                weight: 480,
+                volume: 1.56
+            },
+            'FTL-QR-219804': {
+                route: 'Barcelona (ESBCN) → Shanghai (CNSHA)',
+                price: 'USD 145.30',
+                originType: 'port',
+                originCountry: 'ES',
+                originLocation: 'Barcelona (ESBCN)',
+                destType: 'port',
+                destCountry: 'CN',
+                destLocation: 'Shanghai (CNSHA)',
+                pieces: 18,
+                packageType: 'boxes',
+                goodsType: 'commercial',
+                weight: 920,
+                volume: 2.40
+            }
+        };
+
+        function selectBookingMode(mode) {
+            bookingMode = mode;
+            document.getElementById('oceanTabHeader').classList.toggle('active', mode === 'ocean');
+            document.getElementById('airTabHeader').classList.toggle('active', mode === 'air');
+            document.getElementById('quoteTabHeader').classList.toggle('active', mode === 'quote');
+            const airBanner = document.getElementById('airBanner');
+            const stepsRibbon = document.getElementById('stepsRibbon');
+            const panelsContainer = document.querySelector('.panels-container');
+            if (mode === 'air') {
+                airBanner.style.display = 'block';
+                stepsRibbon.style.display = 'none';
+                panelsContainer.style.display = 'none';
+                document.getElementById('quotePicker').classList.remove('show');
+            } else {
+                airBanner.style.display = 'none';
+                stepsRibbon.style.display = 'flex';
+                panelsContainer.style.display = 'block';
+            }
+            if (mode === 'quote') {
+                if (!linkedQuote) {
+                    document.getElementById('quotePicker').classList.add('show');
+                }
+            } else {
+                document.getElementById('quotePicker').classList.remove('show');
+                if (linkedQuote) {
+                    document.getElementById('linkedQuoteBanner').classList.remove('show');
+                    document.getElementById('originFromQuoteTag').style.display = 'none';
+                    document.getElementById('destFromQuoteTag').style.display = 'none';
+                    document.getElementById('cargoFromQuoteTag').style.display = 'none';
+                    linkedQuote = null;
+                    updateRateSummary();
+                }
+            }
+        }
+
+        function contactOffice() {
+            showAlert('Please contact us:\n\nEmail: quotes@fasttransitline.com\nPhone: +1 (555) 123-4567\n\nOur team will respond within 24 hours.');
+        }
+
+        function useQuote(ref) {
+            linkedQuote = ref;
+            const q = quoteData[ref];
+            document.getElementById('quotePicker').classList.remove('show');
+            document.getElementById('linkedQuoteBanner').classList.add('show');
+            document.getElementById('linkedRef').textContent = ref;
+            document.getElementById('linkedRouteText').textContent = q.route;
+            document.getElementById('linkedPrice').textContent = q.price;
+            // Prefill route
+            document.getElementById('originType').value = q.originType;
+            document.getElementById('originCountry').value = q.originCountry;
+            document.getElementById('originLocation').value = q.originLocation;
+            document.getElementById('destType').value = q.destType;
+            document.getElementById('destCountry').value = q.destCountry;
+            document.getElementById('destLocation').value = q.destLocation;
+            document.getElementById('originFromQuoteTag').style.display = 'inline-block';
+            document.getElementById('destFromQuoteTag').style.display = 'inline-block';
+            // Prefill cargo — ensure at least one item exists, then fill the first
+            if (document.querySelectorAll('.cargo-item').length === 0) addCargoItem();
+            const firstItem = document.querySelector('.cargo-item');
+            const itemId = firstItem.id;
+            document.getElementById(`${itemId}-pieces`).value = q.pieces;
+            document.getElementById(`${itemId}-package`).value = q.packageType;
+            document.getElementById(`${itemId}-goods`).value = q.goodsType;
+            document.getElementById(`${itemId}-weight`).value = q.weight;
+            document.getElementById(`${itemId}-volume`).value = q.volume;
+            document.getElementById('cargoFromQuoteTag').style.display = 'inline-block';
+            updateDocumentRequirements();
+            updateRateSummary();
+            showAlert('Quote ' + ref + ' linked. Route and cargo details have been pre-filled — feel free to adjust them.');
+        }
+
+        function changeQuote() {
+            document.getElementById('quotePicker').classList.add('show');
+        }
+
+        function filterPicker() {
+            const term = document.getElementById('pickerSearch').value.toLowerCase().trim();
+            document.querySelectorAll('.picker-card').forEach(card => {
+                const haystack = (card.dataset.ref + ' ' + card.dataset.route).toLowerCase();
+                card.style.display = !term || haystack.includes(term) ? '' : 'none';
+            });
+        }
+
+        function togglePanel(panelName) {
+            const panels = ['route', 'cargo', 'details', 'parties', 'review'];
+            const panel = document.getElementById(panelName + 'Panel');
+            const section = document.getElementById(panelName + 'Section');
+            panels.forEach(p => {
+                const otherPanel = document.getElementById(p + 'Panel');
+                const otherSection = document.getElementById(p + 'Section');
+                if (otherPanel && p !== panelName) {
+                    otherPanel.classList.remove('open');
+                    otherSection.classList.remove('active');
+                }
+            });
+            const isOpen = panel.classList.contains('open');
+            if (isOpen) {
+                panel.classList.remove('open');
+                section.classList.remove('active');
+            } else {
+                panel.classList.add('open');
+                section.classList.add('active');
+                if (panelName === 'review') updateReview();
+            }
+        }
+
+        function setHeaderValue(sectionPrefix, text) {
+            const el = document.getElementById(sectionPrefix + 'Value');
+            el.textContent = text;
+            el.classList.remove('section-placeholder');
+            el.classList.add('section-value');
+            document.getElementById(sectionPrefix + 'Section').classList.add('completed');
+        }
+
+        function saveRoute() {
+            const originLoc = document.getElementById('originLocation').value;
+            const destLoc = document.getElementById('destLocation').value;
+            if (!originLoc || !destLoc) {
+                showAlert('Please fill in both origin and destination.');
+                return;
+            }
+            const s = sailings[selectedSailingIndex];
+            setHeaderValue('route', `${originLoc} → ${destLoc} · 🚢 ${s.vessel} (${s.etd})`);
+            togglePanel('route');
+            setTimeout(() => togglePanel('cargo'), 300);
+        }
+
+        function saveCargo() {
+            if (selectedCargoType === 'fcl') {
+                showAlert('Please contact our office for Full Container Load bookings.');
+                return;
+            }
+            const cargoItems = document.querySelectorAll('.cargo-item');
+            if (cargoItems.length === 0) {
+                showAlert('Please add at least one cargo item.');
+                return;
+            }
+            let totalPieces = 0,
+                totalWeight = 0,
+                totalVolume = 0;
+            for (const item of cargoItems) {
+                const itemId = item.id;
+                const itemTitle = item.querySelector('.cargo-item-title').textContent;
+                const pieces = document.getElementById(`${itemId}-pieces`).value;
+                const weight = document.getElementById(`${itemId}-weight`).value;
+                const volume = document.getElementById(`${itemId}-volume`).value;
+                if (!pieces || !weight || !volume) {
+                    showAlert(`${itemTitle}: please fill in pieces, weight and volume.`);
+                    return;
+                }
+                const goodsType = document.getElementById(`${itemId}-goods`).value;
+                if (goodsType === 'hazardous') {
+                    const selectedChips = document.querySelectorAll(`#${itemId}-hazmat-chips .hazmat-chip`);
+                    if (selectedChips.length === 0) {
+                        showAlert(`${itemTitle}: please select at least one hazard class for this hazardous cargo.`);
+                        return;
+                    }
+                }
+                const isStackable = document.getElementById(`${itemId}-stackable`).checked;
+                if (!isStackable) {
+                    const dimItems = document.querySelectorAll(`#${itemId}-dimensions .dimension-item`);
+                    if (dimItems.length === 0) {
+                        showAlert(`${itemTitle}: non-stackable cargo requires at least one dimension entry.`);
+                        return;
+                    }
+                    for (const dim of dimItems) {
+                        const inputs = dim.querySelectorAll('input[type="number"]');
+                        const emptyFields = [];
+                        if (!inputs[0]?.value || parseFloat(inputs[0].value) <= 0) emptyFields.push('Pieces');
+                        if (!inputs[1]?.value || parseFloat(inputs[1].value) <= 0) emptyFields.push('Length');
+                        if (!inputs[2]?.value || parseFloat(inputs[2].value) <= 0) emptyFields.push('Width');
+                        if (!inputs[3]?.value || parseFloat(inputs[3].value) <= 0) emptyFields.push('Height');
+                        const weightInputDim = dim.querySelector('input[id$="-weight"]');
+                        if (!weightInputDim?.value || parseFloat(weightInputDim.value) < 0) emptyFields.push('Weight');
+                        if (emptyFields.length > 0) {
+                            showAlert(`${itemTitle}: please fill in all dimension fields: ${emptyFields.join(', ')}`);
+                            return;
+                        }
+                    }
+                }
+                totalPieces += parseFloat(pieces) || 0;
+                totalWeight += parseFloat(weight) || 0;
+                totalVolume += parseFloat(volume) || 0;
+            }
+            const itemLabel = cargoItems.length > 1 ? `${cargoItems.length} cargo items` : '1 cargo item';
+            setHeaderValue('cargo', `${itemLabel} · ${totalPieces} pcs | ${totalWeight.toFixed(2)} kg | ${totalVolume.toFixed(3)} m³`);
+            updateDocumentRequirements();
+            togglePanel('cargo');
+            setTimeout(() => togglePanel('details'), 300);
+        }
+        let selectedCargoType = 'lcl';
+
+        function selectCargoType(type) {
+            selectedCargoType = type;
+            document.getElementById('lclTab').classList.toggle('active', type === 'lcl');
+            document.getElementById('fclTab').classList.toggle('active', type === 'fcl');
+            const fclNotice = document.getElementById('fclNotice');
+            const cargoItemsEl = document.getElementById('cargoItems');
+            const addBtn = document.getElementById('addCargoItemBtn');
+            if (type === 'fcl') {
+                fclNotice.style.display = 'flex';
+                cargoItemsEl.style.display = 'none';
+                addBtn.style.display = 'none';
+            } else {
+                fclNotice.style.display = 'none';
+                cargoItemsEl.style.display = 'flex';
+                addBtn.style.display = 'inline-flex';
+            }
+        }
+        let cargoItemCounter = 0;
+        let dimensionCounters = {};
+        const hazmatLookup = [{
+            code: 'Class 1',
+            label: 'Explosives'
+        },
+        {
+            code: 'Class 2.1',
+            label: 'Flammable Gases'
+        },
+        {
+            code: 'Class 2.2',
+            label: 'Non-Flammable, Non-Toxic Gases'
+        },
+        {
+            code: 'Class 2.3',
+            label: 'Toxic Gases'
+        },
+        {
+            code: 'Class 3',
+            label: 'Flammable Liquids'
+        },
+        {
+            code: 'Class 4.1',
+            label: 'Flammable Solids'
+        },
+        {
+            code: 'Class 4.2',
+            label: 'Spontaneously Combustible'
+        },
+        {
+            code: 'Class 4.3',
+            label: 'Dangerous When Wet'
+        },
+        {
+            code: 'Class 5.1',
+            label: 'Oxidizers'
+        },
+        {
+            code: 'Class 5.2',
+            label: 'Organic Peroxides'
+        },
+        {
+            code: 'Class 6.1',
+            label: 'Toxic Substances'
+        },
+        {
+            code: 'Class 6.2',
+            label: 'Infectious Substances'
+        },
+        {
+            code: 'Class 7',
+            label: 'Radioactive Material'
+        },
+        {
+            code: 'Class 8',
+            label: 'Corrosives'
+        },
+        {
+            code: 'Class 9',
+            label: 'Miscellaneous Dangerous Goods'
+        },
+        {
+            code: 'UN1170',
+            label: 'Ethanol / Ethyl Alcohol (Class 3)'
+        },
+        {
+            code: 'UN1230',
+            label: 'Methanol (Class 3)'
+        },
+        {
+            code: 'UN1263',
+            label: 'Paint (Class 3)'
+        },
+        {
+            code: 'UN1428',
+            label: 'Sodium (Class 4.3)'
+        },
+        {
+            code: 'UN1479',
+            label: 'Oxidizing Solid, N.O.S. (Class 5.1)'
+        },
+        {
+            code: 'UN1789',
+            label: 'Hydrochloric Acid (Class 8)'
+        },
+        {
+            code: 'UN1950',
+            label: 'Aerosols (Class 2)'
+        },
+        {
+            code: 'UN1993',
+            label: 'Flammable Liquid, N.O.S. (Class 3)'
+        },
+        {
+            code: 'UN2794',
+            label: 'Batteries, Wet, Filled with Acid (Class 8)'
+        },
+        {
+            code: 'UN2809',
+            label: 'Mercury (Class 8)'
+        },
+        {
+            code: 'UN3077',
+            label: 'Environmentally Hazardous Substance, Solid, N.O.S. (Class 9)'
+        },
+        {
+            code: 'UN3082',
+            label: 'Environmentally Hazardous Substance, Liquid, N.O.S. (Class 9)'
+        },
+        {
+            code: 'UN3090',
+            label: 'Lithium Metal Batteries (Class 9)'
+        },
+        {
+            code: 'UN3480',
+            label: 'Lithium Ion Batteries (Class 9)'
+        },
+        {
+            code: 'UN3481',
+            label: 'Lithium Ion Batteries Packed with Equipment (Class 9)'
+        }
+        ];
+
+        function getSelectedHazmatCodes(itemId) {
+            return Array.from(document.querySelectorAll(`#${itemId}-hazmat-chips .hazmat-chip`)).map(chip => chip.dataset.code);
+        }
+
+        function showHazmatDropdown(itemId) {
+            const input = document.getElementById(`${itemId}-hazmat-search`);
+            const term = input.value.toLowerCase().trim();
+            const dropdown = document.getElementById(`${itemId}-hazmat-dropdown`);
+            const selectedCodes = getSelectedHazmatCodes(itemId);
+            const filtered = hazmatLookup.filter(h =>
+                !selectedCodes.includes(h.code) &&
+                (h.code.toLowerCase().includes(term) || h.label.toLowerCase().includes(term))
+            );
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div class="dropdown-no-results">No matching hazard class found</div>';
+            } else {
+                dropdown.innerHTML = filtered.slice(0, 8).map(h => `
+                <div class="dropdown-item" onclick="selectHazmat('${itemId}', '${h.code}', '${h.label.replace(/'/g, "\\'")}')">
+                    <div class="dropdown-item-name">${h.label}</div>
+                    <div class="dropdown-item-code">${h.code}</div>
+                </div>
+            `).join('');
+            }
+            dropdown.classList.add('show');
+        }
+
+        function selectHazmat(itemId, code, label) {
+            const chipsContainer = document.getElementById(`${itemId}-hazmat-chips`);
+            const chip = document.createElement('span');
+            chip.className = 'hazmat-chip';
+            chip.dataset.code = code;
+            chip.innerHTML = `${code} · ${label} <button type="button" onclick="removeHazmatChip(this)">✕</button>`;
+            chipsContainer.appendChild(chip);
+            const input = document.getElementById(`${itemId}-hazmat-search`);
+            input.value = '';
+            document.getElementById(`${itemId}-hazmat-dropdown`).classList.remove('show');
+        }
+
+        function removeHazmatChip(btn) {
+            btn.closest('.hazmat-chip').remove();
+        }
+
+        function toggleItemHazmat(itemId) {
+            const goodsType = document.getElementById(`${itemId}-goods`).value;
+            const hazmatSection = document.getElementById(`${itemId}-hazmat`);
+            hazmatSection.style.display = goodsType === 'hazardous' ? 'block' : 'none';
+        }
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.searchable-select')) {
+                document.querySelectorAll('.searchable-dropdown').forEach(d => d.classList.remove('show'));
+            }
+        });
+
+        function addCargoItem() {
+            cargoItemCounter++;
+            const itemId = `bkcargo-${cargoItemCounter}`;
+            dimensionCounters[itemId] = 0;
+            const cargoItemsContainer = document.getElementById('cargoItems');
+            const cargoItem = document.createElement('div');
+            cargoItem.className = 'cargo-item';
+            cargoItem.id = itemId;
+            cargoItem.innerHTML = `
+            <div class="cargo-item-header">
+                <div class="cargo-item-title">Cargo Item #${cargoItemCounter}</div>
+                ${cargoItemCounter > 1 ? `<button type="button" class="remove-item-btn" onclick="removeCargoItem('${itemId}')">Remove</button>` : ''}
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label">Unit of Measurement</label>
+                <div class="unit-toggle">
+                    <button type="button" class="unit-option active" onclick="setUnit('${itemId}', 'metric')">Metric (kg/m³/cm)</button>
+                    <button type="button" class="unit-option" onclick="setUnit('${itemId}', 'imperial')">Imperial (lbs/ft³/in)</button>
+                </div>
+            </div>
+
+            <div class="form-grid" style="grid-template-columns: 110px 1fr 1fr 1fr;">
+                <div class="form-group">
+                    <label class="form-label">Total Pieces <span class="required">*</span></label>
+                    <input type="number" class="form-input" id="${itemId}-pieces" placeholder="0" min="1" value="1" oninput="updateTotals('${itemId}')">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Package Type <span class="required">*</span></label>
+                    <select class="form-select" id="${itemId}-package">
+                        <option value="">Select package type</option>
+                        <option value="pallets">Pallets</option>
+                        <option value="boxes">Boxes/Crates</option>
+                        <option value="drums">Drums</option>
+                        <option value="bags">Bags</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Goods Type <span class="required">*</span></label>
+                    <select class="form-select" id="${itemId}-goods" onchange="updateDocumentRequirements(); toggleItemHazmat('${itemId}')">
+                        <option value="">Select goods type</option>
+                        <option value="commercial">Commercial Cargo</option>
+                        <option value="hazardous">Hazardous Materials</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">HS Code <span style="font-weight:400; color:var(--text-muted); text-transform:none; letter-spacing:0;">(optional)</span></label>
+                    <input type="text" class="form-input" id="${itemId}-hscode" placeholder="e.g. 8471.30">
+                </div>
+            </div>
+
+            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="form-group">
+                    <label class="form-label">Goods Description</label>
+                    <textarea class="form-textarea" id="${itemId}-description" placeholder="Describe the cargo contents (e.g. Ceramic tiles, palletized)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Marks &amp; Numbers</label>
+                    <textarea class="form-textarea" id="${itemId}-marks" placeholder="e.g. ABC CO. / Box 1-12"></textarea>
+                </div>
+            </div>
+
+            <div class="hazmat-section" id="${itemId}-hazmat" style="display:none;">
+                <label class="form-label" style="margin-bottom:0.4rem;">Hazardous Materials <span class="required">*</span></label>
+                <div class="hazmat-chips" id="${itemId}-hazmat-chips"></div>
+                <div class="searchable-select" style="position:relative;">
+                    <input type="text" class="form-input" id="${itemId}-hazmat-search" placeholder="Search hazard class or name (e.g. Class 3, Flammable)"
+                           onfocus="showHazmatDropdown('${itemId}')" oninput="showHazmatDropdown('${itemId}')" autocomplete="off">
+                    <div class="searchable-dropdown" id="${itemId}-hazmat-dropdown"></div>
+                </div>
+                <div class="form-help">Search and select all IMDG hazard classes that apply to this cargo item.</div>
+            </div>
+
+            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="form-group">
+                    <label class="form-label">Total Weight <span class="required">*</span></label>
+                    <input type="number" class="form-input" id="${itemId}-weight" step="0.01" placeholder="0.00 kg" oninput="updateTotals('${itemId}')">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Total Volume <span class="required">*</span></label>
+                    <input type="number" class="form-input" id="${itemId}-volume" step="0.01" placeholder="0.00 m³" oninput="updateTotals('${itemId}')">
+                </div>
+            </div>
+            <div class="form-help" style="margin: -0.4rem 0 0.75rem;">Filled in automatically once you add dimensions below, or enter totals directly if you don't have piece-level dimensions.</div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="${itemId}-stackable" checked onchange="toggleStackable('${itemId}')">
+                <label for="${itemId}-stackable">Stackable</label>
+            </div>
+
+            <div class="dimensions-section">
+                <div class="dimensions-header">
+                    <span class="dimensions-label">Dimensions <span id="${itemId}-dims-required" style="display:none; color: var(--error-red);">*</span></span>
+                    <button type="button" class="btn btn-text" onclick="addDimension('${itemId}')">+ Add Dimension</button>
+                </div>
+                <div id="${itemId}-dimensions"></div>
+            </div>
+        `;
+            cargoItemsContainer.appendChild(cargoItem);
+        }
+
+        function removeCargoItem(itemId) {
+            const item = document.getElementById(itemId);
+            if (item) item.remove();
+            delete dimensionCounters[itemId];
+            updateDocumentRequirements();
+        }
+
+        function setUnit(itemId, unitSystem) {
+            const buttons = document.querySelectorAll(`#${itemId} .unit-option`);
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            const weightInput = document.getElementById(`${itemId}-weight`);
+            const volumeInput = document.getElementById(`${itemId}-volume`);
+            if (unitSystem === 'metric') {
+                weightInput.placeholder = '0.00 kg';
+                volumeInput.placeholder = '0.00 m³';
+            } else {
+                weightInput.placeholder = '0.00 lbs';
+                volumeInput.placeholder = '0.00 ft³';
+            }
+            const lengthUnit = unitSystem === 'metric' ? 'cm' : 'in';
+            const weightUnit = unitSystem === 'metric' ? 'kg' : 'lbs';
+            document.querySelectorAll(`#${itemId}-dimensions .dimension-item`).forEach(item => {
+                const labels = item.querySelectorAll('.dimension-input-small label');
+                const inputs = item.querySelectorAll('.dimension-input-small input');
+                if (labels[1]) labels[1].textContent = `Length (${lengthUnit})`;
+                if (labels[2]) labels[2].textContent = `Width (${lengthUnit})`;
+                if (labels[3]) labels[3].textContent = `Height (${lengthUnit})`;
+                if (inputs[1]) inputs[1].placeholder = `0 ${lengthUnit}`;
+                if (inputs[2]) inputs[2].placeholder = `0 ${lengthUnit}`;
+                if (inputs[3]) inputs[3].placeholder = `0 ${lengthUnit}`;
+                const weightInputDim = item.querySelector('[id$="-weight"]');
+                if (weightInputDim) weightInputDim.placeholder = `0.00 ${weightUnit}`;
+            });
+            document.getElementById(itemId).dataset.unit = unitSystem;
+            updateTotals(itemId);
+        }
+
+        function toggleStackable(itemId) {
+            const isStackable = document.getElementById(`${itemId}-stackable`).checked;
+            const dimsRequired = document.getElementById(`${itemId}-dims-required`);
+            const dimsContainer = document.getElementById(`${itemId}-dimensions`);
+            if (!isStackable) {
+                dimsRequired.style.display = 'inline';
+                if (dimsContainer.children.length === 0) addDimension(itemId);
+            } else {
+                dimsRequired.style.display = 'none';
+            }
+        }
+
+        function addDimension(itemId) {
+            dimensionCounters[itemId] = (dimensionCounters[itemId] || 0) + 1;
+            const dimId = `${itemId}-dim-${dimensionCounters[itemId]}`;
+            const unitSystem = document.getElementById(itemId).dataset.unit || 'metric';
+            const lengthUnit = unitSystem === 'metric' ? 'cm' : 'in';
+            const weightUnit = unitSystem === 'metric' ? 'kg' : 'lbs';
+            const dimensionItem = document.createElement('div');
+            dimensionItem.className = 'dimension-item';
+            dimensionItem.id = dimId;
+            dimensionItem.innerHTML = `
+            <div class="dimension-input-small">
+                <label>Pieces</label>
+                <input type="number" placeholder="1" value="1" min="1" onchange="updateTotals('${itemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Length (${lengthUnit})</label>
+                <input type="number" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${itemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Width (${lengthUnit})</label>
+                <input type="number" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${itemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Height (${lengthUnit})</label>
+                <input type="number" placeholder="0 ${lengthUnit}" step="0.01" onchange="updateTotals('${itemId}')">
+            </div>
+            <div class="dimension-input-small">
+                <label>Weight</label>
+                <div class="dimension-weight-toggle">
+                    <button type="button" class="active" onclick="toggleWeightType('${dimId}', this, '${itemId}')">Total</button>
+                    <button type="button" onclick="toggleWeightType('${dimId}', this, '${itemId}')">Per Pc</button>
+                </div>
+                <input type="number" placeholder="0.00 ${weightUnit}" step="0.01" id="${dimId}-weight" onchange="updateTotals('${itemId}')">
+            </div>
+            <button type="button" class="remove-dim-btn" onclick="removeDimension('${dimId}', '${itemId}')">✕</button>
+        `;
+            document.getElementById(`${itemId}-dimensions`).appendChild(dimensionItem);
+        }
+
+        function removeDimension(dimId, itemId) {
+            const dim = document.getElementById(dimId);
+            if (dim) dim.remove();
+            updateTotals(itemId);
+        }
+
+        function toggleWeightType(dimId, btn, itemId) {
+            document.querySelectorAll(`#${dimId} .dimension-weight-toggle button`).forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateTotals(itemId);
+        }
+
+        function updateTotals(itemId) {
+            const unitSystem = document.getElementById(itemId).dataset.unit || 'metric';
+            const dimItems = document.querySelectorAll(`#${itemId}-dimensions .dimension-item`);
+            let totalVolume = 0;
+            let totalWeight = 0;
+            dimItems.forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                const pieces = parseFloat(inputs[0].value) || 0;
+                const length = parseFloat(inputs[1].value) || 0;
+                const width = parseFloat(inputs[2].value) || 0;
+                const height = parseFloat(inputs[3].value) || 0;
+                const weight = parseFloat(inputs[4].value) || 0;
+                const weightButtons = item.querySelectorAll('.dimension-weight-toggle button');
+                const isPerPiece = weightButtons[1] && weightButtons[1].classList.contains('active');
+                if (length && width && height && pieces) {
+                    totalVolume += unitSystem === 'metric' ?
+                        (length * width * height) / 1000000 * pieces :
+                        (length * width * height) / 1728 * pieces;
+                }
+                if (weight) {
+                    totalWeight += isPerPiece ? weight * pieces : weight;
+                }
+            });
+            if (totalVolume > 0) document.getElementById(`${itemId}-volume`).value = totalVolume.toFixed(3);
+            if (totalWeight > 0) document.getElementById(`${itemId}-weight`).value = totalWeight.toFixed(2);
+        }
+
+        function updateDocumentRequirements() {
+            const goodsSelects = document.querySelectorAll('[id$="-goods"]');
+            let hasHazardous = false;
+            goodsSelects.forEach(sel => {
+                if (sel.value === 'hazardous') hasHazardous = true;
+            });
+            const dgdBtn = document.getElementById('docDGDBtn');
+            const msdsBtn = document.getElementById('docMSDSBtn');
+            const dgdStatus = document.getElementById('docDGDStatus');
+            const msdsStatus = document.getElementById('docMSDSStatus');
+            const note = document.getElementById('docHazardousNote');
+            if (hasHazardous) {
+                dgdBtn.disabled = false;
+                msdsBtn.disabled = false;
+                if (!dgdStatus.classList.contains('uploaded')) dgdStatus.textContent = 'Required';
+                if (!msdsStatus.classList.contains('uploaded')) msdsStatus.textContent = 'Required';
+                dgdStatus.style.color = dgdStatus.classList.contains('uploaded') ? '' : 'var(--error-red)';
+                msdsStatus.style.color = msdsStatus.classList.contains('uploaded') ? '' : 'var(--error-red)';
+                note.style.display = 'block';
+            } else {
+                dgdBtn.disabled = true;
+                msdsBtn.disabled = true;
+                dgdStatus.textContent = 'Not applicable';
+                msdsStatus.textContent = 'Not applicable';
+                dgdStatus.classList.remove('uploaded');
+                msdsStatus.classList.remove('uploaded');
+                dgdStatus.style.color = '';
+                msdsStatus.style.color = '';
+                note.style.display = 'none';
+            }
+        }
+
+        function toggleNotifyParty() {
+            const same = document.getElementById('notifySameAsConsignee').checked;
+            document.getElementById('notifyPartyFields').style.display = same ? 'none' : 'block';
+        }
+
+        function saveParties() {
+            const goodsSelects = document.querySelectorAll('[id$="-goods"]');
+            let hasHazardous = false;
+            goodsSelects.forEach(sel => {
+                if (sel.value === 'hazardous') hasHazardous = true;
+            });
+            if (hasHazardous) {
+                const dgdUploaded = document.getElementById('docDGDStatus').classList.contains('uploaded');
+                const msdsUploaded = document.getElementById('docMSDSStatus').classList.contains('uploaded');
+                if (!dgdUploaded || !msdsUploaded) {
+                    showAlert('This shipment includes hazardous cargo — please upload the DGD and MSDS before continuing.');
+                    return;
+                }
+            }
+            const shipper = document.getElementById('shipperCompany').value;
+            const consignee = document.getElementById('consigneeCompany').value;
+            setHeaderValue('parties', shipper || consignee ? `${shipper || '—'} → ${consignee || '—'}` : 'Not specified (optional)');
+            togglePanel('parties');
+            setTimeout(() => togglePanel('review'), 300);
+        }
+
+        function mockUpload(statusId) {
+            const el = document.getElementById(statusId);
+            el.textContent = '✓ Uploaded';
+            el.classList.add('uploaded');
+            el.style.color = 'var(--primary-green-dark)';
+        }
+
+        function toggleService(card) {
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            card.classList.toggle('selected');
+        }
+
+        function saveDetails() {
+            const readyDate = document.getElementById('cargoReadyDate').value;
+            if (!readyDate) {
+                showAlert('Please select a requested cargo ready date.');
+                return;
+            }
+            const services = ['svcCustoms', 'svcInsurance', 'svcPickup', 'svcDelivery']
+                .filter(id => document.getElementById(id).checked).length;
+            const headerText = services > 0 ? `Ready ${readyDate} · ${services} service${services > 1 ? 's' : ''}` : `Ready ${readyDate}`;
+            setHeaderValue('details', headerText);
+            togglePanel('details');
+            setTimeout(() => togglePanel('parties'), 300);
+        }
+
+        function updateRateSummary() {
+            const box = document.getElementById('rateSummary');
+            const amount = document.getElementById('rateAmount');
+            const refText = document.getElementById('rateRefText');
+            if (linkedQuote) {
+                box.classList.remove('unconfirmed');
+                amount.textContent = quoteData[linkedQuote].price;
+                refText.textContent = `Locked from quote ${linkedQuote} · valid until rate expiry`;
+            } else {
+                box.classList.add('unconfirmed');
+                amount.textContent = 'Rate to be confirmed';
+                refText.textContent = 'No quote linked — our team will issue a rate after reviewing this booking.';
+            }
+        }
+
+        function updateReview() {
+            const routeDone = document.getElementById('routeSection').classList.contains('completed');
+            const cargoDone = document.getElementById('cargoSection').classList.contains('completed');
+            const partiesDone = document.getElementById('partiesSection').classList.contains('completed');
+            const detailsDone = document.getElementById('detailsSection').classList.contains('completed');
+            document.getElementById('reviewRoute').innerHTML = routeDone ?
+                document.getElementById('routeValue').textContent :
+                '<span class="review-empty">Not completed yet</span>';
+            document.getElementById('reviewCargo').innerHTML = cargoDone ?
+                document.getElementById('cargoValue').textContent :
+                '<span class="review-empty">Not completed yet</span>';
+            document.getElementById('reviewParties').innerHTML = partiesDone ?
+                document.getElementById('partiesValue').textContent :
+                '<span class="review-empty">Not completed yet</span>';
+            document.getElementById('reviewDetails').innerHTML = detailsDone ?
+                document.getElementById('detailsValue').textContent :
+                '<span class="review-empty">Not completed yet</span>';
+            updateRateSummary();
+        }
+
+        function generateRequestReference() {
+            const num = Math.floor(10000 + Math.random() * 90000);
+            return `BR-2026-${num}`;
+        }
+
+        function submitBookingRequest() {
+            const routeDone = document.getElementById('routeSection').classList.contains('completed');
+            const cargoDone = document.getElementById('cargoSection').classList.contains('completed');
+            const partiesDone = document.getElementById('partiesSection').classList.contains('completed');
+            const detailsDone = document.getElementById('detailsSection').classList.contains('completed');
+            if (!routeDone || !cargoDone || !detailsDone || !partiesDone) {
+                showAlert('Please complete Route, Cargo, Services & Instructions, and Parties & Documents before submitting.');
+                return;
+            }
+            if (!document.getElementById('termsCheck').checked) {
+                showAlert('Please confirm the Terms & Conditions to proceed.');
+                return;
+            }
+            // Create a form to submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ url_for('customer.new_booking') }}";
+            
+            function addField(name, value) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
+            
+            addField('origin', document.getElementById('originLocation').value);
+            addField('destination', document.getElementById('destLocation').value);
+            addField('service_type', document.querySelector('.cargo-option.active').textContent.includes('FCL') ? 'FCL' : 'LCL');
+            
+            // Add Cargo items
+            const items = document.querySelectorAll('.cargo-item');
+            items.forEach(item => {
+                const id = item.id;
+                const qty = document.getElementById(`${id}-pieces`).value || 1;
+                const pkg = document.getElementById(`${id}-package`).value || 'pallets';
+                const wt = document.getElementById(`${id}-weight`).value || 0;
+                const vol = document.getElementById(`${id}-volume`).value || 0;
+                
+                if (form.querySelector('[name="service_type"]').value === 'LCL') {
+                    addField('item_qty[]', qty);
+                    addField('item_type[]', pkg);
+                    addField('item_weight[]', wt);
+                    addField('item_volume[]', vol);
+                } else {
+                    addField('cont_qty[]', qty);
+                    addField('cont_type[]', pkg);
+                    addField('cont_weight[]', wt);
+                    addField('cont_volume[]', vol);
+                }
+            });
+            
+            // Ready date and remarks
+            addField('ready_date', document.getElementById('readyDate') ? document.getElementById('readyDate').value : '');
+            addField('remarks', document.getElementById('refInput').value + (document.getElementById('instructionsInput').value ? ' - ' + document.getElementById('instructionsInput').value : ''));
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+        addCargoItem();
+        updateDocumentRequirements();
+        renderSailingCard();
+        updateRateSummary();
+
+        {% if quote_data %}
+        document.addEventListener('DOMContentLoaded', function() {
+            const holder = document.getElementById('quoteDataHolder');
+            if (holder) {
+                const ref = holder.dataset.ref;
+                // Populate the mock quoteData object so useQuote can find it
+                quoteData[ref] = {
+                    route: holder.dataset.route,
+                    price: "N/A",
+                    originType: "port",
+                    originCountry: "", // We could map country codes if available
+                    originLocation: holder.dataset.origin,
+                    destType: "port",
+                    destCountry: "",
+                    destLocation: holder.dataset.dest,
+                    pieces: 1,
+                    packageType: "pallets",
+                    goodsType: "GENERAL",
+                    weight: 1000,
+                    volume: 2
+                };
+                
+                // Switch to quote mode
+                selectBookingMode('quote');
+                // Select the quote
+                useQuote(ref);
+                
+                // Optionally clear the quote picker display since we auto-selected
+                document.getElementById('quotePicker').classList.remove('show');
+            }
+        });
+        {% endif %}
+    </script>
+    
+    {% if quote_data %}
+    <div id="quoteDataHolder" 
+         data-ref="{{ quote_data.api_booking_ref or ('QUO-' ~ quote_data.id) }}"
+         data-route="{{ quote_data.origin | default('') }} → {{ quote_data.destination | default('') }}"
+         data-origin="{{ quote_data.origin | default('') }}"
+         data-dest="{{ quote_data.destination | default('') }}" 
+         style="display:none;"></div>
+    {% endif %}
+
+
+{% endblock %}
