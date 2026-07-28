@@ -245,13 +245,16 @@ def save_quote():
     nvocc_name = rate.nvocc_name if rate else 'API Quote'
 
     api_id = query.get('api_quotation_id', '')
-    quote_number = query.get('quote_id', api_id or f"QUOTE-{datetime.now().strftime('%M%S')}")
+    quote_number = None
 
     # POST to Quotations API to get the real quotation number
     import os
     import tempfile
     import requests
     temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
+    api_saved_successfully = False
+    error_msg = "Failed to save quote via API. No valid quotation data or API response found."
+    
     try:
         if os.path.exists(temp_file):
             with open(temp_file, 'r', encoding='utf-8') as f:
@@ -271,17 +274,40 @@ def save_quote():
                 save_resp = requests.post('http://realnexus.comit.cloud:5000/api/Quotations', json=q_payload, headers=headers, timeout=10)
                 if save_resp.status_code in [200, 201]:
                     r_data = save_resp.json()
-                    new_id = r_data.get('quotationId')
+                    
+                    # Unwrap if the API response is wrapped in "quotation" or "header"
+                    header_data = r_data
+                    if "quotation" in r_data:
+                        header_data = r_data["quotation"]
+                    if "header" in header_data:
+                        header_data = header_data["header"]
+
+                    new_id = header_data.get('quotationId')
                     if new_id:
-                        quote_number = r_data.get('quotationNo') or r_data.get('quoteNo') or str(new_id)
+                        p1 = header_data.get('quoPrefix1', 'QUO')
+                        p2 = header_data.get('quoPrefix2', '2026')
+                        quote_number = f"{p1}-{p2}-{new_id}"
                         # Update the session with the new real quote ID
                         query['quote_id'] = quote_number
                         query['api_quotation_id'] = new_id
                         session['search_query'] = query
+                        api_saved_successfully = True
+                    else:
+                        error_msg = "API response did not contain a valid quotation ID."
                 else:
+                    error_msg = f"API returned status {save_resp.status_code}: {save_resp.text}"
                     print(f"Failed to save quote via API: {save_resp.status_code} - {save_resp.text}")
+        else:
+            error_msg = "No cached quotation details found to save."
     except Exception as e:
+        error_msg = f"Error communicating with Quotations API: {str(e)}"
         print(f"Error calling POST /api/Quotations: {e}")
+
+    if not api_saved_successfully:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({'status': 'error', 'message': error_msg}), 400
+        flash(error_msg, 'danger')
+        return redirect(url_for('customer.rate_results'))
 
     booking = Booking(
         user_id=current_user.id,

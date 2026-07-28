@@ -165,6 +165,20 @@ def register_user():
         return redirect(url_for('auth.login'))
     return render_template('auth/register_user.html', form=form)
 
+import time
+from sqlalchemy.exc import OperationalError
+
+def query_with_retry(query_fn, retries=5, delay=4):
+    for attempt in range(retries):
+        try:
+            return query_fn()
+        except OperationalError as e:
+            if attempt < retries - 1:
+                print(f"Transient DB connection error. Retrying query in {delay} seconds (attempt {attempt + 1}/{retries})...")
+                time.sleep(delay)
+            else:
+                raise e
+
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -181,7 +195,7 @@ def login():
     
     # 1. Handle Login Submit
     if login_form.validate_on_submit() and 'login-submit' in request.form:
-        user = User.query.filter_by(email=login_form.email.data).first()
+        user = query_with_retry(lambda: User.query.filter_by(email=login_form.email.data).first())
         if user and check_password_hash(user.password_hash, login_form.password.data):
             if user.role not in ['super_admin', 'admin']:
                 if user.status not in ['active', 'activated']:
@@ -206,14 +220,14 @@ def login():
         company_id = None
         company = None
         if user_form.ftl_code.data:
-            company = Company.query.filter_by(ftl_code=user_form.ftl_code.data).first()
+            company = query_with_retry(lambda: Company.query.filter_by(ftl_code=user_form.ftl_code.data).first())
             if not company:
                 flash('Invalid Company Referral Code.', 'danger')
                 return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab='reg_user')
             company_id = company.id
             
             # Domain check
-            existing_user = User.query.filter_by(company_id=company.id).first()
+            existing_user = query_with_retry(lambda: User.query.filter_by(company_id=company.id).first())
             if existing_user:
                 domain = existing_user.email.split('@')[-1]
                 if user_form.email.data.split('@')[-1] != domain:
