@@ -273,9 +273,7 @@ def save_quote():
                     r_data = save_resp.json()
                     new_id = r_data.get('quotationId')
                     if new_id:
-                        p1 = r_data.get('quoPrefix1', 'QUO')
-                        p2 = r_data.get('quoPrefix2', '2026')
-                        quote_number = f"{p1}-{p2}-{new_id}"
+                        quote_number = r_data.get('quotationNo') or r_data.get('quoteNo') or str(new_id)
                         # Update the session with the new real quote ID
                         query['quote_id'] = quote_number
                         query['api_quotation_id'] = new_id
@@ -345,7 +343,7 @@ def quote_detail(quote_id):
                     header = data.get('header', data)
                     
                     # Verify if the cached data is somewhat related, or just fallback safely
-                    quo_id = f"{header.get('quoPrefix1') or 'QUO'}-{header.get('quoPrefix2') or '2026'}-{header.get('quotationId') or ''}"
+                    quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
                     
                     if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
                         tariff = data.get('tariff', data)
@@ -389,7 +387,7 @@ def download_pdf(quote_id):
                     cached_data = json.load(f)
                     data = cached_data.get('quotation', cached_data)
                     header = data.get('header', data)
-                    quo_id = f"{header.get('quoPrefix1') or 'QUO'}-{header.get('quoPrefix2') or '2026'}-{header.get('quotationId') or ''}"
+                    quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
                     if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
                         tariff = data.get('tariff', data)
                         breakdown = tariff.get('lines', [])
@@ -626,7 +624,7 @@ def rates():
                 else:
                     header_data = data
                     
-                quo_id = f"{header_data.get('quoPrefix1') or 'QUO'}-{header_data.get('quoPrefix2') or '2026'}-{header_data.get('quotationId') or ''}"
+                quo_id = header_data.get('quotationNo') or header_data.get('quoteNo') or str(header_data.get('quotationId') or '')
                 flash(f"Success! Quotation {quo_id} has been created.", "success")
                 
                 # Mock up the rate results session so the redirect works nicely
@@ -850,10 +848,18 @@ def new_booking():
         origins = [o[0] for o in db.session.query(Rate.origin).distinct().all() if o[0]]
         destinations = [d[0] for d in db.session.query(Rate.destination).distinct().all() if d[0]]
     
+    quote_id = request.args.get('quote_id')
+    quote_data = None
+    if quote_id:
+        quote_data = Booking.query.get(quote_id)
+        if quote_data and quote_data.user_id != current_user.id:
+            quote_data = None # security check
+            
     return render_template('customer/new_booking.html', 
                          origins=origins, 
                          destinations=destinations,
-                         query=session.get('search_query', {}))
+                         query=session.get('search_query', {}),
+                         quote_data=quote_data)
 
 @customer.route('/rate-results')
 @login_required

@@ -411,10 +411,7 @@
                             <div class="saved-on">Saved on<br><strong>{{ q.created_at.strftime('%Y-%m-%d') }}</strong></div>
                             
                             <!-- The Book Action -->
-                            <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0">
-                                <input type="hidden" name="quote_id" value="{{ q.id }}">
-                                <button type="submit" class="mq-btn mq-btn-book w-100">Book →</button>
-                            </form>
+                            <a href="{{ url_for('customer.new_booking', quote_id=q.id) }}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
                         {% endif %}
                     </div>
                 </div>
