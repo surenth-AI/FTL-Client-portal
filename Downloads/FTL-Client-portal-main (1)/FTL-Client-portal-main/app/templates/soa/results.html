@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}SOA Audit Results{% endblock %}
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="text-white fw-bold mb-0">Reconciliation Matrix</h2>
+        <p class="text-muted mb-0">Results compiled successfully.</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('soa.export', result_id=result_id) }}" class="btn btn-success rounded-pill shadow-sm">
+            <i class="bi bi-download me-1"></i> Export Excel
+        </a>
+        <a href="{{ url_for('soa.index') }}" class="btn btn-outline-light rounded-pill ms-2">Back</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Mismatches -->
+    <div class="col-12">
+        <div class="card glass-card p-4">
+            <h5 class="text-danger fw-bold mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i> Price Mismatches</h5>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0" style="background: transparent;">
+                    <thead><tr class="text-muted"><th>Job No.</th><th>System Amount</th><th>SOA Amount</th><th>Variance</th><th>Note</th></tr></thead>
+                    <tbody>
+                        {% for m in mismatches %}
+                        <tr>
+                            <td class="text-white fw-bold">{{ m.job_no }}</td>
+                            <td>${{ m.system_amount }}</td>
+                            <td>${{ m.soa_amount }}</td>
+                            <td class="text-danger fw-bold">${{ m.diff }}</td>
+                            <td>{{ m.note or '' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center text-muted">No mismatches found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Missing -->
+    <div class="col-md-6">
+        <div class="card glass-card p-4 h-100">
+            <h5 class="text-warning fw-bold mb-3"><i class="bi bi-question-circle-fill me-2"></i> Missing from SOA</h5>
+            <div class="table-responsive">
+                <table class="table table-dark table-sm table-hover mb-0" style="background: transparent;">
+                    <thead><tr class="text-muted"><th>Job No.</th><th>Supplier</th><th>Amount</th></tr></thead>
+                    <tbody>
+                        {% for m in missing_invoices %}
+                        <tr>
+                            <td class="text-white fw-bold">{{ m.job_no }}</td>
+                            <td>{{ m.supplier }}</td>
+                            <td class="text-warning">${{ m.amount }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center text-muted">No missing invoices.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orphans -->
+    <div class="col-md-6">
+        <div class="card glass-card p-4 h-100">
+            <h5 class="text-info fw-bold mb-3"><i class="bi bi-info-circle-fill me-2"></i> Orphan Records</h5>
+            <div class="table-responsive">
+                <table class="table table-dark table-sm table-hover mb-0" style="background: transparent;">
+                    <thead><tr class="text-muted"><th>Job No.</th><th>SOA Amount</th></tr></thead>
+                    <tbody>
+                        {% for o in orphan_jobs %}
+                        <tr>
+                            <td class="text-white fw-bold">{{ o.job_no }}</td>
+                            <td class="text-info">${{ o.soa_amount }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-muted">No orphans found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

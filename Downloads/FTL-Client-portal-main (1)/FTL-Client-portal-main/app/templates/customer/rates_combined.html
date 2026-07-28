@@ -1,0 +1,2170 @@
+{% extends 'base.html' %}
+{% block title %}Search Rates{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        --primary-blue: var(--primary-color) !important;
+        --border-color: var(--glass-border);
+        --bg-gray: var(--midnight-bg);
+        --bg-white: var(--glass-bg);
+        --success-green: #10b981;
+        --hover-bg: color-mix(in srgb, var(--primary-color) 6%, var(--glass-bg));
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Core Layout Styles */
+    .hero-search-section {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: visible;
+        backdrop-filter: blur(10px);
+    }
+    
+    .hero-search-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), #818cf8);
+        border-radius: 12px 12px 0 0;
+    }
+
+    .form-column-card {
+        background: color-mix(in srgb, var(--bg-gray) 50%, transparent);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1.5rem;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .form-column-card:focus-within, .form-column-card:hover {
+        border-color: color-mix(in srgb, var(--primary-color) 40%, var(--border-color));
+        box-shadow: 0 8px 25px rgba(0,0,0,0.03);
+    }
+
+    .column-title {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.75rem;
+    }
+
+    .column-title i {
+        color: var(--primary-color);
+        background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+        padding: 6px;
+        border-radius: 6px;
+        font-size: 1rem;
+    }
+
+    /* Autocomplete */
+    .searchable-select { position: relative; margin-bottom: 1rem; }
+    .searchable-dropdown {
+        position: absolute; top: 100%; left: 0; right: 0;
+        max-height: 220px; overflow-y: auto;
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 8px; margin-top: 0.5rem;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        z-index: 1000; display: none;
+    }
+    .searchable-dropdown.show { display: block; animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .dropdown-item { padding: 0.75rem 1.25rem; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--border-color); }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: var(--hover-bg); }
+    .dropdown-item-name { font-size: 0.85rem; font-weight: 600; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Interactive Inputs & Toggles */
+    .premium-input {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        transition: all 0.2s;
+        width: 100%;
+    }
+    .premium-input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent);
+    }
+    .premium-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem; display: block; }
+    .premium-label.required::after { content: " *"; color: #ef4444; }
+
+    /* Service Type Toggle */
+    .mode-switcher-container {
+        display: flex;
+        background: var(--bg-gray);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 4px;
+        margin-bottom: 1.5rem;
+    }
+    .mode-switcher-btn {
+        flex: 1; text-align: center; padding: 0.5rem; border-radius: 6px; cursor: pointer;
+        font-size: 0.75rem; font-weight: 700; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .mode-switcher-btn.active {
+        background: var(--primary-color); color: white;
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 40%, transparent);
+    }
+
+    /* Cargo Rows */
+    .cargo-row {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+    .cargo-row-header { display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); }
+    .remove-btn { color: #ef4444; background: transparent; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; padding: 0; }
+
+    /* Dimensions */
+    .dimensions-section { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-color); }
+    .dimension-item { display: grid; grid-template-columns: 45px repeat(3, 1fr) 1fr 28px; gap: 0.5rem; align-items: end; margin-bottom: 0.5rem; }
+    .dim-input-wrapper { display: flex; flex-direction: column; }
+    .dim-input-wrapper label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.2rem; }
+    .dim-input-wrapper input { border: 1px solid var(--border-color); border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.75rem; width: 100%; background: var(--bg-white); }
+    .remove-dim-btn { background: #fee2e2; color: #ef4444; border: none; border-radius: 4px; height: 26px; font-weight: 800; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    /* Action Buttons */
+    .btn-search-glow {
+        background: linear-gradient(135deg, var(--primary-color), #4f46e5);
+        color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-weight: 700;
+        box-shadow: 0 10px 20px color-mix(in srgb, var(--primary-color) 30%, transparent);
+        transition: all 0.3s ease; width: 100%; font-size: 1rem; margin-top: 1.5rem;
+    }
+    .btn-search-glow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px color-mix(in srgb, var(--primary-color) 45%, transparent);
+        color: white;
+    }
+
+    /* Optional Options grid */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .option-card {
+        border: 1px solid var(--border-color); background: var(--bg-white); border-radius: 8px; padding: 0.65rem; cursor: pointer;
+        display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;
+    }
+    .option-card:hover { border-color: var(--primary-color); }
+    .option-card.selected { border-color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 5%, var(--bg-white)); }
+    .option-card input { display: none; }
+    .option-card i { font-size: 1.2rem; }
+    .option-card-title { font-size: 0.7rem; font-weight: 700; line-height: 1.2; }
+
+    /* History Table */
+    .history-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; }
+    .table-badge { font-weight: 800 !important; letter-spacing: 0.04em !important; padding: 0.45em 0.85em !important; text-transform: uppercase; font-size: 0.65rem; border-radius: 20px; }
+    .table-badge-primary { background-color: #DBEAFE !important; color: #1D4ED8 !important; border: 1px solid #93C5FD !important; }
+    .table-badge-success { background-color: #DCFCE7 !important; color: #15803D !important; border: 1px solid #86EFAC !important; }
+    
+    .grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    /* Shutter UI Styles */
+    .quote-header {
+        display: flex;
+        gap: 0;
+        border-bottom: 2px solid var(--border-color);
+        background: var(--bg-white);
+        position: relative;
+        border-radius: 12px 12px 0 0;
+    }
+    .header-section {
+        flex: 1;
+        padding: 1rem;
+        border-right: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        text-align: center;
+    }
+    .header-section:last-child {
+        border-right: none;
+    }
+    .header-section:hover {
+        background: var(--hover-bg);
+    }
+    .header-section.active {
+        background: var(--primary-color);
+        color: white;
+    }
+    .section-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        transition: color 0.2s;
+    }
+    .header-section.active .section-label {
+        color: white;
+    }
+    .panels-container {
+        position: relative;
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 12px 12px;
+    }
+    .expandable-panel {
+        display: none;
+        padding: 2rem;
+        animation: fadeIn 0.2s ease;
+    }
+    .expandable-panel.open {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Dark Mode specific */
+    html[data-color-scheme='dark'] .hero-search-section { background: #0f172a; }
+    html[data-color-scheme='dark'] .form-column-card { background: #1e293b; }
+    html[data-color-scheme='dark'] .premium-input { background: #0f172a; border-color: #334155; color: white; }
+    html[data-color-scheme='dark'] .cargo-row { background: #0f172a; border-color: #334155; }
+    html[data-color-scheme='dark'] .dim-input-wrapper input { background: #1e293b; border-color: #475569; color: white; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #2563eb;
+            --primary-blue-dark: #1d4ed8;
+            --primary-blue-light: #3b82f6;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --bg-gray: #f8fafc;
+            --bg-white: #ffffff;
+            --success-green: #10b981;
+            --error-red: #ef4444;
+            --hover-bg: #f1f5f9;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gray);
+            color: var(--text-primary);
+            line-height: 1.4;
+            padding: 0;
+            margin: 0;
+            font-size: 13px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary-blue);
+        }
+
+        .logo-subtext {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0.75rem 1rem;
+        }
+
+        .page-header {
+            margin-bottom: 0.75rem;
+        }
+
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.125rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* Quote Request Card */
+        .quote-card {
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* Transport Mode Header (Above Steps) */
+        .transport-mode-header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.625rem 1rem 0.5rem 1rem;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .mode-option {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 0.375rem 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-family: inherit;
+        }
+
+        .mode-option:hover .mode-text {
+            color: var(--primary-blue);
+        }
+
+        .mode-option.active {
+            border-bottom-color: var(--primary-blue);
+        }
+
+        .mode-icon-small {
+            font-size: 1.1rem;
+        }
+
+        .mode-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: color 0.2s ease;
+        }
+
+        .mode-option.active .mode-text {
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* Air Freight Banner */
+        .service-unavailable-banner {
+            margin-top: 0.75rem;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+        }
+
+        .banner-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .banner-icon {
+            font-size: 1.25rem;
+        }
+
+        .banner-text {
+            flex: 1;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            min-width: 200px;
+        }
+
+        .btn-small {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        /* Custom Alert Modal */
+        .custom-alert-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .custom-alert-overlay.show {
+            display: flex;
+        }
+
+        .custom-alert-box {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-alert-message {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1.25rem;
+            white-space: pre-line;
+        }
+
+        .custom-alert-button {
+            width: 100%;
+            padding: 0.625rem;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .custom-alert-button:hover {
+            background: var(--primary-blue-dark);
+        }
+
+        /* Steps Ribbon */
+        .quote-header {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--bg-white);
+            position: relative;
+        }
+
+        .header-section {
+            flex: 1;
+            padding: 0.625rem 1rem;
+            border-right: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .header-section:last-child {
+            border-right: none;
+        }
+
+        .header-section:hover {
+            background: var(--hover-bg);
+        }
+
+        .header-section.active {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .header-section.active .section-label,
+        .header-section.active .section-value,
+        .header-section.active .section-placeholder {
+            color: white;
+        }
+
+        .header-section.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 20px;
+            height: 20px;
+            background: var(--success-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .section-value {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .section-placeholder {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Expandable Panel */
+        .panels-container {
+            position: relative;
+            min-height: 50px;
+            background: transparent;
+        }
+
+        .expandable-panel {
+            position: relative;
+            width: 100%;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out;
+            background: var(--bg-gray);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 12px 12px;
+        }
+
+        .expandable-panel.open {
+            max-height: 2000px;
+            overflow: visible;
+        }
+
+        .panel-content {
+            padding: 1rem 1.25rem;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .panel-header-with-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            position: sticky;
+            top: 0;
+            background: var(--bg-gray);
+            padding: 0.125rem 0;
+            z-index: 10;
+        }
+
+        .panel-header-with-action .panel-title {
+            margin-bottom: 0;
+        }
+
+        /* Form Elements */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .form-label .required {
+            color: var(--error-red);
+        }
+
+        .form-input,
+        .form-select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: var(--bg-white);
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Radio Buttons */
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-blue);
+        }
+
+        .radio-option label {
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        /* Cargo Items */
+        .cargo-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+        }
+
+        .cargo-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            position: relative;
+        }
+
+        .cargo-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.625rem;
+        }
+
+        .cargo-item-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: var(--error-red);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            transition: opacity 0.2s ease;
+        }
+
+        .remove-btn:hover {
+            opacity: 0.7;
+        }
+
+        /* Dimensions */
+        .dimensions-section {
+            margin-top: 0.625rem;
+            padding-top: 0.625rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .dimensions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .dimensions-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .dimension-item {
+            display: grid;
+            grid-template-columns: 70px repeat(3, 1fr) 1fr auto;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dimension-item:last-child {
+            border-bottom: none;
+        }
+
+        .dimension-weight-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dimension-weight-toggle {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dimension-weight-toggle button {
+            flex: 1;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-white);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .dimension-weight-toggle button:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .dimension-weight-toggle button:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .dimension-weight-toggle button.active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+
+        .dimension-input-small {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dimension-input-small label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .dimension-input-small input {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .form-help {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-blue-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-white);
+            color: var(--primary-blue);
+            border: 1px solid var(--primary-blue);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-text {
+            background: none;
+            color: var(--primary-blue);
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-text:hover {
+            background: var(--hover-bg);
+        }
+
+        .panel-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Additional Services */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .service-card {
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .service-card:hover {
+            border-color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        }
+
+        .service-card.selected {
+            border-color: var(--primary-blue);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .service-card input[type="checkbox"] {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary-blue);
+        }
+
+        .service-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .service-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Final Actions */
+        .final-actions {
+            padding: 2rem;
+            background: var(--bg-white);
+            text-align: center;
+        }
+
+        .final-actions .btn-primary {
+            padding: 1rem 3rem;
+            font-size: 1.05rem;
+        }
+
+        /* Location Type Selector */
+        .location-type-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            background: var(--bg-gray);
+            padding: 0.25rem;
+            border-radius: 8px;
+        }
+
+        .location-type-tab {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .location-type-tab.active {
+            background: var(--bg-white);
+            color: var(--primary-blue);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Recent Searches */
+        .recent-searches {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .recent-searches-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .recent-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .clear-link {
+            font-size: 0.75rem;
+            color: var(--primary-blue);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .recent-search-item {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .recent-search-item:hover {
+            background: var(--hover-bg);
+            border-color: var(--primary-blue);
+        }
+
+        .recent-search-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .recent-search-route {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .recent-search-location {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .recent-search-arrow {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .recent-search-meta {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .btn-text-small {
+            background: none;
+            border: none;
+            color: var(--primary-blue);
+            font-size: 0.875rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            font-weight: 500;
+        }
+
+        .btn-text-small:hover {
+            text-decoration: underline;
+        }
+
+        .recent-searches-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .recent-search-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-gray);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .recent-search-item:hover {
+            background: var(--hover-bg);
+            border-color: var(--primary-blue);
+        }
+
+        .recent-search-route {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .recent-search-location {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .recent-search-arrow {
+            color: var(--text-muted);
+        }
+
+        .recent-search-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Route Sections */
+        .route-section {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .route-section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.625rem;
+        }
+
+        /* Searchable Select */
+        .searchable-select {
+            position: relative;
+        }
+
+        .searchable-input {
+            width: 100%;
+        }
+
+        .searchable-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 0.25rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            display: none;
+        }
+
+        .searchable-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border-bottom: 1px solid var(--bg-gray);
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .dropdown-item-name {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .dropdown-item-code {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.1rem;
+        }
+
+        .dropdown-no-results {
+            padding: 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        /* Unit Toggle */
+        .unit-toggle {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-gray);
+            padding: 0.25rem;
+            border-radius: 6px;
+            width: fit-content;
+        }
+
+        .unit-option {
+            padding: 0.4rem 1rem;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .unit-option.active {
+            background: var(--bg-white);
+            color: var(--primary-blue);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Cargo Type Selection (Minimalistic Underline) */
+        .cargo-type-section {
+            margin-bottom: 0.875rem;
+        }
+
+        .cargo-type-selector {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .cargo-option {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 0.375rem 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-family: inherit;
+        }
+
+        .cargo-option:hover .cargo-text {
+            color: var(--primary-blue);
+        }
+
+        .cargo-option.active {
+            border-bottom-color: var(--primary-blue);
+        }
+
+        .cargo-icon-small {
+            font-size: 1rem;
+        }
+
+        .cargo-text {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: color 0.2s ease;
+        }
+
+        .cargo-option.active .cargo-text {
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* Transport Mode Section (inside panels - if still used) */
+        .transport-mode-section {
+            margin-bottom: 2rem;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 1.25rem 1.5rem;
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .mode-tab:hover {
+            border-color: var(--primary-blue);
+            background: var(--hover-bg);
+        }
+
+        .mode-tab.active {
+            border-color: var(--primary-blue);
+            background: rgba(37, 99, 235, 0.05);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+        }
+
+        .mode-icon {
+            font-size: 2rem;
+        }
+
+        .mode-label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .mode-tab.active .mode-label {
+            color: var(--primary-blue);
+        }
+
+        /* Service Unavailable Notice */
+        .service-unavailable-notice {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .notice-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .notice-content {
+            flex: 1;
+        }
+
+        .notice-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .notice-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .notice-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Checkbox styling */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-blue);
+        }
+
+        .checkbox-group label {
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        /* Icons */
+        .icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+        }
+
+        /* Terms and Charges Sections */
+        .terms-section,
+        .charges-section,
+        .additional-services-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-subtitle {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .charges-inline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .charge-item-inline {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .charge-item-inline input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-blue);
+            flex-shrink: 0;
+        }
+
+        .charge-item-inline input[type="checkbox"]:disabled {
+            cursor: not-allowed;
+        }
+
+        .charge-item-inline label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .charge-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            margin-left: 0.5rem;
+        }
+
+        .charge-badge.included {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .charge-badge.excluded {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .service-extra {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .service-card.has-extra {
+            cursor: default;
+        }
+
+        .service-card .service-extra input,
+        .service-card .service-extra select {
+            pointer-events: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .transport-mode-header {
+                padding: 1rem;
+            }
+
+            .mode-selector {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .mode-option {
+                width: 100%;
+            }
+
+            .cargo-type-selector {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .cargo-option {
+                width: 100%;
+            }
+
+            .banner-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn-small {
+                width: 100%;
+            }
+
+            .quote-header {
+                flex-direction: column;
+            }
+
+            .header-section {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dimension-item {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charges-inline {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.75rem;
+            }
+
+            .charge-item-inline {
+                justify-content: space-between;
+            }
+
+            .panel-header-with-action {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .panel-header-with-action .btn {
+                width: 100%;
+            }
+
+            .service-unavailable-notice {
+                flex-direction: column;
+            }
+        }
+    
+</style>
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4 intel-fade-in">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark">Freight Quotation</h3>
+        <p class="text-muted small mb-0">Generate comprehensive, all-inclusive quotes across multiple routes and modes.</p>
+    </div>
+</div>
+
+<!-- ============================================================
+     INLINE SEARCH FORM (CREATIVE 3-COLUMN LAYOUT)
+     ============================================================ -->
+<div class="hero-search-section intel-fade-in" style="animation-delay: 0.1s;">
+    <form action="{{ url_for('customer.rates') }}" method="POST" id="wizardSearchForm">
+        <input type="hidden" name="service_type" id="wiz_hidden_service_type" value="LCL">
+
+        <div class="quote-header">
+            <div class="header-section active" id="tab1" onclick="openPanel(1)">
+                <div class="section-label"><i class="bi bi-geo-alt"></i> 1. Route Particulars</div>
+            </div>
+            <div class="header-section" id="tab2" onclick="openPanel(2)">
+                <div class="section-label"><i class="bi bi-box-seam"></i> 2. Commodities & Load</div>
+            </div>
+            <div class="header-section" id="tab3" onclick="openPanel(3)">
+                <div class="section-label"><i class="bi bi-gear"></i> 3. Terms & Services</div>
+            </div>
+        </div>
+
+        <div class="panels-container">
+            
+            <!-- PANEL 1: ROUTING DETAILS -->
+            <div class="expandable-panel open" id="panel1">
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div class="grid-2-col mb-3">
+                            <div>
+                                <label class="premium-label required">Transport Mode</label>
+                                <select class="premium-input" name="transport_mode" required>
+                                    <option value="SEA">Sea Freight</option>
+                                    <option value="AIR">Air Freight</option>
+                                    <option value="ROAD">Road Freight</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="premium-label required">Direction</label>
+                                <select class="premium-input" name="direction" required>
+                                    <option value="EXPORT">Export</option>
+                                    <option value="IMPORT">Import</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="premium-label required">Movement Type</label>
+                            <select class="premium-input" name="movement_type" id="movementType" onchange="toggleHaulage()" required>
+                                <option value="PORT_TO_PORT">Port to Port</option>
+                                <option value="DOOR_TO_DOOR">Door to Door</option>
+                                <option value="DOOR_TO_PORT">Door to Port</option>
+                                <option value="PORT_TO_DOOR">Port to Door</option>
+                            </select>
+                        </div>
+
+                        <!-- Origin (POL) -->
+                        <div class="mb-3">
+                            <label class="premium-label required" id="lblOrigin">Port of Loading (POL)</label>
+                            <div class="searchable-select">
+                                <input type="text" class="premium-input" id="wizOriginLocation" placeholder="Search ports..." onfocus="showWizDropdown('origin')" oninput="filterWizLocations('origin')" autocomplete="off" required>
+                                <div class="searchable-dropdown" id="wizOriginDropdown"></div>
+                            </div>
+                            <input type="hidden" name="origin" id="wiz_hidden_origin">
+                            
+                            <div id="originHaulageGroup" style="display: none; margin-top: 0.5rem;">
+                                <label class="premium-label text-primary">Origin Pickup Address</label>
+                                <input type="text" name="pickup_address" class="premium-input" placeholder="Origin Door / Zip Code...">
+                            </div>
+                        </div>
+
+                        <!-- Destination (POD) -->
+                        <div class="mb-3">
+                            <label class="premium-label required" id="lblDest">Port of Discharge (POD)</label>
+                            <div class="searchable-select">
+                                <input type="text" class="premium-input" id="wizDestLocation" placeholder="Search ports..." onfocus="showWizDropdown('dest')" oninput="filterWizLocations('dest')" autocomplete="off" required>
+                                <div class="searchable-dropdown" id="wizDestDropdown"></div>
+                            </div>
+                            <input type="hidden" name="destination" id="wiz_hidden_dest">
+
+                            <div id="destHaulageGroup" style="display: none; margin-top: 0.5rem;">
+                                <label class="premium-label text-success">Destination Delivery Address</label>
+                                <input type="text" name="place_of_delivery" class="premium-input" placeholder="Destination Door / Zip Code...">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="premium-label required">Estimated Departure Date (ETD)</label>
+                            <input type="date" class="premium-input" id="wizCargoReadyDate" name="cargo_ready_date" required>
+                        </div>
+
+                        <div class="text-end mt-4 pt-3 border-top">
+                            <button type="button" class="btn btn-primary px-4 fw-bold" onclick="openPanel(2)">Next Step <i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 2: LOAD & COMMODITIES -->
+            <div class="expandable-panel" id="panel2">
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div class="mode-switcher-container">
+                            <div class="mode-switcher-btn active" id="tab_lcl" onclick="setWizService('LCL')">LCL (Less than Container)</div>
+                            <div class="mode-switcher-btn" id="tab_fcl" onclick="setWizService('FCL')">FCL (Full Container)</div>
+                        </div>
+
+                        <div style="max-height: 450px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;" id="cargoScrollArea">
+                            <!-- LCL Rows -->
+                            <div id="wiz_lcl_section">
+                                <div id="wiz_lcl_rows"></div>
+                            </div>
+
+                            <!-- FCL Rows -->
+                            <div id="wiz_fcl_section" style="display:none;">
+                                <div id="wiz_fcl_rows"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100 py-2 fw-bold" id="btn_add_lcl" onclick="addWizLCLRow()">
+                                <i class="bi bi-plus-circle"></i> Add Load Unit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100 py-2 fw-bold" id="btn_add_fcl" onclick="addWizFCLRow()" style="display:none;">
+                                <i class="bi bi-plus-circle"></i> Add Container
+                            </button>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <button type="button" class="btn btn-light border px-4 fw-bold" onclick="openPanel(1)"><i class="bi bi-chevron-left"></i> Back</button>
+                            <button type="button" class="btn btn-primary px-4 fw-bold" onclick="openPanel(3)">Next Step <i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 3: OPTIONS, VAS & SUBMIT -->
+            <div class="expandable-panel" id="panel3">
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div class="mb-4">
+                            <label class="premium-label required">Incoterm</label>
+                            <select class="premium-input" id="wizIncoterm" name="freight_terms" required>
+                                <option value="">Select incoterm...</option>
+                                <option value="EXW">EXW - Ex Works</option>
+                                <option value="FCA">FCA - Free Carrier</option>
+                                <option value="FAS">FAS - Free Alongside Ship</option>
+                                <option value="FOB">FOB - Free On Board</option>
+                                <option value="CFR">CFR - Cost and Freight</option>
+                                <option value="CIF">CIF - Cost, Insurance and Freight</option>
+                                <option value="CPT">CPT - Carriage Paid To</option>
+                                <option value="CIP">CIP - Carriage and Insurance Paid To</option>
+                                <option value="DAP">DAP - Delivered At Place</option>
+                                <option value="DPU">DPU - Delivered at Place Unloaded</option>
+                                <option value="DDP">DDP - Delivered Duty Paid</option>
+                                <option value="DDU">DDU - Delivered Duty Unpaid</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="premium-label mb-2">Charges & Options</label>
+                            <div class="options-grid">
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Export Charges" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-box-arrow-up text-primary"></i>
+                                    <span class="option-card-title">Export Charges</span>
+                                </label>
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Import Charges" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-box-arrow-down text-primary"></i>
+                                    <span class="option-card-title">Import Charges</span>
+                                </label>
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Customs" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-file-earmark-text text-primary"></i>
+                                    <span class="option-card-title">Customs Clearance</span>
+                                </label>
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Insurance" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-shield-check text-primary"></i>
+                                    <span class="option-card-title">Insurance</span>
+                                </label>
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Door Pickup" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-truck text-primary"></i>
+                                    <span class="option-card-title">Door Pickup</span>
+                                </label>
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Door Delivery" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-house-door text-primary"></i>
+                                    <span class="option-card-title">Door Delivery</span>
+                                </label>
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Temperature Controlled" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-thermometer-snow text-primary"></i>
+                                    <span class="option-card-title">Temperature Control</span>
+                                </label>
+                                <label class="option-card" style="margin: 0; display: flex;">
+                                    <input type="checkbox" name="vas[]" value="Known Shipper" onchange="this.parentElement.classList.toggle('selected')">
+                                    <i class="bi bi-check-circle text-primary"></i>
+                                    <span class="option-card-title">Known Shipper</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-5 pt-4 border-top align-items-center">
+                            <button type="button" class="btn btn-light border px-4 fw-bold" onclick="openPanel(2)"><i class="bi bi-chevron-left"></i> Back</button>
+                            <button type="button" class="btn-search-glow m-0 mt-0" style="width: auto;" onclick="submitWizForm()">
+                                <i class="bi bi-calculator"></i> Request Quotes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ============================================================
+     RECENT QUOTATIONS & HISTORY
+     ============================================================ -->
+<div class="history-card intel-fade-in" style="animation-delay: 0.2s;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2"></i>Recent Quotations & History</h5>
+        <button type="button" class="btn btn-sm btn-light border" onclick="clearQueryHistory()">Clear History</button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-nowrap">
+            <thead class="bg-white-5">
+                <tr>
+                    <th class="ps-3 text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Quotation Date</th>
+                    <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Route Lane</th>
+                    <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Commodities</th>
+                    <th class="text-muted fw-bold py-3" style="font-size: 0.7rem; text-transform: uppercase;">Movement Type</th>
+                    <th class="pe-3 text-end py-3"></th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <!-- Javascript populated -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let lclItemCounter = 0;
+    let fclItemCounter = 0;
+    let dimensionCounters = {};
+
+    const databaseOrigins = {{ origins|tojson }};
+    const databaseDestinations = {{ destinations|tojson }};
+
+    document.addEventListener('DOMContentLoaded', function () {
+        addWizLCLRow();
+        addWizFCLRow();
+        
+        const today = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('wizCargoReadyDate');
+        if(dateInput) { dateInput.value = today; dateInput.min = today; }
+        
+        renderQueryHistory();
+        toggleHaulage(); // Initialize Haulage toggles
+    });
+
+    // Panel Navigation Logic
+    function openPanel(panelNum) {
+        // Reset all tabs
+        for(let i=1; i<=3; i++) {
+            document.getElementById('tab'+i).classList.remove('active');
+            document.getElementById('panel'+i).classList.remove('open');
+        }
+        // Activate target tab
+        document.getElementById('tab'+panelNum).classList.add('active');
+        document.getElementById('panel'+panelNum).classList.add('open');
+    }
+
+    // Toggle Port/Door inputs based on Movement Type
+    function toggleHaulage() {
+        const movement = document.getElementById('movementType').value;
+        const originGroup = document.getElementById('originHaulageGroup');
+        const destGroup = document.getElementById('destHaulageGroup');
+
+        if (movement === 'DOOR_TO_DOOR') {
+            originGroup.style.display = 'block';
+            destGroup.style.display = 'block';
+        } else if (movement === 'DOOR_TO_PORT') {
+            originGroup.style.display = 'block';
+            destGroup.style.display = 'none';
+        } else if (movement === 'PORT_TO_DOOR') {
+            originGroup.style.display = 'none';
+            destGroup.style.display = 'block';
+        } else {
+            // PORT_TO_PORT
+            originGroup.style.display = 'none';
+            destGroup.style.display = 'none';
+        }
+    }
+
+    // Form logic
+    function setWizService(type) {
+        document.getElementById('wiz_hidden_service_type').value = type;
+        document.getElementById('tab_lcl').classList.toggle('active', type === 'LCL');
+        document.getElementById('tab_fcl').classList.toggle('active', type === 'FCL');
+        document.getElementById('wiz_lcl_section').style.display = type === 'LCL' ? 'block' : 'none';
+        document.getElementById('btn_add_lcl').style.display = type === 'LCL' ? 'block' : 'none';
+        document.getElementById('wiz_fcl_section').style.display = type === 'FCL' ? 'block' : 'none';
+        document.getElementById('btn_add_fcl').style.display = type === 'FCL' ? 'block' : 'none';
+    }
+
+    function toggleOptionCard(labelEl) {
+        setTimeout(() => {
+            const checkbox = labelEl.querySelector('input[type="checkbox"]');
+            if(checkbox.checked) labelEl.classList.add('selected');
+            else labelEl.classList.remove('selected');
+        }, 10);
+    }
+
+    // Autocomplete
+    function showWizDropdown(loc) { filterWizLocations(loc); }
+    function filterWizLocations(loc) {
+        const isOrig = loc === 'origin';
+        const input = document.getElementById('wiz' + (isOrig?'Origin':'Dest') + 'Location');
+        const dropdown = document.getElementById('wiz' + (isOrig?'Origin':'Dest') + 'Dropdown');
+        const searchTerm = input.value.toLowerCase();
+        
+        const locations = isOrig ? databaseOrigins : databaseDestinations;
+        const filtered = locations.filter(l => l.toLowerCase().includes(searchTerm));
+        
+        if(filtered.length === 0) {
+            dropdown.innerHTML = '<div class="dropdown-item text-muted small">No matches found</div>';
+        } else {
+            dropdown.innerHTML = filtered.map(l => `
+                <div class="dropdown-item" onclick="selectWizLocation('${loc}', '${l}')">
+                    <div class="dropdown-item-name">${l}</div>
+                </div>
+            `).join('');
+        }
+        dropdown.classList.add('show');
+    }
+    function selectWizLocation(loc, val) {
+        const isOrig = loc === 'origin';
+        document.getElementById('wiz' + (isOrig?'Origin':'Dest') + 'Location').value = val;
+        document.getElementById('wiz_hidden_' + loc).value = val;
+        document.getElementById('wiz' + (isOrig?'Origin':'Dest') + 'Dropdown').classList.remove('show');
+    }
+    document.addEventListener('click', e => {
+        if(!e.target.closest('.searchable-select')) document.querySelectorAll('.searchable-dropdown').forEach(d => d.classList.remove('show'));
+    });
+
+    // LCL Rows
+    function addWizLCLRow() {
+        lclItemCounter++;
+        const id = `wiz-lcl-row-${lclItemCounter}`;
+        dimensionCounters[id] = 0;
+        const div = document.createElement('div');
+        div.className = 'cargo-row';
+        div.id = id;
+        div.innerHTML = `
+            <div class="cargo-row-header">
+                <span class="fw-bold text-dark" style="font-size:0.75rem;">Commodity #${lclItemCounter}</span>
+                ${lclItemCounter > 1 ? `<button type="button" class="remove-btn" onclick="document.getElementById('${id}').remove()">✕ Remove</button>` : ''}
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-4">
+                    <label class="premium-label mb-1">Qty</label>
+                    <input type="number" name="item_qty[]" class="premium-input w-100 text-center" value="1" min="1" id="${id}-pcs">
+                </div>
+                <div class="col-8">
+                    <label class="premium-label mb-1">Packaging</label>
+                    <select name="item_type[]" class="premium-input w-100">
+                        <option value="Pallet">Pallet</option><option value="Box">Box</option><option value="Carton">Carton</option><option value="Crate">Crate</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="dimensions-section mb-2 border-top-0 pt-0 mt-0">
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted);">Dimensions (cm)</span>
+                    <button type="button" class="btn btn-link p-0 text-decoration-none small" style="font-size: 0.7rem;" onclick="addDimension('${id}')">+ Add Dim</button>
+                </div>
+                <div id="${id}-dimensions"></div>
+            </div>
+            
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="premium-label mb-1">Weight (kg)</label>
+                    <input type="number" name="item_weight[]" class="premium-input w-100" placeholder="0.0" step="0.01" id="${id}-wt">
+                </div>
+                <div class="col-6">
+                    <label class="premium-label mb-1">Volume (cbm)</label>
+                    <input type="number" name="item_volume[]" class="premium-input w-100" placeholder="0.00" step="0.01" id="${id}-vol">
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="premium-label mb-1">Description</label>
+                <input type="text" name="item_desc[]" class="premium-input w-100" placeholder="e.g. General Cargo, Electronics...">
+            </div>
+            
+            <div class="mt-2 pt-2 border-top d-flex gap-4">
+                <label class="d-flex align-items-center" style="cursor:pointer;">
+                    <input type="checkbox" class="me-2" style="width:16px; height:16px; accent-color: var(--primary-color);" onchange="toggleHazardous(this, '${id}')">
+                    <input type="hidden" name="item_is_imo[]" id="${id}-imo-hidden" value="no">
+                    <span class="text-danger fw-bold" style="font-size: 0.75rem;"><i class="bi bi-exclamation-triangle"></i> IMO / Hazardous Goods</span>
+                </label>
+                <label class="d-flex align-items-center" style="cursor:pointer;">
+                    <input type="checkbox" name="item_stackable[]" value="yes" class="me-2" style="width:16px; height:16px; accent-color: var(--primary-color);" checked>
+                    <span class="text-primary fw-bold" style="font-size: 0.75rem;"><i class="bi bi-layers"></i> Stackable Cargo</span>
+                </label>
+            </div>
+            
+            <div id="${id}-hazardousFields" style="display:none; margin-top:0.75rem; padding:0.75rem; border:1px solid #fda4af; background:#fff1f2; border-radius:4px;">
+                <h6 class="text-danger small fw-bold mb-2">IMO Class & UN Specifications</h6>
+                <div class="row g-2">
+                    <div class="col-4"><input type="text" name="item_un[]" class="premium-input w-100" placeholder="UN Number"></div>
+                    <div class="col-4"><input type="text" name="item_class[]" class="premium-input w-100" placeholder="IMO Class"></div>
+                    <div class="col-4"><input type="text" name="item_pg[]" class="premium-input w-100" placeholder="Packing Group"></div>
+                </div>
+            </div>
+        `;
+        document.getElementById('wiz_lcl_rows').appendChild(div);
+    }
+
+    function addDimension(itemId) {
+        dimensionCounters[itemId]++;
+        const dimId = `${itemId}-dim-${dimensionCounters[itemId]}`;
+        const div = document.createElement('div');
+        div.className = 'dimension-item';
+        div.id = dimId;
+        div.innerHTML = `
+            <div class="dim-input-wrapper"><label>Pcs</label><input type="number" value="1" class="dim-pcs" oninput="calcVol('${itemId}')"></div>
+            <div class="dim-input-wrapper"><label>L</label><input type="number" class="dim-l" oninput="calcVol('${itemId}')"></div>
+            <div class="dim-input-wrapper"><label>W</label><input type="number" class="dim-w" oninput="calcVol('${itemId}')"></div>
+            <div class="dim-input-wrapper"><label>H</label><input type="number" class="dim-h" oninput="calcVol('${itemId}')"></div>
+            <div class="dim-input-wrapper"><label>Wt</label><input type="number" class="dim-wt" oninput="calcVol('${itemId}')"></div>
+            <button type="button" class="remove-dim-btn mb-1" onclick="document.getElementById('${dimId}').remove(); calcVol('${itemId}')"><i class="bi bi-x"></i></button>
+        `;
+        document.getElementById(`${itemId}-dimensions`).appendChild(div);
+    }
+
+    function calcVol(itemId) {
+        const rows = document.querySelectorAll(`#${itemId}-dimensions .dimension-item`);
+        let totPcs = 0, totVol = 0, totWt = 0;
+        rows.forEach(r => {
+            const pcs = parseFloat(r.querySelector('.dim-pcs').value)||0;
+            const l = parseFloat(r.querySelector('.dim-l').value)||0;
+            const w = parseFloat(r.querySelector('.dim-w').value)||0;
+            const h = parseFloat(r.querySelector('.dim-h').value)||0;
+            const wt = parseFloat(r.querySelector('.dim-wt').value)||0;
+            totPcs += pcs;
+            if(l && w && h) totVol += (l*w*h*pcs)/1000000;
+            if(wt) totWt += wt*pcs;
+        });
+        if(totPcs) document.getElementById(`${itemId}-pcs`).value = totPcs;
+        if(totVol) document.getElementById(`${itemId}-vol`).value = totVol.toFixed(3);
+        if(totWt) document.getElementById(`${itemId}-wt`).value = totWt.toFixed(2);
+    }
+
+    // FCL Rows
+    function addWizFCLRow() {
+        fclItemCounter++;
+        const id = `wiz-fcl-row-${fclItemCounter}`;
+        const div = document.createElement('div');
+        div.className = 'cargo-row';
+        div.id = id;
+        div.innerHTML = `
+            <div class="cargo-row-header">
+                <span class="fw-bold text-dark" style="font-size:0.75rem;">Container #${fclItemCounter}</span>
+                ${fclItemCounter > 1 ? `<button type="button" class="remove-btn" onclick="document.getElementById('${id}').remove()">✕ Remove</button>` : ''}
+            </div>
+            
+            <div class="row g-2 mb-2">
+                <div class="col-4">
+                    <label class="premium-label mb-1">Qty</label>
+                    <input type="number" name="cont_qty[]" class="premium-input w-100 text-center" value="1" min="1">
+                </div>
+                <div class="col-8">
+                    <label class="premium-label mb-1">Container Type</label>
+                    <select name="cont_type[]" class="premium-input w-100">
+                        <option value="20' ST">20' Standard</option><option value="40' ST">40' Standard</option><option value="40' HC">40' High Cube</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="premium-label mb-1">Weight</label>
+                    <div class="d-flex">
+                        <input type="number" name="cont_weight[]" class="premium-input text-end w-100" style="border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none;" placeholder="0.0" step="0.01">
+                        <select name="cont_weight_unit[]" class="premium-input" style="width: 70px; border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 0.5rem; padding-right: 0.2rem; background-color: var(--bg-gray);">
+                            <option value="kg">kg</option>
+                            <option value="lbs">lbs</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label class="premium-label mb-1">Est. Volume (cbm)</label>
+                    <input type="number" name="cont_volume[]" class="premium-input w-100" placeholder="0.00" step="0.01">
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="premium-label mb-1">Commodity Description</label>
+                <input type="text" name="cont_desc[]" class="premium-input w-100" placeholder="e.g. Garments, Machineries...">
+            </div>
+            
+            <div class="mt-2 pt-2 border-top">
+                <label class="d-flex align-items-center" style="cursor:pointer;">
+                    <input type="checkbox" class="me-2" style="width:16px; height:16px; accent-color: var(--primary-color);" onchange="toggleHazardous(this, '${id}')">
+                    <input type="hidden" name="cont_is_imo[]" id="${id}-imo-hidden" value="no">
+                    <span class="text-danger fw-bold" style="font-size: 0.75rem;"><i class="bi bi-exclamation-triangle"></i> IMO / Hazardous Goods</span>
+                </label>
+            </div>
+            
+            <div id="${id}-hazardousFields" style="display:none; margin-top:0.75rem; padding:0.75rem; border:1px solid #fda4af; background:#fff1f2; border-radius:4px;">
+                <h6 class="text-danger small fw-bold mb-2">IMO Class & UN Specifications</h6>
+                <div class="row g-2">
+                    <div class="col-4"><input type="text" name="cont_un[]" class="premium-input w-100" placeholder="UN Number"></div>
+                    <div class="col-4"><input type="text" name="cont_class[]" class="premium-input w-100" placeholder="IMO Class"></div>
+                    <div class="col-4"><input type="text" name="cont_pg[]" class="premium-input w-100" placeholder="Packing Group"></div>
+                </div>
+            </div>
+        `;
+        document.getElementById('wiz_fcl_rows').appendChild(div);
+    }
+
+    function submitWizForm() {
+        const orig = document.getElementById('wiz_hidden_origin').value;
+        const dest = document.getElementById('wiz_hidden_dest').value;
+        const movement = document.getElementById('movementType').options[document.getElementById('movementType').selectedIndex].text;
+        
+        if(!orig || !dest) { alert('Please select origin and destination ports.'); return; }
+        
+        const isLcl = document.getElementById('tab_lcl').classList.contains('active');
+        let details = '';
+        if(isLcl) {
+            let v = 0;
+            document.querySelectorAll('#wiz_lcl_rows input[name="item_volume[]"]').forEach(i => v += parseFloat(i.value)||0);
+            details = `${v.toFixed(2)} CBM`;
+        } else {
+            let c = 0;
+            document.querySelectorAll('#wiz_fcl_rows input[name="cont_qty[]"]').forEach(i => c += parseInt(i.value)||0);
+            details = `${c} × Container`;
+        }
+        
+        let hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
+        hist.unshift({ date: new Date().toLocaleString(), origin: orig, destination: dest, service: movement + ' (' + (isLcl?'LCL':'FCL') + ')', details });
+        localStorage.setItem('ftl_search_history', JSON.stringify(hist.slice(0, 5)));
+        
+        document.getElementById('wizardSearchForm').submit();
+    }
+
+    function renderQueryHistory() {
+        const tbody = document.getElementById('historyTableBody');
+        let hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
+        if(hist.length === 0) {
+            hist = [
+                { date: '2026-05-20 09:30 AM', origin: 'Shanghai (CNSHA)', destination: 'Hamburg (DEHAM)', service: 'Port to Port (LCL)', details: 'General Cargo, 2.50 CBM' },
+                { date: '2026-05-22 04:15 PM', origin: 'Singapore (SGPIN)', destination: 'Rotterdam (NLRTM)', service: 'Door to Door (FCL)', details: 'Electronics, 1 × Container' }
+            ];
+            localStorage.setItem('ftl_search_history', JSON.stringify(hist));
+        }
+        tbody.innerHTML = hist.map((h, i) => `
+            <tr>
+                <td class="ps-3 py-3 font-monospace text-muted" style="font-size:0.75rem;">${h.date}</td>
+                <td class="py-3">
+                    <div class="fw-bold text-dark" style="font-size:0.8rem;">${h.origin} <i class="bi bi-arrow-right mx-1 text-primary"></i> ${h.destination}</div>
+                </td>
+                <td class="py-3 text-secondary" style="font-size:0.8rem;"><i class="bi bi-box-seam me-1"></i> ${h.details}</td>
+                <td class="py-3"><span class="badge table-badge table-badge-primary">${h.service}</span></td>
+                <td class="pe-3 py-3 text-end">
+                    <button class="btn btn-sm btn-outline-primary" style="font-size:0.7rem; font-weight:700;" onclick="loadHistory(${i})">Re-run</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function loadHistory(idx) {
+        const hist = JSON.parse(localStorage.getItem('ftl_search_history')||'[]');
+        const r = hist[idx];
+        if(!r) return;
+        document.getElementById('wizOriginLocation').value = r.origin;
+        document.getElementById('wiz_hidden_origin').value = r.origin;
+        document.getElementById('wizDestLocation').value = r.destination;
+        document.getElementById('wiz_hidden_dest').value = r.destination;
+        
+        if (r.service.includes('FCL')) {
+            setWizService('FCL');
+        } else {
+            setWizService('LCL');
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function clearQueryHistory() {
+        localStorage.removeItem('ftl_search_history');
+        renderQueryHistory();
+    }
+
+    function toggleHazardous(checkbox, itemId) {
+        document.getElementById(`${itemId}-hazardousFields`).style.display = checkbox.checked ? 'block' : 'none';
+        document.getElementById(`${itemId}-imo-hidden`).value = checkbox.checked ? 'yes' : 'no';
+    }
+</script>
+{% endblock %}

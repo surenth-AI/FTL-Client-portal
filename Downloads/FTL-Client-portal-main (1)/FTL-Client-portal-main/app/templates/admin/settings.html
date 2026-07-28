@@ -1,0 +1,878 @@
+{% extends 'base.html' %}
+{% block title %}System Settings{% endblock %}
+{% block content %}
+
+<form method="POST" enctype="multipart/form-data">
+
+    <!-- Page Header -->
+    <div class="d-flex align-items-start justify-content-between mb-5">
+        <div>
+            <h3 class="fw-bold mb-1" style="letter-spacing:-0.02em;">{% if current_user.role in ['super_admin', 'admin'] %}System Settings{% else %}Personalize Branding{% endif %}</h3>
+            <p class="text-muted small mb-0">{% if current_user.role in ['super_admin', 'admin'] %}Manage branding, navigation layout, accent colours, and outbound email.{% else %}Customize portal accent colors, typographic systems, and layout preferences.{% endif %}</p>
+        </div>
+        <button type="submit" class="btn btn-primary fw-bold px-4 py-2 d-flex align-items-center gap-2" style="border-radius:8px; white-space:nowrap;">
+            <i class="bi bi-check2-circle"></i> Save Changes
+        </button>
+    </div>
+
+    <div class="row g-4">
+
+        {% if current_user.role in ['super_admin', 'admin'] %}
+        <!-- ── 1. PLATFORM ADMINISTRATOR VIEW (2 COLUMNS: 8/4 SPLIT) ── -->
+        <div class="col-lg-8">
+            <!-- BRANDING -->
+            <div class="glass-card mb-4" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 text-primary flex-shrink-0" style="width:40px;height:40px;">
+                        <i class="bi bi-image-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Branding</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Logo and login hero banner.</div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Logo -->
+                    <div class="col-md-6">
+                        <div class="settings-upload-zone p-3 rounded-3 h-100">
+                            <div class="fw-bold mb-2 small">Navigation Logo</div>
+                            <div class="upload-preview-frame d-flex align-items-center justify-content-center mb-3 rounded-2" style="height:110px;">
+                                <img src="{{ system_logo_url }}" class="img-fluid" style="max-height:60px;max-width:100%;object-fit:contain;" alt="Current Logo">
+                            </div>
+                            <input type="file" name="logo_file" class="form-control form-control-sm" accept=".png,.jpg,.jpeg,.svg">
+                            <div class="text-muted mt-1" style="font-size:0.65rem;"><i class="bi bi-info-circle me-1"></i>Transparent PNG · max 2 MB</div>
+                        </div>
+                    </div>
+                    <!-- Banner -->
+                    <div class="col-md-6">
+                        <div class="settings-upload-zone p-3 rounded-3 h-100">
+                            <div class="fw-bold mb-2 small">Login Hero Banner</div>
+                            <div class="upload-preview-frame dark-preview d-flex align-items-center justify-content-center mb-3 rounded-2 overflow-hidden" style="height:110px;">
+                                <img src="{{ system_banner_url }}" class="w-100 h-100" style="object-fit:cover;opacity:0.85;" alt="Current Banner">
+                            </div>
+                            <input type="file" name="banner_file" class="form-control form-control-sm" accept=".png,.jpg,.jpeg">
+                            <div class="text-muted mt-1" style="font-size:0.65rem;"><i class="bi bi-info-circle me-1"></i>High-res landscape · min 1200 px wide</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NAVIGATION LAYOUT -->
+            <div class="glass-card mb-4" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:40px;height:40px;background:rgba(100,116,139,0.12);color:#64748B;">
+                        <i class="bi bi-columns-gap"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Navigation Layout</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Choose your preferred navigation mode.</div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="settings-layout-option w-100">
+                            <input type="radio" name="default_layout" value="sidebar" {% if settings.default_layout == 'sidebar' %}checked{% endif %}>
+                            <div class="settings-option-card d-flex flex-column gap-3 p-3 rounded-3 border">
+                                <div class="layout-preview-mockup sidebar-mockup">
+                                    <div class="mockup-sidebar"></div>
+                                    <div class="mockup-content">
+                                        <div class="mockup-header"></div>
+                                        <div class="mockup-line-sm"></div>
+                                        <div class="mockup-line-lg"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="option-icon rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;">
+                                        <i class="bi bi-layout-sidebar fs-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small">Sidebar</div>
+                                        <div class="text-muted" style="font-size:0.7rem;">Vertical layout navigation</div>
+                                    </div>
+                                    <i class="bi bi-check-circle-fill ms-auto check-indicator" style="font-size:1.1rem;"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="settings-layout-option w-100">
+                            <input type="radio" name="default_layout" value="topbar" {% if settings.default_layout == 'topbar' %}checked{% endif %}>
+                            <div class="settings-option-card d-flex flex-column gap-3 p-3 rounded-3 border">
+                                <div class="layout-preview-mockup topbar-mockup">
+                                    <div class="mockup-topbar"></div>
+                                    <div class="mockup-content">
+                                        <div class="mockup-line-sm"></div>
+                                        <div class="mockup-line-lg"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="option-icon rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;">
+                                        <i class="bi bi-layout-three-columns fs-6" style="transform:rotate(90deg);"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small">Top Bar</div>
+                                        <div class="text-muted" style="font-size:0.7rem;">Horizontal layout navigation</div>
+                                    </div>
+                                    <i class="bi bi-check-circle-fill ms-auto check-indicator" style="font-size:1.1rem;"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SMTP -->
+            <div class="glass-card" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:40px;height:40px;background:rgba(239,68,68,0.1);color:#ef4444;">
+                        <i class="bi bi-envelope-at-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Outbound Email (SMTP)</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Used for password resets and approval notifications.</div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">SMTP Server Host</label>
+                        <div class="input-group settings-input-group">
+                            <span class="input-group-text"><i class="bi bi-server"></i></span>
+                            <input type="text" name="smtp_server" class="form-control" placeholder="smtp.gmail.com" value="{{ settings.smtp_server or '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Port</label>
+                        <div class="input-group settings-input-group">
+                            <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                            <input type="number" name="smtp_port" class="form-control" placeholder="587" value="{{ settings.smtp_port or '587' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sender Email (SMTP User)</label>
+                        <div class="input-group settings-input-group">
+                            <span class="input-group-text"><i class="bi bi-at"></i></span>
+                            <input type="email" name="smtp_user" class="form-control" placeholder="noreply@company.com" value="{{ settings.smtp_user or '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">SMTP Password / App Password</label>
+                        <div class="input-group settings-input-group">
+                            <span class="input-group-text"><i class="bi bi-key-fill"></i></span>
+                            <input type="password" name="smtp_password" id="smtpPassword" class="form-control" placeholder="Leave blank to keep current">
+                            <button type="button" class="input-group-text border-0 bg-transparent px-3" onclick="toggleSmtpPw()" style="cursor:pointer;" tabindex="-1">
+                                <i class="bi bi-eye" id="smtpPwEye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Leave blank to keep the existing password.</div>
+                    </div>
+                    <div class="col-12 pt-2 mt-1 border-top">
+                        <label class="form-label">Internal Receiver Email</label>
+                        <div class="input-group settings-input-group">
+                            <span class="input-group-text"><i class="bi bi-inbox-fill"></i></span>
+                            <input type="email" name="receiver_email" class="form-control" placeholder="operations@company.com" value="{{ settings.receiver_email or '' }}">
+                        </div>
+                        <div class="form-text">Destination for registration approval notifications.</div>
+                    </div>
+                </div>
+
+                {% if settings.smtp_server %}
+                <div class="smtp-status-bar d-flex align-items-center gap-2 mt-3 p-3 rounded-3">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <span class="small fw-semibold">SMTP configured — <span class="text-muted fw-normal">{{ settings.smtp_server }}:{{ settings.smtp_port }}</span></span>
+                </div>
+                {% else %}
+                <div class="smtp-status-bar d-flex align-items-center gap-2 mt-3 p-3 rounded-3 warning">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                    <span class="small fw-semibold text-warning">No SMTP server configured — email features are disabled.</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- ACCENT COLOUR -->
+            <div class="glass-card mb-4" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:40px;height:40px;background:rgba(14,165,233,0.1);color:#0ea5e9;">
+                        <i class="bi bi-palette2"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Accent Colour</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Applied globally across the interface.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column mb-4 p-3 rounded-3 settings-preview-bar">
+                    <div class="fw-semibold small text-muted mb-2">Live Theme Preview</div>
+                    <div class="mockup-ui-card p-3 rounded-3" style="border: 1px solid var(--glass-border, #E2E8F0); background: var(--bg-surface-raised, #F1F5F9); transition: all 0.2s;">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold mockup-text-title" id="typographyPreview" style="font-size: 0.85rem;">Portal Dashboard</span>
+                            <span class="badge mockup-badge" style="background: var(--primary-color); font-size: 0.65rem; color: #fff;">Active</span>
+                        </div>
+                        <div class="mockup-line mb-3" style="height: 6px; width: 85%; background: var(--glass-border, #E2E8F0); border-radius: 3px;"></div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="mockup-btn btn btn-sm py-1 px-2 text-white fw-bold d-flex align-items-center gap-1" style="background: var(--primary-color); border: none; font-size: 0.7rem; border-radius: 4px; pointer-events: none;">
+                                <i class="bi bi-send-fill" style="font-size: 0.65rem;"></i> Action
+                            </div>
+                            <div class="mockup-btn-secondary btn btn-sm py-1 px-2 border" style="font-size: 0.7rem; border-radius: 4px; pointer-events: none; background: transparent; color: var(--text-primary);">
+                                Cancel
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    {% set swatches = [
+                        ('blue',   '#2563EB', 'Blue'),
+                        ('purple', '#7C3AED', 'Purple'),
+                        ('teal',   '#0D9488', 'Teal'),
+                        ('green',  '#059669', 'Green'),
+                        ('orange', '#F97316', 'Orange'),
+                    ] %}
+                    {% for val, hex, label in swatches %}
+                    <div class="col-6">
+                        <label class="settings-theme-option w-100">
+                            <input type="radio" name="theme_color" value="{{ val }}" {% if settings.theme_color == val %}checked{% endif %} onchange="previewColor('{{ hex }}', '{{ label }}')">
+                            <div class="settings-theme-card d-flex flex-column align-items-center justify-content-center p-3 rounded-3 border text-center" style="min-height:90px;">
+                                <span class="rounded-circle mb-2 position-relative d-flex align-items-center justify-content-center swatch-circle" style="width:32px;height:32px;background:{{ hex }};box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                    <i class="bi bi-check2 text-white fs-5 check-indicator-inner" style="opacity:0; transition:opacity .15s;"></i>
+                                </span>
+                                <span class="fw-semibold small">{{ label }}</span>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Custom colour -->
+                    {% set is_custom = settings.theme_color not in ['blue', 'purple', 'teal', 'green', 'orange'] %}
+                    {% set custom_hex = settings.theme_color if is_custom and settings.theme_color.startswith('#') else '#3B82F6' %}
+                    <div class="col-6">
+                        <label class="settings-theme-option w-100">
+                            <input type="radio" name="theme_color" id="customColorRadio" value="{{ custom_hex }}" {% if is_custom %}checked{% endif %}>
+                            <div id="customColorCard" class="settings-theme-card d-flex flex-column align-items-center justify-content-center p-3 rounded-3 border text-center" style="min-height:90px; cursor:pointer;" onclick="if(event.target!==document.getElementById('colorPickerInput'))document.getElementById('colorPickerInput').click()">
+                                <div class="position-relative mb-2 swatch-circle d-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;">
+                                    <input type="color" id="colorPickerInput" value="{{ custom_hex }}" class="position-absolute top-0 start-0 opacity-0 w-100 h-100" style="cursor:pointer;">
+                                    <span id="customSwatch" class="rounded-circle d-block w-100 h-100" style="background:{{ custom_hex }}; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></span>
+                                    <i class="bi bi-check2 text-white fs-5 check-indicator-inner" style="position: absolute; pointer-events: none; opacity:0; transition:opacity .15s;"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold small">Custom</span>
+                                    <span class="text-muted" style="font-size:0.6rem; line-height: 1;" id="customHexLabel">{{ custom_hex }}</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TYPOGRAPHY SELECTION -->
+            <div class="glass-card" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:40px;height:40px;background:rgba(99,102,241,0.1);color:#6366f1;">
+                        <i class="bi bi-type"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Typography</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Global interface font style.</div>
+                    </div>
+                </div>
+
+                <div class="settings-theme-grid">
+                    {% set fonts = [
+                        ('Inter', 'Inter', 'Modern Sans-Serif'),
+                        ('Outfit', 'Outfit', 'Premium Geometric'),
+                        ('Plus Jakarta Sans', 'Plus Jakarta Sans', 'Dynamic & Clean'),
+                        ('Roboto', 'Roboto', 'Neo-Grotesque Tech'),
+                        ('Lora', 'Lora', 'Elegant Editorial Serif')
+                    ] %}
+                    {% for val, label, desc in fonts %}
+                    <label class="settings-theme-option w-100">
+                        <input type="radio" name="typography" value="{{ val }}" {% if settings.typography == val %}checked{% endif %} onchange="previewFont('{{ val }}')">
+                        <div class="settings-theme-card d-flex align-items-center gap-3 p-3 rounded-3 border">
+                            <div class="font-letter-specimen rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px; font-family: '{{ val }}', sans-serif; font-size:1.25rem; font-weight:700; line-height: 1;">
+                                Aa
+                            </div>
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold small" style="font-family: '{{ val }}', sans-serif; font-size: 0.9rem;">{{ label }}</span>
+                                <span class="text-muted" style="font-size:0.7rem;">{{ desc }}</span>
+                            </div>
+                            <i class="bi bi-check2-circle ms-auto check-indicator fs-5"></i>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- ── 2. CUSTOMER / EXECUTIVE PERSONALIZATION VIEW (3 COLUMNS: 4/4/4 SPLIT) ── -->
+        <div class="col-lg-4 col-md-6">
+            <!-- NAVIGATION LAYOUT -->
+            <div class="glass-card h-100" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:40px;height:40px;background:rgba(100,116,139,0.12);color:#64748B;">
+                        <i class="bi bi-columns-gap"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Navigation Layout</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Choose your preferred navigation mode.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-3">
+                    <label class="settings-layout-option w-100">
+                        <input type="radio" name="default_layout" value="sidebar" {% if settings.default_layout == 'sidebar' %}checked{% endif %}>
+                        <div class="settings-option-card d-flex flex-column gap-3 p-3 rounded-3 border">
+                            <div class="layout-preview-mockup sidebar-mockup">
+                                <div class="mockup-sidebar"></div>
+                                <div class="mockup-content">
+                                    <div class="mockup-header"></div>
+                                    <div class="mockup-line-sm"></div>
+                                    <div class="mockup-line-lg"></div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="option-icon rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;">
+                                    <i class="bi bi-layout-sidebar fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold small">Sidebar</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">Vertical layout navigation</div>
+                                </div>
+                                <i class="bi bi-check-circle-fill ms-auto check-indicator" style="font-size:1.1rem;"></i>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="settings-layout-option w-100">
+                        <input type="radio" name="default_layout" value="topbar" {% if settings.default_layout == 'topbar' %}checked{% endif %}>
+                        <div class="settings-option-card d-flex flex-column gap-3 p-3 rounded-3 border">
+                            <div class="layout-preview-mockup topbar-mockup">
+                                <div class="mockup-topbar"></div>
+                                <div class="mockup-content">
+                                    <div class="mockup-line-sm"></div>
+                                    <div class="mockup-line-lg"></div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="option-icon rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;">
+                                    <i class="bi bi-layout-three-columns fs-6" style="transform:rotate(90deg);"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold small">Top Bar</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">Horizontal layout navigation</div>
+                                </div>
+                                <i class="bi bi-check-circle-fill ms-auto check-indicator" style="font-size:1.1rem;"></i>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <!-- ACCENT COLOUR -->
+            <div class="glass-card h-100" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:40px;height:40px;background:rgba(14,165,233,0.1);color:#0ea5e9;">
+                        <i class="bi bi-palette2"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Accent Colour</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Applied globally across the interface.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column mb-4 p-3 rounded-3 settings-preview-bar">
+                    <div class="fw-semibold small text-muted mb-2">Live Theme Preview</div>
+                    <div class="mockup-ui-card p-3 rounded-3" style="border: 1px solid var(--glass-border, #E2E8F0); background: var(--bg-surface-raised, #F1F5F9); transition: all 0.2s;">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold mockup-text-title" id="typographyPreview" style="font-size: 0.85rem;">Portal Dashboard</span>
+                            <span class="badge mockup-badge" style="background: var(--primary-color); font-size: 0.65rem; color: #fff;">Active</span>
+                        </div>
+                        <div class="mockup-line mb-3" style="height: 6px; width: 85%; background: var(--glass-border, #E2E8F0); border-radius: 3px;"></div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="mockup-btn btn btn-sm py-1 px-2 text-white fw-bold d-flex align-items-center gap-1" style="background: var(--primary-color); border: none; font-size: 0.7rem; border-radius: 4px; pointer-events: none;">
+                                <i class="bi bi-send-fill" style="font-size: 0.65rem;"></i> Action
+                            </div>
+                            <div class="mockup-btn-secondary btn btn-sm py-1 px-2 border" style="font-size: 0.7rem; border-radius: 4px; pointer-events: none; background: transparent; color: var(--text-primary);">
+                                Cancel
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    {% set swatches = [
+                        ('blue',   '#2563EB', 'Blue'),
+                        ('purple', '#7C3AED', 'Purple'),
+                        ('teal',   '#0D9488', 'Teal'),
+                        ('green',  '#059669', 'Green'),
+                        ('orange', '#F97316', 'Orange'),
+                    ] %}
+                    {% for val, hex, label in swatches %}
+                    <div class="col-6">
+                        <label class="settings-theme-option w-100">
+                            <input type="radio" name="theme_color" value="{{ val }}" {% if settings.theme_color == val %}checked{% endif %} onchange="previewColor('{{ hex }}', '{{ label }}')">
+                            <div class="settings-theme-card d-flex flex-column align-items-center justify-content-center p-3 rounded-3 border text-center" style="min-height:90px;">
+                                <span class="rounded-circle mb-2 position-relative d-flex align-items-center justify-content-center swatch-circle" style="width:32px;height:32px;background:{{ hex }};box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                    <i class="bi bi-check2 text-white fs-5 check-indicator-inner" style="opacity:0; transition:opacity .15s;"></i>
+                                </span>
+                                <span class="fw-semibold small">{{ label }}</span>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Custom colour -->
+                    {% set is_custom = settings.theme_color not in ['blue', 'purple', 'teal', 'green', 'orange'] %}
+                    {% set custom_hex = settings.theme_color if is_custom and settings.theme_color.startswith('#') else '#3B82F6' %}
+                    <div class="col-6">
+                        <label class="settings-theme-option w-100">
+                            <input type="radio" name="theme_color" id="customColorRadio" value="{{ custom_hex }}" {% if is_custom %}checked{% endif %}>
+                            <div id="customColorCard" class="settings-theme-card d-flex flex-column align-items-center justify-content-center p-3 rounded-3 border text-center" style="min-height:90px; cursor:pointer;" onclick="if(event.target!==document.getElementById('colorPickerInput'))document.getElementById('colorPickerInput').click()">
+                                <div class="position-relative mb-2 swatch-circle d-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;">
+                                    <input type="color" id="colorPickerInput" value="{{ custom_hex }}" class="position-absolute top-0 start-0 opacity-0 w-100 h-100" style="cursor:pointer;">
+                                    <span id="customSwatch" class="rounded-circle d-block w-100 h-100" style="background:{{ custom_hex }}; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></span>
+                                    <i class="bi bi-check2 text-white fs-5 check-indicator-inner" style="position: absolute; pointer-events: none; opacity:0; transition:opacity .15s;"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold small">Custom</span>
+                                    <span class="text-muted" style="font-size:0.6rem; line-height: 1;" id="customHexLabel">{{ custom_hex }}</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-12">
+            <!-- TYPOGRAPHY SELECTION -->
+            <div class="glass-card h-100" style="border-radius:10px; padding:1.75rem;">
+                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:40px;height:40px;background:rgba(99,102,241,0.1);color:#6366f1;">
+                        <i class="bi bi-type"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:.06em;">Typography</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Global interface font style.</div>
+                    </div>
+                </div>
+
+                <div class="settings-theme-grid">
+                    {% set fonts = [
+                        ('Inter', 'Inter', 'Modern Sans-Serif'),
+                        ('Outfit', 'Outfit', 'Premium Geometric'),
+                        ('Plus Jakarta Sans', 'Plus Jakarta Sans', 'Dynamic & Clean'),
+                        ('Roboto', 'Roboto', 'Neo-Grotesque Tech'),
+                        ('Lora', 'Lora', 'Elegant Editorial Serif')
+                    ] %}
+                    {% for val, label, desc in fonts %}
+                    <label class="settings-theme-option w-100">
+                        <input type="radio" name="typography" value="{{ val }}" {% if settings.typography == val %}checked{% endif %} onchange="previewFont('{{ val }}')">
+                        <div class="settings-theme-card d-flex align-items-center gap-3 p-3 rounded-3 border">
+                            <div class="font-letter-specimen rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px; font-family: '{{ val }}', sans-serif; font-size:1.25rem; font-weight:700; line-height: 1;">
+                                Aa
+                            </div>
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold small" style="font-family: '{{ val }}', sans-serif; font-size: 0.9rem;">{{ label }}</span>
+                                <span class="text-muted" style="font-size:0.7rem;">{{ desc }}</span>
+                            </div>
+                            <i class="bi bi-check2-circle ms-auto check-indicator fs-5"></i>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</form>
+
+<style>
+/* ── Settings page local styles (dark-mode compatible via CSS vars) ── */
+
+/* Upload zones */
+.settings-upload-zone {
+    background: var(--glass-bg, #f8fafc);
+    border: 1.5px dashed var(--glass-border, #E2E8F0);
+    transition: border-color .2s;
+}
+.settings-upload-zone:hover { border-color: var(--primary-color); }
+
+.upload-preview-frame {
+    background: repeating-conic-gradient(var(--glass-border, #E2E8F0) 0% 25%, var(--glass-bg, #f8fafc) 0% 50%) 0 0 / 16px 16px;
+    border: 1px solid var(--glass-border, #E2E8F0);
+}
+.upload-preview-frame.dark-preview { background: #1E293B; border-color: #334155; }
+
+/* Layout / theme option cards */
+.settings-layout-option input[type="radio"],
+.settings-theme-option input[type="radio"] {
+    position: absolute; opacity: 0; width: 0; height: 0;
+}
+
+.settings-option-card,
+.settings-theme-card {
+    cursor: pointer;
+    transition: border-color .18s, background .18s, box-shadow .18s;
+    border-color: var(--glass-border, #E2E8F0) !important;
+    background: var(--glass-bg, #ffffff);
+    color: var(--text-primary, #1E293B);
+}
+
+.settings-option-card:hover,
+.settings-theme-card:hover {
+    border-color: var(--primary-color) !important;
+    background: var(--bg-surface-hover, #F8FAFC);
+}
+
+.settings-layout-option input:checked + .settings-option-card,
+.settings-theme-option input:checked + .settings-theme-card {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+
+.check-indicator { color: transparent; transition: color .15s; }
+.settings-layout-option input:checked + .settings-option-card .check-indicator,
+.settings-theme-option input:checked + .settings-theme-card .check-indicator { color: var(--primary-color); }
+
+.option-icon {
+    background: var(--bg-surface-raised, #F1F5F9);
+    color: var(--text-secondary, #64748B);
+    transition: background-color 0.2s, color 0.2s;
+}
+.settings-layout-option input:checked + .settings-option-card .option-icon {
+    background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+    color: var(--primary-color);
+}
+
+/* Visual layout mockups */
+.layout-preview-mockup {
+    height: 72px;
+    border-radius: 6px;
+    border: 1px solid var(--glass-border, #E2E8F0);
+    background: var(--bg-surface-raised, #F8FAFC);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+.layout-preview-mockup.sidebar-mockup {
+    flex-direction: row;
+}
+.layout-preview-mockup.topbar-mockup {
+    flex-direction: column;
+}
+.mockup-sidebar {
+    width: 24px;
+    height: 100%;
+    background: var(--bg-surface-raised, #F1F5F9);
+    border-right: 1px solid var(--glass-border, #E2E8F0);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 3px;
+}
+.mockup-sidebar::before,
+.mockup-sidebar::after {
+    content: '';
+    height: 3px;
+    background: var(--glass-border, #E2E8F0);
+    border-radius: 1px;
+}
+.mockup-sidebar::before {
+    background: var(--primary-color);
+    opacity: 0.6;
+}
+.mockup-topbar {
+    height: 18px;
+    background: var(--bg-surface-raised, #F1F5F9);
+    border-bottom: 1px solid var(--glass-border, #E2E8F0);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+}
+.mockup-topbar::before {
+    content: '';
+    width: 12px;
+    height: 4px;
+    background: var(--primary-color);
+    opacity: 0.6;
+    border-radius: 1px;
+}
+.mockup-content {
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.mockup-header {
+    height: 6px;
+    background: var(--glass-border, #E2E8F0);
+    border-radius: 2px;
+    margin-bottom: 2px;
+}
+.mockup-line-sm {
+    width: 40%;
+    height: 4px;
+    background: var(--glass-border, #E2E8F0);
+    border-radius: 1px;
+}
+.mockup-line-lg {
+    width: 80%;
+    height: 4px;
+    background: var(--glass-border, #E2E8F0);
+    border-radius: 1px;
+}
+
+.settings-layout-option input:checked + .settings-option-card .layout-preview-mockup {
+    border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+    background: color-mix(in srgb, var(--primary-color) 5%, var(--bg-surface-hover, #ffffff));
+}
+
+/* Theme grid & swatches */
+.settings-theme-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+.settings-theme-option { display: block; cursor: pointer; }
+
+.swatch-circle {
+    border: 2px solid transparent;
+    transition: transform 0.2s, border-color 0.2s;
+}
+.settings-theme-option input:checked + .settings-theme-card .swatch-circle {
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+.settings-theme-option input:checked + .settings-theme-card .swatch-circle .check-indicator-inner {
+    opacity: 1 !important;
+}
+
+/* Font specimens */
+.font-letter-specimen {
+    background: var(--bg-surface-raised, #F1F5F9);
+    border: 1px solid var(--glass-border, #E2E8F0);
+    color: var(--text-primary, #1E293B);
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+.settings-theme-option input:checked + .settings-theme-card .font-letter-specimen {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
+
+/* SMTP input groups */
+.settings-input-group .input-group-text {
+    background: var(--glass-bg, #f8fafc);
+    border-color: var(--glass-border, #E2E8F0);
+    color: var(--text-muted, #94A3B8);
+    border-right: none;
+}
+.settings-input-group .form-control {
+    border-left: none;
+}
+.settings-input-group .form-control:focus { border-left: none; z-index: 1; }
+
+/* SMTP status bar */
+.smtp-status-bar {
+    background: rgba(16,185,129,0.06);
+    border: 1px solid rgba(16,185,129,0.2);
+}
+.smtp-status-bar.warning {
+    background: rgba(245,158,11,0.06);
+    border-color: rgba(245,158,11,0.2);
+}
+
+/* Preview bar */
+.settings-preview-bar {
+    background: var(--bg-surface-raised, #F1F5F9);
+    border: 1px solid var(--glass-border, #E2E8F0);
+}
+
+/* Dark mode overrides for settings-specific elements */
+html[data-color-scheme='dark'] .settings-upload-zone {
+    background: #263348;
+    border-color: #334155;
+}
+html[data-color-scheme='dark'] .upload-preview-frame {
+    background: repeating-conic-gradient(#334155 0% 25%, #263348 0% 50%) 0 0 / 16px 16px;
+    border-color: #334155;
+}
+html[data-color-scheme='dark'] .settings-option-card,
+html[data-color-scheme='dark'] .settings-theme-card {
+    background: #263348;
+    border-color: #334155 !important;
+    color: #CBD5E1;
+}
+html[data-color-scheme='dark'] .settings-option-card:hover,
+html[data-color-scheme='dark'] .settings-theme-card:hover { background: #2D3D54; }
+html[data-color-scheme='dark'] .option-icon { background: #334155; color: #94A3B8; }
+html[data-color-scheme='dark'] .settings-preview-bar { background: #263348; border-color: #334155; }
+html[data-color-scheme='dark'] .settings-input-group .input-group-text { background: #263348; border-color: #334155; color: #64748B; }
+html[data-color-scheme='dark'] .smtp-status-bar         { background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.2); }
+html[data-color-scheme='dark'] .smtp-status-bar.warning { background: rgba(245,158,11,0.07); border-color: rgba(245,158,11,0.2); }
+
+html[data-color-scheme='dark'] .font-letter-specimen {
+    background: #334155;
+    border-color: #475569;
+    color: #CBD5E1;
+}
+html[data-color-scheme='dark'] .layout-preview-mockup {
+    background: #1E293B;
+    border-color: #334155;
+}
+html[data-color-scheme='dark'] .mockup-sidebar,
+html[data-color-scheme='dark'] .mockup-topbar {
+    background: #263348;
+    border-color: #334155;
+}
+html[data-color-scheme='dark'] .mockup-header,
+html[data-color-scheme='dark'] .mockup-line-sm,
+html[data-color-scheme='dark'] .mockup-line-lg {
+    background: #334155;
+}
+
+/* ── Mockup preview card (the white "Portal Dashboard" box) ── */
+html[data-color-scheme='dark'] .mockup-ui-card {
+    background: #1E293B !important;
+    border-color: #334155 !important;
+}
+html[data-color-scheme='dark'] .mockup-ui-card .mockup-line {
+    background: #334155 !important;
+}
+html[data-color-scheme='dark'] .mockup-ui-card .mockup-text-title {
+    color: #F1F5F9 !important;
+}
+html[data-color-scheme='dark'] .mockup-ui-card .mockup-btn-secondary {
+    border-color: #475569 !important;
+    color: #94A3B8 !important;
+}
+
+/* ── Form controls in settings ── */
+html[data-color-scheme='dark'] .settings-input-group .form-control {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+    color: #CBD5E1 !important;
+}
+html[data-color-scheme='dark'] .settings-input-group .form-control::placeholder {
+    color: #475569 !important;
+}
+html[data-color-scheme='dark'] .settings-input-group .form-control:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
+}
+
+/* ── Form labels and helper text ── */
+html[data-color-scheme='dark'] .form-label {
+    color: #94A3B8 !important;
+}
+html[data-color-scheme='dark'] .form-text {
+    color: #475569 !important;
+}
+
+/* ── Section header borders ── */
+html[data-color-scheme='dark'] .border-bottom {
+    border-color: #334155 !important;
+}
+html[data-color-scheme='dark'] .border-top {
+    border-color: #334155 !important;
+}
+
+/* ── File input ── */
+html[data-color-scheme='dark'] .form-control-sm[type="file"] {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+    color: #94A3B8 !important;
+}
+
+/* ── Settings page heading overrides ── */
+html[data-color-scheme='dark'] .fw-bold.mb-2.small,
+html[data-color-scheme='dark'] .fw-bold.small {
+    color: #CBD5E1 !important;
+}
+html[data-color-scheme='dark'] .fw-semibold.small {
+    color: #CBD5E1 !important;
+}
+
+/* ── Selected color ring glow in dark mode ── */
+html[data-color-scheme='dark'] .settings-layout-option input:checked + .settings-option-card,
+html[data-color-scheme='dark'] .settings-theme-option input:checked + .settings-theme-card {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+
+/* ── Active layout mockup in dark mode ── */
+html[data-color-scheme='dark'] .settings-layout-option input:checked + .settings-option-card .layout-preview-mockup {
+    border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+    background: color-mix(in srgb, var(--primary-color) 8%, #1E293B);
+}
+</style>
+
+<script>
+function previewColor(hex, label) {
+    document.querySelectorAll('[id^="previewDot"]').forEach(el => el.style.background = hex);
+    document.querySelectorAll('[id^="previewLabel"]').forEach(el => el.textContent = label);
+    document.querySelectorAll('.mockup-badge, .mockup-btn').forEach(el => {
+        el.style.backgroundColor = hex;
+    });
+}
+
+function previewFont(fontName) {
+    document.querySelectorAll('[id^="typographyPreview"]').forEach(el => {
+        el.style.fontFamily = fontName;
+    });
+}
+
+function toggleSmtpPw() {
+    var f = document.getElementById('smtpPassword');
+    var e = document.getElementById('smtpPwEye');
+    if (f && f.type === 'password') {
+        f.type = 'text';
+        e.className = 'bi bi-eye-slash';
+    } else if (f) {
+        f.type = 'password';
+        e.className = 'bi bi-eye';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Sync picker 1
+    var picker = document.getElementById('colorPickerInput');
+    var radio  = document.getElementById('customColorRadio');
+    var swatch = document.getElementById('customSwatch');
+    var label  = document.getElementById('customHexLabel');
+
+    if (picker) {
+        picker.addEventListener('input', function() {
+            var v = picker.value;
+            radio.value = v;
+            radio.checked = true;
+            swatch.style.background = v;
+            label.textContent = v.toUpperCase();
+            previewColor(v, 'Custom');
+        });
+    }
+
+    // Sync preview dot and mockup styles to the already-checked color option on load
+    var checkedColor = document.querySelector('input[name="theme_color"]:checked');
+    if (checkedColor) {
+        var swatch_el = checkedColor.nextElementSibling.querySelector('span[style*="background"], .swatch-circle');
+        if (swatch_el) {
+            var bg = swatch_el.style.backgroundColor || swatch_el.style.background;
+            if (bg) previewColor(bg, checkedColor.value);
+        }
+    }
+
+    // Sync typography preview on load
+    var checkedFont = document.querySelector('input[name="typography"]:checked');
+    if (checkedFont) {
+        previewFont(checkedFont.value);
+    }
+});
+</script>
+{% endblock %}

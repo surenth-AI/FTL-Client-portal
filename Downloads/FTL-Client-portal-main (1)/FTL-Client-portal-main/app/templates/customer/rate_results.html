@@ -1,0 +1,1256 @@
+{% extends 'base.html' %}
+{% block title %}Quotations Available - Fast Transit Line{% endblock %}
+
+{% block content %}
+<style>
+    /* -----------------------------------------------------
+       MERGED STYLES FROM OFFERLIST (1) (1).HTML
+       ----------------------------------------------------- */
+    :root {
+        --primary-blue: #2563eb;
+        --primary-blue-dark: #1d4ed8;
+        --primary-green: #059669;
+        --primary-green-dark: #047857;
+        --green-bg: #ecfdf5;
+        --text-primary: #0f172a;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --border-color: #e2e8f0;
+        --bg-gray: #f8fafc;
+        --bg-white: #ffffff;
+        --success-green: #10b981;
+        --error-red: #ef4444;
+        --amber: #f59e0b;
+        --amber-bg: #fffbeb;
+        --hover-bg: #f1f5f9;
+    }
+
+    html[data-color-scheme='dark'] {
+        --bg-gray: #0f172a;
+        --bg-white: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --border-color: #334155;
+        --hover-bg: #334155;
+        --green-bg: rgba(5, 150, 105, 0.2);
+    }
+
+    .offerlist-container {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--text-primary);
+        line-height: 1.4;
+        font-size: 13px;
+        width: 100%;
+        padding: 0.75rem 1.5rem 3rem;
+    }
+
+    .modify-search {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--primary-blue);
+        text-decoration: none;
+        margin-bottom: 0.625rem;
+        cursor: pointer;
+    }
+
+    .modify-search:hover {
+        text-decoration: underline;
+    }
+
+    /* Summary card */
+    .summary-card {
+        background: var(--bg-white);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 0.875rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.875rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .summary-left h1 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--primary-green-dark);
+        margin-bottom: 0.3rem;
+    }
+
+    .summary-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .summary-meta .divider {
+        color: var(--border-color);
+    }
+
+    .summary-meta strong {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .route-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .view-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: 7px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid var(--border-color);
+        background: var(--bg-white);
+        color: var(--text-secondary);
+        transition: all 0.15s ease;
+    }
+
+    .view-btn.active {
+        background: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+    }
+
+    .view-btn:not(.active):hover {
+        background: var(--hover-bg);
+    }
+
+    /* Toolbar: sort + filter chips */
+    .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.875rem;
+    }
+
+    .sort-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .sort-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .sort-chip {
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-white);
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .sort-chip:hover {
+        border-color: var(--primary-green);
+        color: var(--primary-green-dark);
+    }
+
+    .sort-chip.active {
+        background: var(--text-primary);
+        border-color: var(--text-primary);
+        color: white;
+    }
+
+    .results-count {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+    }
+
+    .info-banner {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.625rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.875rem;
+    }
+
+    /* Offer card */
+    .offers-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+    }
+
+    .offer-card {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .offer-card:hover {
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    }
+
+    .offer-card.best {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 1px var(--primary-green);
+    }
+
+    .offer-badge-row {
+        display: flex;
+        gap: 0.4rem;
+        padding: 0.5rem 1.25rem 0;
+    }
+
+    .offer-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 0.2rem 0.55rem;
+        border-radius: 5px;
+    }
+
+    .offer-tag.cheapest {
+        background: var(--green-bg);
+        color: var(--primary-green-dark);
+    }
+
+    .offer-tag.fastest {
+        background: #eff6ff;
+        color: var(--primary-blue-dark);
+    }
+
+    .offer-tag.recommended {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .offer-main {
+        display: grid;
+        grid-template-columns: 200px 1fr 220px;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        align-items: center;
+    }
+
+    .offer-price-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .price-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    .price-amount {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--primary-green-dark);
+        line-height: 1.1;
+    }
+
+    .price-amount .currency {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-right: 0.2rem;
+    }
+
+    .price-valid {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+    }
+
+    .save-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.4rem 0.7rem;
+        cursor: pointer;
+        width: fit-content;
+        transition: all 0.15s ease;
+    }
+
+    .save-btn:hover {
+        border-color: var(--primary-blue);
+        color: var(--primary-blue);
+    }
+
+    .save-btn.saved {
+        background: #eff6ff;
+        border-color: var(--primary-blue);
+        color: var(--primary-blue-dark);
+    }
+
+    .quote-ref {
+        display: none;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.72rem;
+        color: var(--primary-blue-dark);
+        background: #eff6ff;
+        border: 1px dashed #bfdbfe;
+        border-radius: 6px;
+        padding: 0.35rem 0.55rem;
+        cursor: pointer;
+        width: fit-content;
+        transition: background 0.15s ease;
+    }
+
+    .quote-ref:hover {
+        background: #dbeafe;
+    }
+
+    .quote-ref .ref-code {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .quote-ref .copy-icon {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    .quote-ref.copied {
+        background: var(--green-bg);
+        border-color: #a7f3d0;
+        color: var(--primary-green-dark);
+    }
+
+    .offer-details {
+        min-width: 0;
+    }
+
+    .carrier-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .carrier-logo {
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        background: var(--bg-gray);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.7rem;
+        color: var(--primary-green-dark);
+        flex-shrink: 0;
+        border: 1px solid var(--border-color);
+    }
+
+    .carrier-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .carrier-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+
+    .service-name {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+    }
+
+    .route-line {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .route-arrow {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+    }
+
+    .routing-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.875rem;
+    }
+
+    .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: var(--bg-gray);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+
+    .meta-pill.service {
+        background: #f3e8ff;
+        color: #7e22ce;
+        border-color: #e9d5ff;
+    }
+
+    .meta-pill.direct {
+        background: #ecfdf5;
+        color: #047857;
+        border-color: #a7f3d0;
+    }
+
+    .meta-pill.transship {
+        background: #f1f5f9;
+        color: #475569;
+        border-color: #cbd5e1;
+    }
+
+    .charges-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .charge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid var(--border-color);
+    }
+
+    .charge-pill .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .charge-pill.included {
+        background: var(--bg-white);
+        color: var(--text-primary);
+    }
+
+    .charge-pill.included .dot {
+        background: var(--success-green);
+    }
+
+    .charge-pill.excluded {
+        background: var(--bg-white);
+        color: var(--text-secondary);
+    }
+
+    .charge-pill.excluded .dot {
+        background: var(--error-red);
+    }
+
+    .offer-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    .next-closing {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-align: right;
+    }
+
+    .next-closing strong {
+        color: var(--text-primary);
+        font-size: 0.85rem;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        border: none;
+        outline: none;
+    }
+
+    .btn-book {
+        background: var(--primary-green);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        width: 100%;
+        font-size: 0.95rem;
+    }
+
+    .btn-book:hover {
+        background: var(--primary-green-dark);
+    }
+
+    .btn-book:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .compare-checkbox-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 0.25rem;
+    }
+
+    .compare-checkbox-wrap:hover {
+        color: var(--text-primary);
+    }
+
+    .compare-checkbox-wrap input {
+        width: 15px;
+        height: 15px;
+        cursor: pointer;
+        accent-color: var(--primary-green);
+    }
+
+    .offer-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 1.25rem;
+        background: var(--bg-gray);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .footer-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .terms-link {
+        font-size: 0.75rem;
+        color: var(--primary-blue);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .terms-link:hover {
+        text-decoration: underline;
+    }
+
+    .breakdown-toggle {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .breakdown-toggle:hover {
+        color: var(--primary-blue);
+    }
+
+    .breakdown-toggle .chev {
+        transition: transform 0.2s ease;
+    }
+
+    .breakdown-toggle.open .chev {
+        transform: rotate(180deg);
+    }
+
+    .breakdown-panel {
+        display: none;
+        background: var(--bg-white);
+        border-top: 1px solid var(--border-color);
+        padding: 1.25rem;
+    }
+
+    .breakdown-panel.open {
+        display: block;
+    }
+
+    .breakdown-inner {
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .breakdown-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+        font-size: 0.78rem;
+    }
+
+    .breakdown-table th,
+    .breakdown-table td {
+        padding: 0.6rem;
+        border-bottom: 1px solid var(--border-color);
+        text-align: left;
+    }
+
+    .breakdown-table th {
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        font-size: 0.68rem;
+    }
+
+    .breakdown-table .num {
+        text-align: right;
+    }
+
+    .code-cell {
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .base-cell {
+        background: var(--bg-gray);
+        padding: 0.1rem 0.3rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .fx-cell {
+        color: var(--text-muted);
+        font-size: 0.7rem;
+    }
+
+    .final-cell {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .breakdown-total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0.6rem;
+        background: var(--green-bg);
+        border-radius: 6px;
+        font-weight: 700;
+        color: var(--primary-green-dark);
+        margin-bottom: 1rem;
+    }
+
+    .breakdown-total-row .amount {
+        font-size: 1.1rem;
+    }
+
+    .fx-note {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    .breakdown-cta {
+        margin-top: 1.5rem;
+        text-align: right;
+    }
+
+    .breakdown-cta .btn-book {
+        width: auto;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.85rem;
+    }
+
+    /* Table view */
+    .table-view-wrap {
+        display: none;
+    }
+
+    .table-view-wrap.active {
+        display: block;
+    }
+
+    .card-view-wrap.hidden {
+        display: none;
+    }
+
+    .offers-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--bg-white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .offers-table thead th {
+        text-align: left;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--text-muted);
+        padding: 0.7rem 1rem;
+        background: var(--bg-gray);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .offers-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.82rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .offers-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .offers-table tbody tr:hover {
+        background: var(--hover-bg);
+    }
+
+    .offers-table .price-cell {
+        font-weight: 800;
+        color: var(--primary-green-dark);
+        font-size: 0.95rem;
+    }
+
+    .offers-table .carrier-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+    }
+
+    /* Empty / footer note */
+    .results-footer-note {
+        text-align: center;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 1rem;
+    }
+
+    @media (max-width: 900px) {
+        .offer-main {
+            grid-template-columns: 1fr;
+        }
+
+        .offer-actions {
+            align-items: flex-start;
+        }
+
+        .next-closing {
+            text-align: left;
+        }
+
+        .breakdown-table {
+            display: block;
+            overflow-x: auto;
+        }
+    }
+</style>
+
+<div class="offerlist-container">
+    <a href="{{ url_for('customer.new_booking') }}" class="modify-search">← Modify Search</a>
+
+    <!-- Summary -->
+    <div class="summary-card">
+        <div class="summary-left">
+            <h1>Quotations Available ({{ results|length }})</h1>
+            <div class="summary-meta">
+                <span class="route-pill">📍 {{ query.origin }}</span>
+                <span>→</span>
+                <span class="route-pill">📍 {{ query.destination }}</span>
+                <span class="divider">|</span>
+                <span>Vol: <strong>{{ query.volume }} CBM</strong></span>
+                <span class="divider">|</span>
+                <span>📅 Valid Until: <strong>{{ (results[0].rate.validity_end if results else None) or '30 Days'
+                        }}</strong></span>
+            </div>
+        </div>
+        <div class="view-toggle">
+            <button class="view-btn active" id="cardViewBtn" onclick="setView('card')">▦ Card View</button>
+            <button class="view-btn" id="tableViewBtn" onclick="setView('table')">☰ Table View</button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="sort-group">
+            <span class="sort-label">Sort by</span>
+            <button class="sort-chip active" data-sort="price" onclick="sortOffers('price', this)">💲 Lowest
+                price</button>
+            <button class="sort-chip" data-sort="transit" onclick="sortOffers('transit', this)">⚡ Fastest
+                transit</button>
+            <button class="sort-chip" data-sort="closing" onclick="sortOffers('closing', this)">📅 Next closing</button>
+        </div>
+        <div class="results-count">Rates valid until {{ (results[0].rate.validity_end if results else None) or '30 Days'
+            }}</div>
+    </div>
+
+    <div class="info-banner" id="infoBanner">
+        <span>ℹ️</span>
+        <span>Click <strong>View rate breakdown</strong> on any offer to see the full charge-by-charge calculation,
+            including the rate of exchange applied to each line.</span>
+    </div>
+
+    <!-- CARD VIEW -->
+    <div class="card-view-wrap" id="cardViewWrap">
+        <div class="offers-list" id="offersList">
+            {% for res in results %}
+            <div class="offer-card {% if loop.first %}best{% endif %}" data-price="{{ res.total_cost }}"
+                data-transit="{{ res.transit_days }}" data-closing="{{ res.next_closing or '2026-07-31' }}">
+                <div class="offer-badge-row" style="justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="display: flex; gap: 0.4rem;">
+                        {% if results|length == 1 %}
+                        <span class="offer-tag cheapest">💲 Cheapest</span>
+                        <span class="offer-tag recommended">★ Recommended</span>
+                        <span class="offer-tag fastest">⚡ Fastest</span>
+                        {% else %}
+                        {% if loop.index == 1 %}
+                        <span class="offer-tag cheapest">💲 Cheapest</span>
+                        {% elif loop.index == 2 %}
+                        <span class="offer-tag recommended">★ Recommended</span>
+                        {% elif loop.index == 3 %}
+                        <span class="offer-tag fastest">⚡ Fastest</span>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 0.4rem;">
+                        {% if loop.index % 2 == 0 %}
+                        <span class="meta-pill transship" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px;">⇄ 1 Transshipment</span>
+                        {% else %}
+                        <span class="meta-pill direct" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px;">⚡ Direct routing</span>
+                        {% endif %}
+                        <span class="meta-pill time" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; background: #f8fafc;">🕐 {{ res.transit_days }} days</span>
+                    </div>
+                </div>
+                <div class="offer-main">
+                    <div class="offer-price-block">
+                        <div class="price-label">Total</div>
+                        <div class="price-amount"><span class="currency">{{
+                                res.api_quote.tariff.quotationCurrency|default('USD') }}</span>{{
+                            "%.2f"|format(res.total_cost) }}</div>
+                        <div class="price-valid">📅 Valid until {{ res.rate.validity_end }}</div>
+                        <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0"
+                            onsubmit="event.preventDefault(); submitSaveQuote(this, 'card-{{ loop.index }}');">
+                            <input type="hidden" name="rate_id" value="{{ res.rate.id }}">
+                            <input type="hidden" name="total_cost" value="{{ res.total_cost }}">
+                            <input type="hidden" name="service_type" value="{{ query.get('service_type', 'LCL') }}">
+                            <button type="submit" class="save-btn" id="saveBtn-card-{{ loop.index }}">🔖 Save</button>
+                        </form>
+                    </div>
+                    <div class="offer-details">
+                        <div class="carrier-row">
+                            <div class="carrier-logo">FTL</div>
+                            <div class="carrier-text">
+                                <div class="carrier-name">{{ res.rate.nvocc_name }}</div>
+                                <div class="service-name">{{ res.carrier or 'Standard Carrier' }}</div>
+                            </div>
+                        </div>
+                        <div class="route-line">
+                            <span class="route-stop">{{ query.origin }}</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-stop">{{ query.destination }}</span>
+                        </div>
+                        <div class="routing-meta" style="margin-top:0.5rem;">
+                            <!-- LCL conditionally rendered if service_type implies LCL, else FCL -->
+                            {% if query.get('service_type', 'LCL') in ['Less than a container load', 'LCL'] %}
+                            <span class="meta-pill service">📦 LCL</span>
+                            {% else %}
+                            <span class="meta-pill service">📦 FCL</span>
+                            {% endif %}
+                        </div>
+                        <div class="charges-row">
+                            <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
+                            <span class="charge-pill included"><span class="dot"></span>Freight &amp; Surcharges</span>
+                            <span class="charge-pill excluded"><span class="dot"></span>Destination Port Charges</span>
+                        </div>
+                    </div>
+                    <div class="offer-actions">
+                        <div class="next-closing">Next closing<br>
+                            <strong>{{ res.next_closing or '2026-07-31' }}</strong>
+                            <br><a href="#"
+                                onclick="openSchedulesModal('schedulesModal-{{ loop.index }}'); event.preventDefault();"
+                                style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; text-decoration:none;">View
+                                more</a>
+                        </div>
+                        <a href="{{ url_for('customer.new_booking') }}" class="btn btn-book w-100" style="text-decoration:none; display:inline-block; text-align:center; padding:0.6rem;">Book →</a>
+                        <div class="quote-ref" id="quoteIdDisplay-card-{{ loop.index }}" onclick="copyRef(this)"></div>
+                    </div>
+                </div>
+                <div class="offer-footer">
+                    <div class="footer-links">
+                        <a class="terms-link" href="#">📄 View terms &amp; conditions ↗</a>
+                    </div>
+                    <button class="breakdown-toggle" onclick="toggleBreakdown(this, 'bd-{{ loop.index }}')">View rate
+                        breakdown <span class="chev">▾</span></button>
+                </div>
+                <div class="breakdown-panel" id="bd-{{ loop.index }}">
+                    <div class="breakdown-inner">
+                        <div class="breakdown-title">🧾 Quotation Breakdown</div>
+                        <table class="breakdown-table">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Base</th>
+                                    <th class="num">Units</th>
+                                    <th class="num">Unit Price</th>
+                                    <th class="num">Rate of Exchange</th>
+                                    <th class="num">Final Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if res.breakdown %}
+                                {% for line in res.breakdown %}
+                                <tr>
+                                    <td class="code-cell">{{ line.chargeCode or line.id or 'N/A' }}</td>
+                                    <td>{{ line.chargeName or line.description or 'Standard Charge' }}</td>
+                                    <td><span class="base-cell">{{ line.unitCode or 'ACT' }}</span></td>
+                                    <td class="num">{{ line.quantity|default(1) }}</td>
+                                    <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.amount) }}
+                                    </td>
+                                    <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD</td>
+                                    <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">No breakdown details available.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                        <div class="breakdown-total-row">
+                            <span class="label">Total</span>
+                            <span class="amount">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{
+                                "%.2f"|format(res.total_cost) }}</span>
+                        </div>
+                        <div class="fx-note">ℹ️ Charges are calculated in their original currency and converted using
+                            the rate of exchange shown on each line, fixed at quotation time.</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="results-footer-note">That's all the quotations available for this route right now. Rates refresh
+            daily.</div>
+    </div>
+
+    <!-- TABLE VIEW -->
+    <div class="table-view-wrap" id="tableViewWrap">
+        <table class="offers-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Routing</th>
+                    <th>Transit</th>
+                    <th>Charges Included</th>
+                    <th>Next Closing</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for res in results %}
+                <tr onclick="toggleTableBreakdown('table-bd-{{ loop.index }}')" style="cursor: pointer;">
+                    <td class="carrier-cell">
+                        <div class="carrier-logo">FTL</div>{{ res.carrier or 'Standard Carrier' }}
+                        <span class="meta-pill service" style="margin-left:0.4rem;">{{ query.get('service_type', 'LCL')
+                            }}</span>
+                    </td>
+                    <td>{% if loop.index % 2 == 0 %}1 Transshipment{% else %}Direct{% endif %}</td>
+                    <td>{{ res.transit_days }} days</td>
+                    <td>Origin + Freight</td>
+                    <td>
+                        {{ res.next_closing or '2026-07-31' }}
+                        <br><a href="#"
+                            onclick="event.stopPropagation(); openSchedulesModal('schedulesModal-{{ loop.index }}'); event.preventDefault();"
+                            style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; text-decoration:none;">View
+                            more</a>
+                    </td>
+                    <td class="price-cell">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{
+                        "%.2f"|format(res.total_cost) }}</td>
+                    <td style="display:flex; gap:0.5rem; align-items:center; justify-content: flex-end;"
+                        onclick="event.stopPropagation();">
+                        <a href="{{ url_for('customer.new_booking') }}" class="btn btn-book" style="padding: 0.5rem 1rem; width: auto; text-decoration:none;">Book</a>
+                    </td>
+                </tr>
+                <tr id="table-bd-{{ loop.index }}" class="table-breakdown-row" style="display: none;">
+                    <td colspan="7" style="padding: 0;">
+                        <div class="breakdown-panel open"
+                            style="border-top: none; background: var(--hover-bg); padding: 1rem;">
+                            <div class="breakdown-inner">
+                                <table class="breakdown-table"
+                                    style="background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                    <thead style="background: var(--bg-gray);">
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Name</th>
+                                            <th>Base</th>
+                                            <th class="num">Units</th>
+                                            <th class="num">Unit Price</th>
+                                            <th class="num">Rate of Exchange</th>
+                                            <th class="num">Final Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if res.breakdown %}
+                                        {% for line in res.breakdown %}
+                                        <tr>
+                                            <td class="code-cell">{{ line.chargeCode or line.id or 'N/A' }}</td>
+                                            <td>{{ line.chargeName or line.description or 'Standard Charge' }}</td>
+                                            <td><span class="base-cell">{{ line.unitCode or 'ACT' }}</span></td>
+                                            <td class="num">{{ line.quantity|default(1) }}</td>
+                                            <td class="num">{{ line.currency|default('USD') }} {{
+                                                "%.2f"|format(line.amount) }}</td>
+                                            <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD
+                                            </td>
+                                            <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">No breakdown details available.
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function toggleBreakdown(btn, panelId) {
+        const panel = document.getElementById(panelId);
+        const isOpen = panel.classList.contains('open');
+        if (isOpen) {
+            panel.classList.remove('open');
+            btn.classList.remove('open');
+            btn.innerHTML = 'View rate breakdown <span class="chev">▾</span>';
+        } else {
+            panel.classList.add('open');
+            btn.classList.add('open');
+            btn.innerHTML = 'Hide rate breakdown <span class="chev">▾</span>';
+        }
+    }
+
+    function toggleTableBreakdown(rowId) {
+        const row = document.getElementById(rowId);
+        if (row.style.display === 'none') {
+            row.style.display = 'table-row';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+
+    function setView(mode) {
+        const cardBtn = document.getElementById('cardViewBtn');
+        const tableBtn = document.getElementById('tableViewBtn');
+        const cardWrap = document.getElementById('cardViewWrap');
+        const tableWrap = document.getElementById('tableViewWrap');
+        const infoBanner = document.getElementById('infoBanner');
+
+        if (mode === 'card') {
+            cardBtn.classList.add('active');
+            tableBtn.classList.remove('active');
+            cardWrap.classList.remove('hidden');
+            tableWrap.classList.remove('active');
+            if (infoBanner) infoBanner.style.display = 'flex';
+        } else {
+            tableBtn.classList.add('active');
+            cardBtn.classList.remove('active');
+            cardWrap.classList.add('hidden');
+            tableWrap.classList.add('active');
+            if (infoBanner) infoBanner.style.display = 'none';
+        }
+    }
+
+    function sortOffers(criteria, chip) {
+        document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        const list = document.getElementById('offersList');
+        const cards = Array.from(list.querySelectorAll('.offer-card'));
+
+        cards.sort((a, b) => {
+            if (criteria === 'price') {
+                return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+            } else if (criteria === 'transit') {
+                return parseFloat(a.dataset.transit) - parseFloat(b.dataset.transit);
+            } else if (criteria === 'closing') {
+                return new Date(a.dataset.closing) - new Date(b.dataset.closing);
+            }
+            return 0;
+        });
+
+        cards.forEach(card => list.appendChild(card));
+    }
+
+    function copyRef(refEl) {
+        if (!refEl.dataset.ref) return;
+        navigator.clipboard?.writeText(refEl.dataset.ref).catch(() => { });
+        refEl.classList.add('copied');
+        const original = refEl.innerHTML;
+        refEl.innerHTML = `✓ Copied <span class="ref-code">${refEl.dataset.ref}</span>`;
+        setTimeout(() => {
+            refEl.classList.remove('copied');
+            refEl.innerHTML = original;
+        }, 1200);
+    }
+
+    function submitSaveQuote(form, elementId) {
+        const formData = new FormData(form);
+        const saveBtn = document.getElementById('saveBtn-' + elementId);
+        const quoteDisplay = document.getElementById('quoteIdDisplay-' + elementId);
+
+        saveBtn.innerHTML = 'Saving...';
+        saveBtn.disabled = true;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    saveBtn.innerHTML = '✓ Saved';
+                    saveBtn.classList.add('saved');
+                    if (quoteDisplay && data.quote_number) {
+                        quoteDisplay.dataset.ref = data.quote_number;
+                        quoteDisplay.innerHTML = `📌 Ref: <span class="ref-code">${data.quote_number}</span> <span class="copy-icon">⧉</span>`;
+                        quoteDisplay.style.display = 'flex';
+                    }
+                } else {
+                    saveBtn.innerHTML = 'Error';
+                    saveBtn.disabled = false;
+                }
+            })
+            .catch(err => {
+                saveBtn.innerHTML = '🔖 Save';
+                saveBtn.disabled = false;
+                console.error('Error saving quote:', err);
+            });
+    }
+
+    function openSchedulesModal(id) {
+        document.getElementById(id).style.display = 'flex';
+    }
+    function closeSchedulesModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+</script>
+
+<!-- Modals for Schedules -->
+{% for res in results %}
+<div id="schedulesModal-{{ loop.index }}" class="sched-modal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="sched-modal-content"
+        style="background:#fff; padding:2rem; border-radius:12px; width:90%; max-width:650px; max-height:80vh; overflow-y:auto; position:relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <button onclick="closeSchedulesModal('schedulesModal-{{ loop.index }}')"
+            style="position:absolute; right:1.2rem; top:1.2rem; border:none; background:#f1f5f9; border-radius:50%; width:30px; height:30px; font-size:1.2rem; cursor:pointer; color:var(--text-secondary); display:flex; align-items:center; justify-content:center; transition:background 0.2s;">&times;</button>
+        <h3 style="margin-top:0; color:var(--primary-green-dark); font-size:1.2rem; margin-bottom:1rem;">Available
+            Schedules</h3>
+        {% if res.schedules %}
+        <table class="offers-table" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>Vessel</th>
+                    <th>Voyage</th>
+                    <th>ETD</th>
+                    <th>ETA</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in res.schedules %}
+                <tr>
+                    <td style="font-weight:600; color:var(--text-primary);">{{ s.vesselName or s.vessel or 'TBA' }}</td>
+                    <td>{{ s.voyageNumber or s.voyage or 'TBA' }}</td>
+                    <td>{{ (s.estimatedTimeOfDeparture or s.etd or '')[:10] }}</td>
+                    <td>{{ (s.estimatedTimeOfArrival or s.eta or '')[:10] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center; padding: 2rem; color:var(--text-secondary);">
+            No upcoming schedules available.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

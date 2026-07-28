@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Quotation {{ quote.api_booking_ref }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            @frame header_frame {           
+                -pdf-frame-content: header_content;
+                left: 50pt; width: 512pt; top: 50pt; height: 40pt;
+            }
+            @frame content_frame {          
+                left: 50pt; width: 512pt; top: 90pt; height: 632pt;
+            }
+            @frame footer_frame {           
+                -pdf-frame-content: footer_content;
+                left: 50pt; width: 512pt; top: 772pt; height: 20pt;
+            }
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            color: #333333;
+        }
+        h1 {
+            font-size: 18pt;
+            color: #000;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        h2 {
+            font-size: 14pt;
+            color: #444;
+            margin-bottom: 5px;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+        }
+        .info-table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            width: 120px;
+        }
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .breakdown-table th {
+            background-color: #f2f2f2;
+            color: #333;
+            font-weight: bold;
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .breakdown-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        .total-row td {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+        .total-amount {
+            font-size: 14pt;
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div id="header_content">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <h1>QUOTATION</h1>
+                    <p style="margin:0; color:#666;">Ref: {{ quote.api_booking_ref or ('QUO-' ~ quote.id) }}</p>
+                </td>
+                <td class="text-right">
+                    <h2 style="margin:0;">AxeGlobal Logistics</h2>
+                    <p style="margin:0; color:#666;">Date: {{ quote.created_at.strftime('%B %d, %Y') }}</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div id="footer_content" class="text-center" style="font-size: 9pt; color: #888; border-top: 1px solid #ccc; padding-top: 5px;">
+        Page <pdf:pagenumber> of <pdf:pagecount> | AxeGlobal Logistics
+    </div>
+
+    <div>
+        <h2>Quote Summary</h2>
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Routing:</td>
+                <td>{{ quote.origin }} &rarr; {{ quote.destination }}</td>
+                <td class="info-label">Carrier:</td>
+                <td>{{ quote.selected_nvocc }}</td>
+            </tr>
+            <tr>
+                <td class="info-label">Service:</td>
+                <td>{{ quote.service_type }}</td>
+                <td class="info-label">Total Volume:</td>
+                <td>{{ quote.volume }} CBM</td>
+            </tr>
+            <tr>
+                <td class="info-label">Total Cost:</td>
+                <td colspan="3"><span class="total-amount">${{ "{:,.2f}".format(quote.total_cost) }}</span></td>
+            </tr>
+        </table>
+
+        <h2>Tariff Breakdown</h2>
+        {% if breakdown %}
+        <table class="breakdown-table">
+            <thead>
+                <tr>
+                    <th>Charge Type</th>
+                    <th>Description</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-center">Currency</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in breakdown %}
+                <tr>
+                    <td>{{ item.chargeCode }}</td>
+                    <td>{{ item.description or 'Standard Charge' }}</td>
+                    <td class="text-right">${{ "{:,.2f}".format(item.amount) }}</td>
+                    <td class="text-center">{{ item.currency or 'USD' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="2" class="text-right">Total:</td>
+                    <td class="text-right total-amount">${{ "{:,.2f}".format(quote.total_cost) }}</td>
+                    <td class="text-center">USD</td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <p style="color: #666; font-style: italic;">No detailed breakdown available for this quotation.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

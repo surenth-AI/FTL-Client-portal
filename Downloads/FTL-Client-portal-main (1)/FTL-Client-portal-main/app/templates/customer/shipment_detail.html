@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% block title %}Shipment #{{ booking.id }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Left Column: Primary Details -->
+    <div class="col-lg-8">
+        <div class="card glass-card p-4 mb-4">
+            <div class="mb-3">
+                <a href="{{ url_for('customer.my_shipments') }}" class="text-accent text-decoration-none small fw-bold">
+                    <i class="bi bi-arrow-left me-1"></i> Back to My Shipments
+                </a>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="text-white fw-bold mb-1">Shipment #{{ booking.id }}</h3>
+                    <p class="text-muted small mb-0">Booked on {{ booking.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                <div class="text-end">
+                    <span class="badge rounded-pill bg-primary px-3 py-2 fs-6 shadow-sm">{{ booking.status }}</span>
+                    {% if booking.status in ['Booked', 'Pending Review'] %}
+                    <div class="mt-2 d-flex flex-column gap-2 align-items-end">
+                        <a href="{{ url_for('customer.edit_booking', booking_id=booking.id) }}" class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                            <i class="bi bi-pencil-square me-1"></i> Edit Details
+                        </a>
+                        {% if booking.status == 'Booked' and not booking.is_si_submitted %}
+                        <a href="{{ url_for('customer.submit_si', booking_id=booking.id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-accent">
+                            <i class="bi bi-file-earmark-plus me-1"></i> Submit SI
+                        </a>
+                        {% elif booking.is_si_submitted %}
+                        <a href="{{ url_for('customer.submit_si', booking_id=booking.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                            <i class="bi bi-pencil-square me-1"></i> Amendment
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Route Summary -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-5">
+                    <div class="p-3 bg-white-5 rounded-4 border border-white-10 h-100">
+                        <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Origin</label>
+                        <div class="text-white fs-5 fw-bold mb-1">{{ booking.origin }}</div>
+                        <p class="text-muted small mb-0">{{ booking.place_of_receipt or 'Standard Pickup' }}</p>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-arrow-right-circle display-6 text-accent-glow opacity-50"></i>
+                </div>
+                <div class="col-md-5">
+                    <div class="p-3 bg-white-5 rounded-4 border border-white-10 h-100">
+                        <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Destination</label>
+                        <div class="text-white fs-5 fw-bold mb-1">{{ booking.destination }}</div>
+                        <p class="text-muted small mb-0">{{ booking.place_of_delivery or 'Standard Port/Door' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cargo Breakdown (Tiered View) -->
+            <h5 class="text-white fw-bold border-bottom border-white-10 pb-2 mb-3">Cargo Breakdown</h5>
+            <div class="cargo-list">
+                {% for item in booking.cargo_items %}
+                <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 border-white-10">
+                    <!-- Identity Tier -->
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted text-uppercase tracking-wider mb-0">Item / Container</label>
+                            <div class="text-white fw-bold">
+                                {% if booking.service_type == 'FCL' %}
+                                {{ item.container_count }}x {{ item.container_type }}
+                                {% else %}
+                                {{ item.quantity }}x {{ item.package_type }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted text-uppercase tracking-wider mb-0">HS Code</label>
+                            <div class="text-white fw-bold">{{ item.hs_code or 'N/A' }}</div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if item.is_imo %}
+                            <span class="badge bg-danger shadow-sm">IMO / HAZMAT</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Specs Tier -->
+                    <div class="bg-white-5 rounded-3 p-2 border border-white-10">
+                        <div class="row g-2 text-center">
+                            <div class="col-4 border-end border-white-10">
+                                <small class="text-muted d-block">Weight</small>
+                                <span class="text-success fw-bold">{{ item.weight_kg }} kg</span>
+                            </div>
+                            <div class="col-4 border-end border-white-10">
+                                <small class="text-muted d-block">Volume</small>
+                                <span class="text-info fw-bold">{{ item.volume_cbm }} cbm</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Dims (LWH)</small>
+                                <span class="text-white">{{ item.length or '-' }} x {{ item.width or '-' }} x {{ item.height or '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if item.description or item.marks_numbers %}
+                    <div class="mt-3 p-2 bg-white-5 rounded-3 border-start border-3 border-accent-light">
+                        {% if item.description %}
+                        <div class="mb-1 text-white small italic">
+                            <span class="text-muted fw-bold small text-uppercase me-2">Goods:</span> {{ item.description }}
+                        </div>
+                        {% endif %}
+                        {% if item.marks_numbers %}
+                        <div class="text-white small italic">
+                            <span class="text-muted fw-bold small text-uppercase me-2">Marks:</span> {{ item.marks_numbers }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if booking.service_type == 'FCL' and (item.container_no or item.seal_no) %}
+                    <div class="mt-2 row g-2">
+                        <div class="col-md-6">
+                            <div class="px-2 py-1 bg-white-5 rounded text-accent small">
+                                <i class="bi bi-hash me-1"></i> Cont: <span class="text-white">{{ item.container_no or 'N/A' }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="px-2 py-1 bg-white-5 rounded text-accent small">
+                                <i class="bi bi-shield-check me-1"></i> Seal: <span class="text-white">{{ item.seal_no or 'N/A' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Shipping Instructions Details (If submitted) -->
+        {% if booking.shipping_instruction %}
+        <div class="card glass-card p-4 mb-4 border-accent-light">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-white-10">
+                <h5 class="text-white fw-bold mb-0">Shipping Instructions (SI)</h5>
+                <span class="badge bg-success-light text-success fw-bold px-3">SUBMITTED</span>
+            </div>
+            
+            <div class="row g-4">
+                <!-- Parties -->
+                <div class="col-md-4">
+                    <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Shipper</label>
+                    <div class="text-white small lh-base white-space-pre">{{ booking.shipping_instruction.shipper }}</div>
+                </div>
+                <div class="col-md-4 border-start border-white-10">
+                    <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Consignee</label>
+                    <div class="text-white small lh-base white-space-pre">{{ booking.shipping_instruction.consignee }}</div>
+                </div>
+                <div class="col-md-4 border-start border-white-10">
+                    <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Notify Party</label>
+                    <div class="text-white small lh-base white-space-pre">{{ booking.shipping_instruction.notify_party }}</div>
+                </div>
+
+                <!-- Vessel & Voyage -->
+                <div class="col-md-12">
+                    <div class="bg-white-5 rounded-4 p-3 border border-white-10 d-flex align-items-center">
+                        <div class="ship-icon-container bg-accent-light p-3 rounded-circle me-3">
+                            <i class="bi bi-ship-wheel fs-4 text-accent"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="text-muted small text-uppercase d-block">Confirmed Vessel</label>
+                                    <span class="text-white fw-bold fs-5">{{ booking.shipping_instruction.vessel_name }}</span>
+                                </div>
+                                <div class="col-md-6 border-start border-white-10">
+                                    <label class="text-muted small text-uppercase d-block">Voyage No.</label>
+                                    <span class="text-white fw-bold fs-5">{{ booking.shipping_instruction.voyage }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentation Specs -->
+                <div class="col-md-4">
+                    <label class="text-muted small text-uppercase">B/L Type</label>
+                    <p class="text-white fw-bold"><i class="bi bi-file-earmark-text me-1"></i> {{ booking.shipping_instruction.document_type }}</p>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted small text-uppercase">Terms</label>
+                    <p class="text-white fw-bold">{{ booking.shipping_instruction.freight_term }}</p>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted small text-uppercase">Originals / Copies</label>
+                    <p class="text-white fw-bold">{{ booking.shipping_instruction.num_originals }} / {{ booking.shipping_instruction.num_copies }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Logistics & Remarks -->
+        <div class="card glass-card p-4">
+            <h5 class="text-white fw-bold border-bottom border-white-10 pb-2 mb-3">Logistics Info</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="text-muted small text-uppercase">Pickup Address</label>
+                    <p class="text-white">{{ booking.pickup_address }}</p>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted small text-uppercase">Freight Terms</label>
+                    <p class="text-white fw-bold text-accent-glow">{{ booking.freight_terms }}</p>
+                </div>
+                <div class="col-12">
+                    <label class="text-muted small text-uppercase">Special Instructions</label>
+                    <p class="text-white small opacity-75">{{ booking.general_terms or 'None provided.' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Timeline & Attachments -->
+    <div class="col-lg-4">
+        <!-- Milestone Timeline -->
+        <div class="card glass-card p-4 mb-4">
+            <h5 class="text-white fw-bold mb-4">Tracking History</h5>
+            <div class="timeline-container">
+                {% if booking.tracking_events %}
+                    {% for event in booking.tracking_events|sort(attribute='timestamp', reverse=True) %}
+                    <div class="timeline-item pb-4 position-relative border-start border-white-10 ms-2 ps-4">
+                        <div class="timeline-dot position-absolute top-0 start-0 translate-middle-x bg-primary rounded-circle" style="width: 12px; height: 12px; margin-left: -1px;"></div>
+                        <div class="text-white fw-bold mb-1">{{ event.status }}</div>
+                        <div class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ event.location }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">{{ event.timestamp.strftime('%b %d, %H:%M') }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted italic">No tracking events recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Documentation -->
+        <div class="card glass-card p-4">
+            <h5 class="text-white fw-bold mb-3">Shipment Documents</h5>
+            <div class="list-group list-group-flush bg-transparent">
+                <!-- System Generated Documents -->
+                <div class="mb-4">
+                    <label class="text-muted smaller text-uppercase fw-bold mb-2 d-block">System Generated</label>
+                    <div class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-receipt h4 mb-0 me-3 text-accent-glow"></i>
+                            <div>
+                                <div class="small fw-bold">Freight Invoice</div>
+                                <div class="text-muted small">Auto-generated</div>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('customer.download_document', booking_id=booking.id, doc_type='invoice') }}" class="btn btn-sm btn-outline-light rounded-pill px-2">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
+                    {% if booking.is_si_submitted %}
+                    <div class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-file-earmark-ruled h4 mb-0 me-3 text-warning"></i>
+                            <div>
+                                <div class="small fw-bold">Draft Bill of Lading</div>
+                                <div class="text-muted small">Based on SI</div>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('customer.download_document', booking_id=booking.id, doc_type='draft_bl') }}" class="btn btn-sm btn-outline-light rounded-pill px-2">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
+                    {% endif %}
+                    <div class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-file-earmark-check h4 mb-0 me-3 text-success"></i>
+                            <div>
+                                <div class="small fw-bold">Final Bill of Lading</div>
+                                <div class="text-muted small">Official Release</div>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('customer.download_document', booking_id=booking.id, doc_type='final_bl') }}" class="btn btn-sm btn-outline-light rounded-pill px-2">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- User Attachments -->
+                <div class="mb-2">
+                    <label class="text-muted smaller text-uppercase fw-bold mb-2 d-block">Attachments</label>
+                    {% for attachment in booking.attachments %}
+                    <a href="#" class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center">
+                        <i class="bi bi-file-earmark-pdf h4 mb-0 me-3 text-accent-glow"></i>
+                        <div class="flex-grow-1">
+                            <div class="small fw-bold text-truncate" style="max-width: 180px;">{{ attachment.filename }}</div>
+                            <div class="text-muted small">Uploaded Doc</div>
+                        </div>
+                        <i class="bi bi-download"></i>
+                    </a>
+                    {% endfor %}
+                    {% if not booking.attachments %}
+                    <p class="text-muted small italic mb-0">No documents attached.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline-item:last-child {
+    border-start: 0 !important;
+}
+.italic { font-style: italic; }
+</style>
+{% endblock %}

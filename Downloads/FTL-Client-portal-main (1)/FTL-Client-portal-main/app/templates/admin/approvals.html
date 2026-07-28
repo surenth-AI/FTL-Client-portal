@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block title %}Registrations & Approvals{% endblock %}
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-end intel-fade-in">
+    <div>
+        <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">Approval Nexus</h3>
+        <p class="text-muted small mb-0">Regulatory review gate for entity validation and authorization queuing.</p>
+    </div>
+</div>
+
+<div class="row g-4 intel-fade-in" style="animation-delay: 0.1s;">
+    <!-- Entity Activation Grid -->
+    <div class="col-12">
+        <div class="bg-white border" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: #FDFDFD;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                        <i class="bi bi-building" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">Corporate Verification Queue</h6>
+                </div>
+                <span class="badge bg-light text-dark border rounded-pill fw-bold" style="font-size: 0.65rem;">{{ companies|length }} PENDING</span>
+            </div>
+            
+            {% if companies %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
+                    <thead style="background-color: #F8FAFC;">
+                        <tr>
+                            <th class="ps-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Organization Node</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Identifiers</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Contact Interface</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Stage</th>
+                            <th class="text-end pe-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Executive Execution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for company in companies %}
+                        <tr style="border-bottom: 1px solid #F1F5F9;">
+                            <td class="ps-4 py-3">
+                                <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ company.name }}</div>
+                                <div class="text-muted d-flex align-items-center" style="font-size: 0.7rem;">
+                                    <i class="bi bi-geo-alt me-1" style="font-size: 0.65rem;"></i> {{ company.city }}, {{ company.country }}
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div class="d-flex flex-column gap-1">
+                                    <div style="font-size: 0.65rem;"><span class="text-muted fw-bold">VAT:</span> <span class="text-dark fw-bold" style="font-family: 'JetBrains Mono', monospace;">{{ company.vat_number }}</span></div>
+                                    <div style="font-size: 0.65rem;"><span class="text-muted fw-bold">EORI:</span> <span class="text-dark fw-bold" style="font-family: 'JetBrains Mono', monospace;">{{ company.eori_number }}</span></div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                {% if company.users %}
+                                    <div class="fw-bold text-dark" style="font-size: 0.75rem;">{{ company.users[0].name }}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">{{ company.users[0].email }}</div>
+                                {% else %}
+                                    <span class="text-muted opacity-50" style="font-style: italic;">Unlinked</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                {% if company.status == 'pending_finance' %}
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold d-inline-flex align-items-center" style="background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; font-size: 0.6rem;">
+                                        <i class="bi bi-clock me-1" style="font-size: 0.55rem;"></i> FINANCE PENDING
+                                    </span>
+                                {% elif company.status == 'pending_ops' %}
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold d-inline-flex align-items-center" style="background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; font-size: 0.6rem;">
+                                        <i class="bi bi-gear me-1" style="font-size: 0.55rem;"></i> OPS PENDING
+                                    </span>
+                                    {% if company.assigned_ops %}
+                                        <div class="text-muted mt-1" style="font-size: 0.6rem;">AGENT: <span class="fw-bold text-primary">{{ company.assigned_ops.name|upper }}</span></div>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4 py-3">
+                                <div class="d-flex justify-content-end align-items-center gap-2">
+                                    {% if company.status == 'pending_finance' %}
+                                        <form action="{{ url_for('admin.approve_finance', company_id=company.id) }}" method="POST" class="d-flex gap-2 align-items-center">
+                                            <select name="assigned_ops_id" class="form-select form-select-sm border rounded-pill bg-white shadow-none" style="min-width: 160px; font-size: 0.7rem; font-weight: 600; color: #475569;" required>
+                                                <option value="" selected disabled>-- SELECT OPS LOGIC --</option>
+                                                {% for ops in ops_executives %}
+                                                    <option value="{{ ops.id }}">{{ ops.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="btn btn-primary btn-sm border-0 rounded-pill px-3 fw-bold" style="font-size: 0.7rem;">
+                                                Authorize
+                                            </button>
+                                        </form>
+                                    {% elif company.status == 'pending_ops' %}
+                                        <a href="{{ url_for('admin.approve_ops_company', company_id=company.id) }}" class="btn btn-success btn-sm rounded-pill px-3 border-0 fw-bold d-flex align-items-center" style="font-size: 0.7rem; background: #10B981;">
+                                            <i class="bi bi-check2-circle me-1"></i> Full Activation
+                                        </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('admin.reject_request', type='company', id=company.id) }}" class="btn btn-light btn-sm border rounded-circle text-danger d-flex align-items-center justify-content-center" style="width: 26px; height: 26px;" title="Reject Path">
+                                        <i class="bi bi-x-lg" style="font-size: 0.6rem;"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 bg-light bg-opacity-10">
+                <div class="text-muted display-6 mb-2 opacity-25"><i class="bi bi-check2-all"></i></div>
+                <div class="fw-bold text-muted" style="font-size: 0.85rem; letter-spacing: 0.02em;">REGISTRATION QUEUE VACANT</div>
+                <div class="text-muted small mt-1">All submitted corporate entities fully audited.</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Individual User Admission Grid -->
+    <div class="col-12 mt-4">
+        <div class="bg-white border" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: #FDFDFD;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                        <i class="bi bi-person-plus" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">User Admission Requests</h6>
+                </div>
+                <span class="badge bg-light text-secondary border rounded-pill fw-bold" style="font-size: 0.65rem;">{{ users|length }} PENDING</span>
+            </div>
+            
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.825rem;">
+                    <thead style="background-color: #F8FAFC;">
+                        <tr>
+                            <th class="ps-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Applicant</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Correlation Structure</th>
+                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Validation Vector</th>
+                            <th class="text-end pe-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Operations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr style="border-bottom: 1px solid #F1F5F9;">
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light text-secondary border d-flex align-items-center justify-content-center fw-bold rounded-circle me-3" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                                        {{ user.name[:1].upper() }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ user.name }}</div>
+                                        <div class="text-muted" style="font-size: 0.65rem;">{{ user.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                {% if user.company %}
+                                    <div class="fw-bold text-dark" style="font-size: 0.8rem;">{{ user.company.name }}</div>
+                                    <div class="badge bg-light text-secondary border rounded-1 fw-bold mt-1" style="font-size: 0.6rem; font-family: 'JetBrains Mono', monospace;">{{ user.company.ftl_code }}</div>
+                                {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border rounded-pill px-2 fw-bold" style="font-size: 0.6rem;">UNLINKED NODE</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                <span class="badge rounded-pill px-2 py-1 fw-bold d-inline-flex align-items-center" style="background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; font-size: 0.6rem;">
+                                    <i class="bi bi-gear-wide-connected me-1" style="font-size: 0.55rem;"></i> LOGISTICS REVIEW
+                                </span>
+                            </td>
+                            <td class="text-end pe-4 py-3">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{{ url_for('admin.approve_ops_user', user_id=user.id) }}" class="btn btn-primary btn-sm rounded-pill border-0 px-3 fw-bold" style="font-size: 0.7rem;">
+                                        Admit User
+                                    </a>
+                                    <a href="{{ url_for('admin.reject_request', type='user', id=user.id) }}" class="btn btn-light btn-sm border rounded-circle text-danger d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                        <i class="bi bi-trash" style="font-size: 0.7rem;"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 bg-light bg-opacity-10">
+                <div class="text-muted small">No active user onboarding requests detected.</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

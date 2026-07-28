@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}Join Company{% endblock %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-lg-5 col-md-7">
+        <div class="card glass-card p-4 p-md-5 rounded-4 border-white-10 shadow-lg">
+            <!-- Branding Header -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="80">
+                </div>
+                <h3 class="fw-bold text-white mb-1">Join Your Team</h3>
+                <p class="text-muted small text-uppercase fw-bold tracking-widest">Register under an existing customer</p>
+            </div>
+
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-4">
+                    <label class="form-label">FTL Company Code</label>
+                    {{ form.ftl_code(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. FTL-BE-001") }}
+                    {% for error in form.ftl_code.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                    <div class="text-muted-xs mt-2 opacity-50">Request this code from your company administrator.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Full Name</label>
+                    {{ form.name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter your full name") }}
+                    {% for error in form.name.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Work Email ID</label>
+                    {{ form.email(class="form-control bg-white-5 border-white-10 text-white", placeholder="your.name@company.com") }}
+                    {% for error in form.email.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                    <div class="text-muted-xs mt-2 opacity-50">Email domain must match your company's domain.</div>
+                </div>
+
+                <div class="row g-3 mb-5">
+                    <div class="col-md-6">
+                        <label class="form-label">Password</label>
+                        {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••", id="ru-pw") }}
+                        {% for error in form.password.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                        <div id="pw-rules-ru" class="mt-2 px-3 py-2 rounded-3 small" style="display:none; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);">
+                            <div class="fw-semibold mb-1 text-white-50" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:.05em;">Password requirements</div>
+                            <ul class="list-unstyled mb-0">
+                                <li id="ru-len"   class="text-white-50 py-1 border-bottom border-white-10"><i class="bi bi-circle me-2"></i>At least 12 characters</li>
+                                <li id="ru-upper" class="text-white-50 py-1 border-bottom border-white-10"><i class="bi bi-circle me-2"></i>One uppercase letter (A-Z)</li>
+                                <li id="ru-lower" class="text-white-50 py-1 border-bottom border-white-10"><i class="bi bi-circle me-2"></i>One lowercase letter (a-z)</li>
+                                <li id="ru-num"   class="text-white-50 py-1 border-bottom border-white-10"><i class="bi bi-circle me-2"></i>One number (0-9)</li>
+                                <li id="ru-spl"   class="text-white-50 py-1"                              ><i class="bi bi-circle me-2"></i>One special character (!@#$% …)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Re-enter Password</label>
+                        {{ form.confirm_password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                        {% for error in form.confirm_password.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-3">
+                    {{ form.submit(class="btn btn-primary py-3 rounded-pill fw-bold text-uppercase tracking-wide shadow-accent") }}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-glass py-3 rounded-pill fw-bold">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.text-muted-xs { font-size: 0.7rem; font-style: italic; }
+</style>
+<script>
+(function () {
+    var rules = [
+        { id: 'ru-len',   test: function(p){ return p.length >= 12; } },
+        { id: 'ru-upper', test: function(p){ return /[A-Z]/.test(p); } },
+        { id: 'ru-lower', test: function(p){ return /[a-z]/.test(p); } },
+        { id: 'ru-num',   test: function(p){ return /\d/.test(p); } },
+        { id: 'ru-spl',   test: function(p){ return /[!@#$%^&*()\-_=+\[\]{}|;:'",.<>?\/`~\\]/.test(p); } }
+    ];
+    var input = document.getElementById('ru-pw');
+    var box   = document.getElementById('pw-rules-ru');
+    if (!input || !box) return;
+
+    function evaluate(val) {
+        rules.forEach(function(r) {
+            var el = document.getElementById(r.id);
+            if (!el) return;
+            var pass = r.test(val);
+            var isLast = (r.id === 'ru-spl');
+            el.className = pass
+                ? ('text-success py-1' + (isLast ? '' : ' border-bottom border-white-10'))
+                : ('text-white-50 py-1' + (isLast ? '' : ' border-bottom border-white-10'));
+            el.querySelector('i').className = pass
+                ? 'bi bi-check-circle-fill me-2'
+                : 'bi bi-circle me-2';
+        });
+    }
+
+    input.addEventListener('focus', function() { box.style.display = 'block'; evaluate(input.value); });
+    input.addEventListener('input', function() { evaluate(input.value); });
+    input.addEventListener('blur',  function() { if (!input.value) box.style.display = 'none'; });
+})();
+</script>
+{% endblock %}

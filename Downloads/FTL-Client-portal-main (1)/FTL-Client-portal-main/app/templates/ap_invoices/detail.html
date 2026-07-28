@@ -1,0 +1,1007 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis: {{ inv.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="analysis-container">
+    <!-- Header: Consistent with Navigation -->
+    <header class="analysis-header">
+        <div class="header-main">
+            <a href="{{ url_for('ap_invoices.list_invoices') }}" class="back-btn"><i data-lucide="arrow-left"></i></a>
+            <div class="title-group">
+                <span class="eyebrow">Data Intelligence Dashboard</span>
+                <h1>
+                    <div class="edit-field" data-field="invoice_number">
+                        <span class="view-val">{{ inv.invoice_number }}</span>
+                        <input type="text" class="edit-input" value="{{ inv.invoice_number }}">
+                    </div>
+                    <span class="badge {{ inv.match_status|lower|replace(' ', '-') }}">{{ inv.match_status }}</span>
+                </h1>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="supplier-info-pill">
+                <i data-lucide="building"></i>
+                <div class="edit-field" data-field="supplier">
+                    <span class="view-val sup-name">{{ inv.supplier }}</span>
+                    <input type="text" class="edit-input" value="{{ inv.supplier }}">
+                </div>
+                <div class="edit-field" data-field="supplier_code">
+                    <span class="view-val sup-code">{{ inv.supplier_code or 'N/A' }}</span>
+                    <input type="text" class="edit-input sm-input" value="{{ inv.supplier_code or '' }}">
+                </div>
+            </div>
+            
+            <button id="headerSaveBtn" class="btn-save-header" onclick="saveAllChanges()" style="display: none;">
+                <i data-lucide="save"></i> Save Audit
+            </button>
+            <button class="btn-toggle-edit" onclick="toggleEditMode()">
+                <i data-lucide="edit-3"></i> <span id="editBtnText">Edit Mode</span>
+            </button>
+            <a href="{{ url_for('ap_invoices.download_pdf', inv_id=inv.id) }}?download=1" class="btn-export">
+                <i data-lucide="download"></i> Export
+            </a>
+        </div>
+    </header>
+
+    <!-- PREMIUM AUDIT PULSE: Central Intelligence Hero -->
+    <section class="audit-pulse-hero animate-in">
+        <div class="pulse-main">
+            <div class="pulse-indicator">
+                <div class="gauge-ring {% if intelligence.math_verified %}verified{% else %}delta{% endif %}">
+                    <i data-lucide="{% if intelligence.math_verified %}check-shield{% else %}alert-octagon{% endif %}"></i>
+                </div>
+                <div class="pulse-info">
+                    <span class="pulse-eyebrow">Audit Integrity Status</span>
+                    <h2 class="pulse-status-text">
+                        {% if intelligence.math_verified %}
+                            Fiscal Match Perfect
+                        {% else %}
+                            Mathematical Delta Identified
+                        {% endif %}
+                    </h2>
+                </div>
+            </div>
+            
+            <div class="pulse-stats">
+                <div class="p-stat">
+                    <label>Extracted Total</label>
+                    <div class="p-val">{{ inv.currency }} {{ "{:,.2f}".format(inv.amount) }}</div>
+                </div>
+                <div class="p-stat">
+                    <label>Items Sum</label>
+                    <div class="p-val">{{ inv.currency }} {{ "{:,.2f}".format(intelligence.items_total) }}</div>
+                </div>
+                {% if not intelligence.math_verified %}
+                <div class="p-stat highlight">
+                    <label>Delta Gap</label>
+                    <div class="p-val error">{{ inv.currency }} {{ "{:,.2f}".format(intelligence.delta) }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="pulse-footer">
+            <div class="engine-tag"><i data-lucide="zap"></i> Audit Engine v3.5 Stable</div>
+            <button class="btn-recheck" onclick="recheckAudit(this)">
+                <i data-lucide="refresh-cw"></i> Recheck Cost
+            </button>
+        </div>
+    </section>
+
+    <div class="analysis-layout">
+        <!-- TOP ZONE: Global Reference Intelligence -->
+        <div class="top-intelligence-zone">
+            {% if intelligence.global_refs %}
+            <section class="global-assets-section section-card animate-in">
+                <div class="card-header">
+                    <div class="card-title-group"><i data-lucide="blocks"></i> <h3>Global Logistics Assets</h3></div>
+                    <span class="ref-count">Singleton Normalization</span>
+                </div>
+                <div class="asset-grid">
+                    {% for rtype, rval in intelligence.global_refs.items() %}
+                    <div class="asset-pill">
+                        <span class="asset-label">{{ rtype }}</span>
+                        <div class="asset-value">{{ rval }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            {% if intelligence.distributed_refs %}
+            <section class="analysis-hero section-card animate-in">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <i data-lucide="share-2"></i>
+                        <h3>Sub-Asset Distribution Analysis</h3>
+                    </div>
+                    <span class="ref-count">{{ intelligence.distributed_refs|length }} Nodes</span>
+                </div>
+                
+                <div class="reference-dashboard">
+                    {% set ref_colors = {'Container Number': '#6366f1', 'BL Number': '#0ea5e9', 'HBL': '#f59e0b', 'Reference': '#94a3b8', 'MBL': '#a855f7'} %}
+                    {% for ref in intelligence.distributed_refs %}
+                    {% set per = (ref.amount / inv.amount * 100) if inv.amount > 0 else 0 %}
+                    {% set rc = ref_colors.get(ref.type, '#94a3b8') %}
+                    <div class="ref-node">
+                        <div class="node-info">
+                            <div class="node-meta">
+                                <span class="node-type" style="color: {{ rc }};">{{ ref.type }}</span>
+                                <span class="node-value">{{ ref.value }}</span>
+                            </div>
+                            <div class="node-finance">
+                                <span class="node-amount">{{ inv.currency }} {{ "{:,.2f}".format(ref.amount) }}</span>
+                                <span class="node-per">{{ "{:,.1f}".format(per) }}%</span>
+                            </div>
+                        </div>
+                        <div class="node-track">
+                            <div class="node-bar" style="width: {{ per }}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+        </div>
+
+        <!-- MAIN ZONE: High-Density Table -->
+        <section class="cost-audit-section section-card animate-in" id="costAuditSection">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <i data-lucide="list-checks"></i> 
+                    <h3>Industrial Cost Audit 2.0</h3>
+                    <button class="focus-toggle-btn" onclick="toggleFocusMode()" title="Toggle Focus Mode">
+                        <i data-lucide="maximize-2"></i> Focus Mode
+                    </button>
+                </div>
+                <span class="ref-count">{{ inv.items|length }} Line Segments</span>
+            </div>
+            
+            <div class="cost-table-wrapper">
+                <table class="cost-audit-table">
+                    <thead>
+                        <tr>
+                            <th class="sticky-col">Description & Charge</th>
+                            <th>Logistics Segments (MBL / HBL / CONT)</th>
+                            <th>Dossier / AWB Mapping</th>
+                            <th>Vendor Details</th>
+                            <th>Tax / VAT</th>
+                            <th class="text-right">Financials</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for it in inv.items %}
+                            <tr class="item-row" data-item-id="{{ it.id }}">
+                                <td class="sticky-col">
+                                    <div class="edit-field" data-field="description">
+                                        <span class="view-val desc-main">{{ it.description }}</span>
+                                        <input type="text" class="edit-input" value="{{ it.description }}">
+                                    </div>
+                                    <div class="edit-field" data-field="charge_code">
+                                        <span class="view-val charge-sub">CODE: {{ it.charge_code or 'N/A' }}</span>
+                                        <input type="text" class="edit-input sm-input" value="{{ it.charge_code or '' }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="log-grid">
+                                        <div class="log-item">
+                                            <label>MBL</label> 
+                                            <div class="edit-field" data-field="m_bl_no">
+                                                <span class="view-val mono">{{ it.m_bl_no or intelligence.global_refs.get('MBL Number', '—') }}</span>
+                                                <input type="text" class="edit-input" value="{{ it.m_bl_no or '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="log-item">
+                                            <label>HBL</label> 
+                                            <div class="edit-field" data-field="h_bl_no">
+                                                <span class="view-val mono">{{ it.h_bl_no or intelligence.global_refs.get('HBL', '—') }}</span>
+                                                <input type="text" class="edit-input" value="{{ it.h_bl_no or '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="log-item">
+                                            <label>CONT</label> 
+                                            <div class="edit-field" data-field="container_no">
+                                                <span class="view-val mono">{{ it.container_no or intelligence.global_refs.get('Container Number', '—') }}</span>
+                                                <input type="text" class="edit-input" value="{{ it.container_no or '' }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="log-grid">
+                                        <div class="log-item">
+                                            <label>JOB ID</label> 
+                                            <div class="edit-field" data-field="job_id">
+                                                <span class="view-val mono">{{ it.job_id or '—' }}</span>
+                                                <input type="text" class="edit-input" value="{{ it.job_id or '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="log-item">
+                                            <label>MSTR</label> 
+                                            <div class="edit-field" data-field="master_id">
+                                                <span class="view-val mono">{{ it.master_id or '—' }}</span>
+                                                <input type="text" class="edit-input" value="{{ it.master_id or '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="log-item">
+                                            <label>AWB</label> 
+                                            <div class="edit-field" data-field="awb_no">
+                                                <span class="view-val mono">{{ it.awb_no or '—' }}</span>
+                                                <input type="text" class="edit-input" value="{{ it.awb_no or '' }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="vendor-segment">
+                                        <div class="edit-field" data-field="vendor_name">
+                                            <span class="view-val v-name">{{ it.vendor_name or inv.supplier }}</span>
+                                            <input type="text" class="edit-input" value="{{ it.vendor_name or '' }}">
+                                        </div>
+                                        <div class="edit-field" data-field="vendor_code">
+                                            <span class="view-val v-code">CODE: {{ it.vendor_code or inv.supplier_code or '—' }}</span>
+                                            <input type="text" class="edit-input" value="{{ it.vendor_code or '' }}">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="tax-pills">
+                                        <div class="edit-field" data-field="vat_code">
+                                            <span class="view-val tax-badge">{{ it.vat_code or 'EXEMPT' }}</span>
+                                            <input type="text" class="edit-input sm-input" value="{{ it.vat_code or '' }}">
+                                        </div>
+                                        <div class="edit-field" data-field="vat_perc">
+                                            <span class="view-val perc-badge">{{ it.vat_perc or 0 }}%</span>
+                                            <input type="number" step="0.01" class="edit-input sm-input" value="{{ it.vat_perc or 0 }}">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-right">
+                                    <div class="price-main">
+                                        <div class="edit-field" data-field="total_price">
+                                            <span class="view-val">{{ it.currency }} {{ "{:,.2f}".format(it.total_price) }}</span>
+                                            <input type="number" step="0.01" class="edit-input" value="{{ it.total_price }}">
+                                        </div>
+                                    </div>
+                                    <div class="price-sub">
+                                        <div class="edit-field" data-field="quantity" style="display: inline-block;">
+                                            <span class="view-val">{{ it.quantity }}</span>
+                                            <input type="number" step="1" class="edit-input sm-input" value="{{ it.quantity }}">
+                                        </div> units @ 
+                                        <div class="edit-field" data-field="unit_price" style="display: inline-block;">
+                                            <span class="view-val">{{ "{:,.2f}".format(it.unit_price) }}</span>
+                                            <input type="number" step="0.01" class="edit-input" value="{{ it.unit_price }}">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="empty-row">No itemized cost lines identified.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- META ZONE: Fiscal & Context -->
+        <div class="metadata-grid animate-in">
+            <!-- Block 1: Financial & Tax Audit -->
+            <section class="metadata-block section-card">
+                <div class="card-header">
+                    <div class="card-title-group"><i data-lucide="credit-card"></i> <h3>Fiscal Breakdown</h3></div>
+                </div>
+                <div class="fiscal-details">
+                    <div class="main-amount">
+                        <label>Total Payload ({{ inv.currency }})</label>
+                        <div class="edit-field" data-field="amount">
+                            <div class="val view-val">{{ inv.currency }} {{ "{:,.2f}".format(inv.amount) }}</div>
+                            <input type="number" step="0.01" class="edit-input" value="{{ inv.amount }}">
+                        </div>
+                    </div>
+                    <div class="sub-fiscal-grid">
+                        <div class="f-item">
+                            <label>VAT Amount</label>
+                            <div class="edit-field" data-field="vat_amount">
+                                <div class="f-val view-val">{{ "{:,.2f}".format(inv.vat_amount or 0) }}</div>
+                                <input type="number" step="0.01" class="edit-input" value="{{ inv.vat_amount or 0 }}">
+                            </div>
+                        </div>
+                        <div class="f-item">
+                            <label>VAT Code</label>
+                            <div class="edit-field" data-field="vat_code">
+                                <div class="f-val view-val">{{ inv.vat_code or 'N/A' }}</div>
+                                <input type="text" class="edit-input" value="{{ inv.vat_code or '' }}">
+                            </div>
+                        </div>
+                        <div class="f-item">
+                            <label>Net Value</label>
+                            <div class="f-val">{{ "{:,.2f}".format(inv.amount - (inv.vat_amount or 0)) }}</div>
+                        </div>
+                        <div class="f-item">
+                            <label>Currency</label>
+                            <div class="edit-field" data-field="currency">
+                                <div class="f-val view-val">{{ inv.currency }}</div>
+                                <input type="text" class="edit-input" value="{{ inv.currency }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Block 2: Document Context & Logistics -->
+            <section class="metadata-block section-card">
+                <div class="card-header">
+                    <div class="card-title-group"><i data-lucide="info"></i> <h3>Document Context</h3></div>
+                </div>
+                <div class="logistics-compact">
+                    <div class="log-tile">
+                        <label>Invoice Type</label>
+                        <div class="edit-field" data-field="invoice_type">
+                            <div class="log-val-small view-val uppercase" style="color: var(--accent-hero); font-weight: 800;">{{ inv.invoice_type }}</div>
+                            <input type="text" class="edit-input" value="{{ inv.invoice_type }}">
+                        </div>
+                    </div>
+                    <div class="log-tile">
+                        <label>User Group</label>
+                        <div class="edit-field" data-field="user_group">
+                            <div class="log-val-small view-val" style="font-weight: 700;">{{ inv.user_group or 'General' }}</div>
+                            <input type="text" class="edit-input" value="{{ inv.user_group or '' }}">
+                        </div>
+                    </div>
+                    <div class="log-tile">
+                        <label>Net Weight</label>
+                        <div class="edit-field" data-field="net_weight">
+                            <div class="log-val view-val">{{ "{:,.2f}".format(inv.net_weight or 0) }}<span>kg</span></div>
+                            <input type="number" step="0.01" class="edit-input" value="{{ inv.net_weight or 0 }}">
+                        </div>
+                    </div>
+                    <div class="log-tile">
+                        <label>Gross Weight</label>
+                        <div class="edit-field" data-field="gross_weight">
+                            <div class="log-val view-val">{{ "{:,.2f}".format(inv.gross_weight or 0) }}<span>kg</span></div>
+                            <input type="number" step="0.01" class="edit-input" value="{{ inv.gross_weight or 0 }}">
+                        </div>
+                    </div>
+                    <div class="log-tile">
+                        <label>Invoice Date</label>
+                        <div class="edit-field" data-field="invoice_date">
+                            <div class="log-val-small view-val">{{ inv.invoice_date.strftime('%B %d, %Y') if inv.invoice_date else 'N/A' }}</div>
+                            <input type="date" class="edit-input" value="{{ inv.invoice_date.strftime('%Y-%m-%d') if inv.invoice_date else '' }}">
+                        </div>
+                    </div>
+                    <div class="log-tile">
+                        <label>Currency</label>
+                        <div class="log-val-small">{{ inv.currency }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Block 3: System Audit -->
+            <section class="metadata-block section-card">
+                <div class="card-header">
+                    <div class="card-title-group"><i data-lucide="shield-check"></i> <h3>Analysis Audit</h3></div>
+                </div>
+                <div class="audit-grid">
+                    <div class="audit-item">
+                        <label>Verification Status</label>
+                        <div class="audit-val status-{{ inv.match_status|lower|replace(' ', '-') }}">{{ inv.match_status }}</div>
+                    </div>
+                </div>
+            </section>
+
+            {% if inv.notes or True %}
+            <section class="remarks-card section-card">
+                <div class="card-title-group"><i data-lucide="sticky-note"></i> <h3>Internal Observations</h3></div>
+                <div class="remarks-content">
+                    <div class="edit-field" data-field="notes" style="width: 100%;">
+                        <div class="view-val">{{ inv.notes or 'No internal observations recorded.' }}</div>
+                        <textarea class="edit-input" style="min-height: 100px;">{{ inv.notes or '' }}</textarea>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+        </div>
+
+        <!-- Floating Save Bar -->
+        <div class="floating-save-bar" id="saveBar">
+            <div class="save-label">
+                <i data-lucide="save"></i> 
+                <span>Unsaved Corrections Detected</span>
+            </div>
+            <div class="save-actions">
+                <button class="btn-discard" onclick="cancelEdits()">Discard</button>
+                <button class="btn-save" onclick="saveAllChanges()">Commit Changes</button>
+            </div>
+        </div>
+
+        <!-- DOCUMENT ZONE: Original Payload View -->
+        <div class="document-side animate-in">
+            <div class="document-viewer section-card">
+                <div class="viewer-controls">
+                    <span class="v-label"><i data-lucide="file-text"></i> Digital Original Payload</span>
+                    <span class="v-status">High Fidelity View</span>
+                </div>
+                <div class="viewer-body">
+                    {% if inv.pdf_path %}
+                    <iframe src="{{ url_for('ap_invoices.download_pdf', inv_id=inv.id) }}#toolbar=0&navpanes=0"></iframe>
+                    {% else %}
+                    <div class="no-file">
+                        <i data-lucide="alert-octagon"></i>
+                        <p>Document not available for this entry.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* PREMIUM UI DESIGN — Uses global theme system */
+
+/* Page-level scoped variables (inherit from global, add page-specific ones) */
+.analysis-container {
+    --bg-main: var(--bg-dark);
+    --card-bg: rgba(30, 34, 45, 0.95); /* More solid background for cards */
+    --border-base: rgba(255, 255, 255, 0.15); /* More visible borders */
+    --text-primary: #ffffff;
+    --text-sec: #a0aec0;
+    --accent-hero: var(--primary);
+    --accent-glow: var(--primary-glow);
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* Intelligence Audit Bar */
+.intelligence-audit-bar { display: none; }
+
+/* Audit Pulse Hero */
+.audit-pulse-hero {
+    background: var(--card-bg);
+    border: 1px solid var(--border-base);
+    border-radius: 24px;
+    padding: 2rem;
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.audit-pulse-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--accent-hero), #8b5cf6);
+}
+
+.pulse-main { display: flex; justify-content: space-between; align-items: center; gap: 3rem; margin-bottom: 2rem; }
+.pulse-indicator { display: flex; align-items: center; gap: 1.5rem; }
+
+.gauge-ring {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid;
+    position: relative;
+}
+.gauge-ring i { width: 28px; height: 28px; }
+
+.gauge-ring.verified { border-color: #22c55e; color: #22c55e; background: rgba(34, 197, 94, 0.1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.2); }
+.gauge-ring.delta { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.1); box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
+
+.pulse-eyebrow { font-size: 0.7rem; font-weight: 800; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px; }
+.pulse-status-text { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin: 0; letter-spacing: -0.5px; }
+
+.pulse-stats { display: flex; gap: 2.5rem; align-items: center; }
+.p-stat label { font-size: 0.65rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; margin-bottom: 4px; display: block; }
+.p-val { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+.p-val.error { color: #ef4444; }
+
+.pulse-footer {
+    display: flex; justify-content: space-between; padding-top: 1.5rem; border-top: 1px solid var(--border-base);
+    font-size: 0.75rem; font-weight: 700; color: var(--text-sec);
+}
+.engine-tag, .match-link-tag { display: flex; align-items: center; gap: 0.5rem; }
+.engine-tag i { width: 14px; height: 14px; color: var(--accent-hero); }
+.match-link-tag i { width: 14px; height: 14px; color: var(--secondary); }
+.match-link-tag strong { color: var(--accent-hero); }
+
+/* Staggered Animations */
+.animate-in { opacity: 0; animation: fade-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.content-side > section:nth-child(1) { animation-delay: 0.1s; }
+.content-side > section:nth-child(2) { animation-delay: 0.2s; }
+.content-side > section:nth-child(3) { animation-delay: 0.3s; }
+.content-side > div:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes pulse-border { 0%, 100% { border-color: rgba(239, 68, 68, 0.2); } 50% { border-color: rgba(239, 68, 68, 0.5); } }
+
+/* Global Asset UI */
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.asset-pill { background: var(--bg-main); border: 2px solid var(--border-base); padding: 1rem 1.25rem; border-radius: 16px; transition: all 0.2s; }
+.asset-pill:hover { border-color: var(--accent-hero); transform: translateY(-2px); }
+.asset-label { font-size: 0.65rem; font-weight: 800; color: var(--text-sec); text-transform: uppercase; margin-bottom: 4px; display: block; }
+.asset-value { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+
+.analysis-container { max-width: 1500px; margin: 0 auto; padding: 2rem 1rem; }
+
+/* Industrial Cost Audit UI */
+.cost-audit-section { padding: 0 !important; }
+.cost-audit-section .card-header { padding: 1.5rem 1.5rem 1rem; margin-bottom: 0; }
+.cost-table-wrapper { width: 100%; overflow-x: auto; border-top: 1px solid var(--border-base); }
+.cost-audit-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+
+.cost-audit-table th { background: var(--bg-main); padding: 1rem 1.5rem; text-align: left; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-sec); border-bottom: 1px solid var(--border-base); letter-spacing: 0.5px; }
+.cost-audit-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-base); vertical-align: top; background: var(--card-bg); transition: background 0.2s; }
+.cost-audit-table tr:hover td { background: var(--overlay-hover, rgba(0,0,0,0.02)); }
+
+.sticky-col { position: sticky; left: 0; z-index: 10; background: var(--card-bg) !important; box-shadow: 4px 0 10px -5px rgba(0,0,0,0.1); border-right: 1px solid var(--border-base); }
+
+.desc-main { font-weight: 800; color: var(--text-primary); font-size: 0.9rem; margin-bottom: 4px; }
+.charge-sub { font-size: 0.7rem; font-weight: 700; color: var(--accent-hero); font-family: 'JetBrains Mono', monospace; }
+
+.log-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1rem; }
+.log-item { display: flex; flex-direction: column; }
+.log-item label { font-size: 0.6rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; margin-bottom: 2px; }
+.log-item .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+
+.vendor-segment .v-name { font-weight: 700; font-size: 0.85rem; color: var(--text-primary); margin-bottom: 2px; }
+.vendor-segment .v-code { font-size: 0.7rem; color: var(--text-sec); font-weight: 600; }
+
+.tax-pills { display: flex; gap: 0.5rem; }
+.tax-badge { background: var(--bg-main); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; color: var(--text-primary); border: 1px solid var(--border-base); }
+.perc-badge { background: var(--accent-glow); color: var(--accent-hero); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; }
+
+.price-main { font-weight: 800; color: var(--text-primary); font-size: 1.1rem; margin-bottom: 2px; }
+.price-sub { font-size: 0.75rem; color: var(--text-sec); font-weight: 600; }
+.text-right { text-align: right; }
+.empty-row { padding: 3rem !important; text-align: center; color: var(--text-sec); font-style: italic; }
+
+/* Interactive Row Reveal Logic */
+.log-item label { opacity: 0.5; transition: opacity 0.2s; }
+.cost-audit-table tr:hover .log-item label { opacity: 1; }
+.cost-audit-table tr:hover .mono { color: var(--accent-hero); }
+
+/* Hierarchical Grid System */
+.analysis-layout {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 2.5rem;
+    align-items: start;
+}
+
+.top-intelligence-zone { grid-column: 1; }
+.cost-audit-section { grid-column: 1; }
+.metadata-grid { grid-column: 1; }
+.document-side { grid-column: 2; grid-row: 1 / span 10; position: sticky; top: 2rem; height: calc(100vh - 4rem); }
+
+/* FOCUS MODE: Inversion Logic */
+.analysis-layout.focus-active {
+    grid-template-columns: 1fr 1fr !important;
+}
+
+.analysis-layout.focus-active .top-intelligence-zone { grid-column: span 2; }
+.analysis-layout.focus-active .cost-audit-section { grid-column: span 2; }
+.analysis-layout.focus-active .metadata-grid { grid-column: 1; }
+.analysis-layout.focus-active .document-side { 
+    grid-column: 2; 
+    grid-row: auto; 
+    position: sticky; 
+    top: 2rem; 
+    display: block !important; 
+    height: 800px;
+}
+
+.focus-toggle-btn {
+    margin-left: 1.5rem;
+    background: var(--bg-main);
+    border: 1px solid var(--border-base);
+    color: var(--text-sec);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.focus-toggle-btn:hover { border-color: var(--accent-hero); color: var(--accent-hero); background: var(--accent-glow); }
+.focus-toggle-btn i { width: 14px; height: 14px; }
+
+
+
+/* Header */
+.analysis-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem; }
+.header-main { display: flex; align-items: center; gap: 1.5rem; }
+.back-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border-base); border-radius: 12px; color: var(--text-sec); box-shadow: var(--shadow-sm); transition: all 0.2s; text-decoration: none; }
+.back-btn:hover { border-color: var(--accent-hero); color: var(--accent-hero); transform: translateX(-2px); }
+
+.eyebrow { font-size: 0.75rem; color: var(--accent-hero); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 2px; }
+.title-group h1 { font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 1rem; margin: 0; }
+
+.header-actions { display: flex; align-items: center; gap: 1.25rem; }
+.supplier-info-pill { background: var(--card-bg); border: 1px solid var(--border-base); padding: 0.5rem 1rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem; box-shadow: var(--shadow-sm); }
+.supplier-info-pill i { width: 16px; height: 16px; color: var(--accent-hero); }
+.sup-name { font-weight: 700; font-size: 0.9rem; color: var(--text-primary); }
+.sup-code { font-size: 0.75rem; font-weight: 600; color: var(--text-sec); background: var(--bg-main); padding: 0.1rem 0.4rem; border-radius: 4px; }
+
+.btn-export { background: var(--accent-hero); color: #fff; text-decoration: none; padding: 0.7rem 1.4rem; border-radius: 12px; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 0.6rem; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.3); transition: all 0.2s; }
+.btn-export:hover { transform: translateY(-2px); box-shadow: 0 6px 20px 0 rgba(79, 70, 229, 0.4); }
+
+/* Layout Grid */
+.analysis-layout { display: grid; grid-template-columns: 600px 1fr; gap: 2.5rem; align-items: start; }
+
+.btn-toggle-edit { background: var(--bg-main); border: 1px solid var(--border-base); color: var(--text-primary); padding: 0.7rem 1.2rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.6rem; cursor: pointer; transition: all 0.2s; }
+.btn-toggle-edit:hover { border-color: var(--accent-hero); background: var(--accent-glow); }
+.btn-toggle-edit.active { background: var(--accent-hero); color: white; border-color: var(--accent-hero); }
+
+/* Edit State Engine */
+.edit-field { position: relative; display: inline-block; min-width: 40px; }
+.edit-input { 
+    display: none; 
+    background: var(--bg-main); 
+    border: 1px solid var(--accent-hero); 
+    color: var(--text-primary); 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: inherit; 
+    font-family: inherit; 
+    width: 100%; 
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+.edit-mode .view-val { display: none; }
+.edit-mode .edit-input { display: block; }
+.edit-mode .section-card { border-color: var(--accent-hero); }
+
+/* Floating Save Bar */
+.floating-save-bar {
+    position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+    background: var(--surface); border: 1px solid var(--accent-hero);
+    padding: 1rem 2rem; border-radius: 50px; display: flex; align-items: center; gap: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 1000; transition: bottom 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+.floating-save-bar.visible { bottom: 2rem; }
+.save-label { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; }
+.save-actions { display: flex; gap: 1rem; }
+.btn-save { background: var(--accent-hero); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 25px; font-weight: 800; cursor: pointer; }
+.btn-discard { background: transparent; color: var(--text-sec); border: 1px solid var(--border-base); padding: 0.6rem 1.5rem; border-radius: 25px; font-weight: 700; cursor: pointer; }
+
+/* Header Save Button */
+.btn-save-header {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 0.7rem 1.4rem;
+    border-radius: 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    box-shadow: 0 4px 14px 1px rgba(34, 197, 94, 0.3);
+    transition: all 0.2s;
+}
+.btn-save-header:hover { transform: translateY(-2px); box-shadow: 0 6px 20px 1px rgba(34, 197, 94, 0.4); }
+.btn-save-header i { width: 16px; height: 16px; }
+
+.section-card { background: var(--card-bg); border: 1px solid var(--border-base); border-radius: 20px; box-shadow: var(--shadow-sm); padding: 1.5rem; overflow: hidden; margin-bottom: 1.5rem; transition: box-shadow 0.3s ease, border-color 0.3s; }
+.section-card:hover { box-shadow: var(--shadow-md); }
+
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.card-title-group { display: flex; align-items: center; gap: 0.75rem; }
+.card-title-group i { width: 18px; height: 18px; color: var(--accent-hero); }
+.card-title-group h3 { font-size: 0.9rem; font-weight: 800; margin: 0; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em; }
+.ref-count { font-size: 0.7rem; font-weight: 700; color: var(--text-sec); background: var(--bg-main); padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-base); }
+
+/* HERO: Reference Analysis */
+.analysis-hero { border: 2px solid var(--accent-glow); background: linear-gradient(to bottom right, var(--card-bg), var(--bg-main)); }
+
+.ref-node { margin-bottom: 1.5rem; }
+.node-info { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.6rem; }
+.node-type { display: block; font-size: 0.65rem; font-weight: 800; color: var(--text-sec); text-transform: uppercase; margin-bottom: 2px; }
+.node-value { font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
+.node-finance { text-align: right; }
+.node-amount { display: block; font-weight: 800; color: var(--text-primary); font-size: 1.1rem; line-height: 1; }
+.node-per { font-size: 0.75rem; font-weight: 800; color: var(--accent-hero); }
+
+.node-track { height: 8px; background: var(--bg-main); border-radius: 4px; overflow: hidden; border: 1px solid var(--border-base); }
+.node-bar { height: 100%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); border-radius: 4px; transition: width 0.6s ease; }
+
+/* Single Ref Hero */
+.single-ref-hero { padding: 1rem 0; }
+.hero-label { font-size: 0.7rem; font-weight: 800; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px; }
+.hero-val { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 2rem; border-left: 6px solid var(--accent-hero); padding-left: 1.5rem; }
+
+.hero-stat { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.stat-box { background: var(--bg-main); padding: 1rem; border-radius: 12px; border: 1px solid var(--border-base); }
+.stat-box label { font-size: 0.65rem; font-weight: 700; color: var(--text-sec); display: block; margin-bottom: 4px; text-transform: uppercase; }
+.stat-box .val { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+
+.hero-progress { height: 10px; background: var(--bg-main); border-radius: 5px; overflow: hidden; border: 1px solid var(--border-base); }
+.hero-progress .bar { height: 100%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); border-radius: 5px; }
+
+/* Item Table */
+.item-table-container { overflow-x: auto; margin-top: -1rem; }
+.item-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.item-table th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border-base); color: var(--text-sec); font-weight: 700; text-transform: uppercase; font-size: 0.7rem; }
+.item-table td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-base); color: var(--text-primary); vertical-align: middle; }
+.item-desc { font-weight: 700; color: var(--text-primary); max-width: 250px; }
+.item-table tr:hover td { background: var(--overlay-hover, rgba(0,0,0,0.02)); }
+.item-table tfoot td { border: none; background: var(--bg-main); border-radius: 0 0 12px 12px; }
+
+/* Metadata Grid */
+.metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+.main-amount label { font-size: 0.7rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; margin-bottom: 4px; display: block; }
+.main-amount .val { font-size: 1.75rem; font-weight: 800; color: var(--accent-hero); margin-bottom: 1.25rem; }
+
+.sub-fiscal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-top: 1px solid var(--border-base); padding-top: 1rem; }
+.f-item label { font-size: 0.65rem; font-weight: 700; color: var(--text-sec); display: block; margin-bottom: 2px; }
+.f-val { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+
+.logistics-compact { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.log-tile { background: var(--bg-main); padding: 0.85rem; border-radius: 12px; border: 1px solid var(--border-base); transition: border-color 0.2s; }
+.log-tile:hover { border-color: var(--accent-hero); }
+.log-tile label { font-size: 0.65rem; font-weight: 700; color: var(--text-sec); margin-bottom: 4px; display: block; text-transform: uppercase; }
+.log-val { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); }
+.log-val span { font-size: 0.75rem; color: var(--text-sec); margin-left: 2px; }
+.log-val-small { font-weight: 700; font-size: 0.85rem; color: var(--text-primary); }
+.log-val-small.uppercase { text-transform: uppercase; color: var(--accent-hero); }
+
+/* Audit Grid */
+.audit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+.audit-item label { font-size: 0.7rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; margin-bottom: 4px; display: block; }
+.audit-val { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
+.job-link { color: var(--accent-hero); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; }
+.job-link:hover { text-decoration: underline; }
+.unlinked { opacity: 0.5; font-style: italic; font-size: 0.85rem; }
+
+/* Remarks */
+.remarks-content { margin-top: 1rem; font-size: 0.9rem; line-height: 1.6; color: var(--text-sec); background: var(--bg-main); padding: 1.25rem; border-radius: 12px; border-left: 4px solid var(--accent-hero); }
+
+/* Document Viewer */
+.document-side { position: sticky; top: 2rem; height: calc(100vh - 4rem); }
+.document-viewer { padding: 0; display: flex; flex-direction: column; height: 100%; border: 1px solid var(--border-base); box-shadow: var(--shadow-md); margin-bottom: 0; border-radius: 20px; overflow: hidden; }
+.viewer-controls { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-base); display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); }
+.v-label { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.85rem; color: var(--text-sec); }
+.v-label i { width: 14px; height: 14px; color: var(--accent-hero); }
+.v-status { font-size: 0.7rem; font-weight: 700; color: #22c55e; text-transform: uppercase; }
+
+.viewer-body { flex: 1; background: #eaeff5; position: relative; }
+.viewer-body iframe { width: 100%; height: 100%; border: none; }
+.no-file { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sec); }
+.no-file i { width: 3rem; height: 3rem; margin-bottom: 1rem; opacity: 0.15; }
+
+/* Badge Settings */
+.badge { font-size: 0.65rem; text-transform: uppercase; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: 800; border: 1px solid; }
+.badge.matched-100\% { border-color: #22c55e; color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+.badge.pending { border-color: #94a3b8; color: #94a3b8; background: rgba(148, 163, 184, 0.1); }
+.badge.over-priced { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+/* Status color helpers */
+.audit-val[class*="matched-100"] { color: #22c55e; }
+.audit-val[class*="over-priced"] { color: #ef4444; }
+.audit-val[class*="partial"] { color: #f59e0b; }
+
+@media (max-width: 1300px) {
+    .analysis-layout { grid-template-columns: 1fr; }
+    .document-side { position: static; height: 700px; }
+}
+
+@media (max-width: 768px) {
+    .analysis-header { flex-direction: column; align-items: flex-start; }
+    .metadata-grid { grid-template-columns: 1fr; }
+    .hero-stat { grid-template-columns: 1fr; }
+.btn-recheck {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.5rem 1.2rem;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+    animation: recheck-pulse 3s ease-in-out infinite;
+}
+
+.btn-recheck:hover { 
+    background: rgba(255, 255, 255, 0.15); 
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #fff;
+    transform: translateY(-2px); 
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    animation: none;
+}
+
+.btn-recheck:active { transform: translateY(0); }
+
+.btn-recheck i { 
+    width: 14px; 
+    height: 14px; 
+}
+
+.btn-recheck.loading {
+    background: var(--accent-hero);
+    border-color: var(--accent-hero);
+    box-shadow: 0 0 25px var(--accent-glow);
+    animation: none;
+}
+
+.btn-recheck.loading i { 
+    animation: audit-spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; 
+}
+
+@keyframes audit-spin { 
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); } 
+}
+
+@keyframes recheck-pulse {
+    0% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.2); }
+    50% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.4); }
+    100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.2); }
+}
+
+</style>
+<script>
+    async function recheckAudit(btn) {
+        btn.classList.add('loading');
+        btn.disabled = true;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="refresh-cw"></i> Auditing...';
+        lucide.createIcons();
+
+        try {
+            const response = await fetch(`/user/invoices/recheck/{{ inv.id }}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                // Flash status and reload to update all badges/hero
+                location.reload();
+            } else {
+                alert("Audit Error: " + result.error);
+                btn.classList.remove('loading');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            }
+        } catch (err) {
+            alert("Network error: " + err.message);
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            lucide.createIcons();
+        }
+    }
+
+    let isEditMode = false;
+    let hasChanges = false;
+
+    function toggleEditMode() {
+        const container = document.querySelector('.analysis-container');
+        const btn = document.querySelector('.btn-toggle-edit');
+        const btnText = document.getElementById('editBtnText');
+        const headerSave = document.getElementById('headerSaveBtn');
+        
+        isEditMode = !isEditMode;
+        container.classList.toggle('edit-mode', isEditMode);
+        btn.classList.toggle('active', isEditMode);
+        
+        if (isEditMode) {
+            btnText.innerText = "Exit Editor";
+            btn.querySelector('i').setAttribute('data-lucide', 'x');
+            headerSave.style.display = 'flex';
+        } else {
+            btnText.innerText = "Edit Mode";
+            btn.querySelector('i').setAttribute('data-lucide', 'edit-3');
+            headerSave.style.display = 'none';
+            hideSaveBar();
+        }
+        lucide.createIcons();
+    }
+
+    // Detect Changes
+    document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('edit-input')) {
+            showSaveBar();
+        }
+    });
+
+    function showSaveBar() {
+        document.getElementById('saveBar').classList.add('visible');
+    }
+
+    function hideSaveBar() {
+        document.getElementById('saveBar').classList.remove('visible');
+    }
+
+    function cancelEdits() {
+        if (confirm("Discard all unsaved changes?")) {
+            location.reload();
+        }
+    }
+
+    async function saveAllChanges() {
+        const saveBtn = document.querySelector('.btn-save');
+        saveBtn.innerText = "Saving...";
+        saveBtn.disabled = true;
+
+        const payload = {
+            items: []
+        };
+
+        // Collect Header & Meta Fields
+        document.querySelectorAll('.analysis-container > .analysis-header .edit-field, .metadata-grid .edit-field, .remarks-card .edit-field').forEach(field => {
+            const fieldName = field.getAttribute('data-field');
+            const input = field.querySelector('input, textarea');
+            if (input) payload[fieldName] = input.value;
+        });
+
+        // Collect Table Items
+        document.querySelectorAll('.item-row').forEach(row => {
+            const item = { id: row.getAttribute('data-item-id') };
+            row.querySelectorAll('.edit-field').forEach(field => {
+                const fieldName = field.getAttribute('data-field');
+                const input = field.querySelector('input');
+                if (input) item[fieldName] = input.value;
+            });
+            payload.items.push(item);
+        });
+
+        try {
+            const response = await fetch(`/user/invoices/update_all/{{ inv.id }}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                alert("Error saving: " + result.error);
+                saveBtn.innerText = "Commit Changes";
+                saveBtn.disabled = false;
+            }
+        } catch (err) {
+            alert("Network error: " + err.message);
+            saveBtn.innerText = "Commit Changes";
+            saveBtn.disabled = false;
+        }
+    }
+
+    function toggleFocusMode() {
+        const layout = document.querySelector('.analysis-layout');
+        const btn = document.querySelector('.focus-toggle-btn');
+        
+        layout.classList.toggle('focus-active');
+        
+        if (layout.classList.contains('focus-active')) {
+            btn.innerHTML = '<i data-lucide="minimize-2"></i> Exit Focus';
+        } else {
+            btn.innerHTML = '<i data-lucide="maximize-2"></i> Focus Mode';
+        }
+        lucide.createIcons();
+    }
+    
+    document.addEventListener("DOMContentLoaded", () => {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

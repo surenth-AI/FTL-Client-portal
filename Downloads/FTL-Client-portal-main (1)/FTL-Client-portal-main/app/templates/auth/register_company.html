@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %}Register Company{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-8">
+        <div class="card glass-card p-4 p-md-5 rounded-4 border-white-10 shadow-lg">
+            <!-- Branding Header -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="80">
+                </div>
+                <h3 class="fw-bold text-white mb-1">Company Registration</h3>
+                <p class="text-muted small text-uppercase fw-bold tracking-widest">Establish your corporate account</p>
+            </div>
+
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                
+                <!-- Section 1: Company Information -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="icon-box-sm bg-primary-gradient me-3">
+                            <i class="bi bi-building text-white"></i>
+                        </div>
+                        <h5 class="mb-0 fw-bold">Company Information</h5>
+                    </div>
+                    
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <label class="form-label">Registered Company Name</label>
+                            {{ form.company_name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter full legal company name") }}
+                            {% for error in form.company_name.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label">Full Address</label>
+                            {{ form.address(class="form-control bg-white-5 border-white-10 text-white", placeholder="Street, Building, Suite") }}
+                            {% for error in form.address.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Zip Code</label>
+                            {{ form.zip_code(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. 2000", id="zip_code") }}
+                            {% for error in form.zip_code.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">City</label>
+                            {{ form.city(class="form-control bg-white-5 border-white-10 text-white", placeholder="City", id="city") }}
+                            {% for error in form.city.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Country</label>
+                            {{ form.country(class="form-control bg-white-5 border-white-10 text-white", placeholder="Country", id="country") }}
+                            {% for error in form.country.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">BTW/VAT Number</label>
+                            {{ form.vat_number(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. BE0123456789") }}
+                            {% for error in form.vat_number.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">EORI Number</label>
+                            {{ form.eori_number(class="form-control bg-white-5 border-white-10 text-white", placeholder="European Registration Number") }}
+                            {% for error in form.eori_number.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Contact Person -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="icon-box-sm bg-accent-gradient me-3">
+                            <i class="bi bi-person-badge text-white"></i>
+                        </div>
+                        <h5 class="mb-0 fw-bold">Contact Person & Security</h5>
+                    </div>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Full Name</label>
+                            {{ form.contact_name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Contact Person Name") }}
+                            {% for error in form.contact_name.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mobile Number</label>
+                            {{ form.mobile(class="form-control bg-white-5 border-white-10 text-white", placeholder="+32 000 00 00 00") }}
+                            {% for error in form.mobile.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Email ID (User ID)</label>
+                            {{ form.contact_email(class="form-control bg-white-5 border-white-10 text-white", placeholder="email@company.com") }}
+                            {% for error in form.contact_email.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Password</label>
+                            {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                            {% for error in form.password.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Re-enter Password</label>
+                            {{ form.confirm_password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                            {% for error in form.confirm_password.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3 mt-5">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-glass px-4 py-3 fw-bold flex-grow-1">Cancel</a>
+                    {{ form.submit(class="btn btn-primary px-5 py-3 rounded-pill fw-bold text-uppercase tracking-wide shadow-accent flex-grow-1") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple Zip Code mock auto-population
+    document.getElementById('zip_code').addEventListener('input', function(e) {
+        const zip = e.target.value;
+        const cityInput = document.getElementById('city');
+        const countryInput = document.getElementById('country');
+        
+        // Mock data
+        const zipMap = {
+            '2000': {city: 'Antwerp', country: 'Belgium'},
+            '1000': {city: 'Brussels', country: 'Belgium'},
+            '20095': {city: 'Hamburg', country: 'Germany'},
+            '3011': {city: 'Rotterdam', country: 'Netherlands'},
+            '1011': {city: 'Amsterdam', country: 'Netherlands'}
+        };
+        
+        if (zipMap[zip]) {
+            cityInput.value = zipMap[zip].city;
+            countryInput.value = zipMap[zip].country;
+            cityInput.classList.add('pulse-accent');
+            countryInput.classList.add('pulse-accent');
+            setTimeout(() => {
+                cityInput.classList.remove('pulse-accent');
+                countryInput.classList.remove('pulse-accent');
+            }, 1000);
+        }
+    });
+</script>
+
+<style>
+.icon-box-sm {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+.bg-primary-gradient {
+    background: linear-gradient(135deg, #007bff 0%, #00d4ff 100%);
+}
+.bg-accent-gradient {
+    background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);
+}
+</style>
+{% endblock %}

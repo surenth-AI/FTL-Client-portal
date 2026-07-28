@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Quote Breakdown{% endblock %}
+
+{% block content %}
+
+<!-- Professional Document Header for Print -->
+<div class="print-only mb-4 border-bottom pb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0">QUOTATION</h2>
+            <p class="text-muted mb-0">Ref: {{ quote.api_booking_ref or ('QUO-' ~ quote.id) }}</p>
+        </div>
+        <div class="text-end">
+            <h4 class="fw-bold mb-1">{{ company.name if company else 'AxeGlobal Logistics' }}</h4>
+            <p class="text-muted mb-0 small">Date: {{ quote.created_at.strftime('%B %d, %Y') }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <h3 class="mb-0 fw-bold">Quote Breakdown</h3>
+    <a href="{{ url_for('customer.my_quotes') }}" class="btn btn-outline-secondary shadow-sm rounded-pill px-4 py-2">
+        <i class="bi bi-arrow-left me-2"></i> Back to Quotes
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card glass-card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-info-circle me-2"></i>Quote Summary</h5>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">Routing</small>
+                    <span class="fw-bold text-dark">{{ quote.origin }}</span>
+                    <i class="bi bi-arrow-down d-block text-muted my-1"></i>
+                    <span class="fw-bold text-dark">{{ quote.destination }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">Carrier</small>
+                    <span class="fw-semibold">{{ quote.selected_nvocc }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">Service</small>
+                    <span class="fw-semibold">{{ quote.service_type }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted d-block">Total Volume</small>
+                    <span class="fw-semibold">{{ quote.volume }} CBM</span>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted d-block">Saved On</small>
+                    <span class="fw-semibold">{{ quote.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <small class="text-muted d-block">Total Cost</small>
+                    <span class="fs-2 fw-bold text-success">${{ "{:,.2f}".format(quote.total_cost) }}</span>
+                </div>
+                
+                <div class="mt-4">
+                    <form action="{{ url_for('customer.finalize_booking') }}" method="POST" class="m-0 p-0">
+                        <input type="hidden" name="rate_id" value=""> <!-- Since rate ID might be expired, a real booking might require a fresh search, but we can pass dummy for now -->
+                        <input type="hidden" name="volume" value="{{ quote.volume }}">
+                        <input type="hidden" name="total_cost" value="{{ quote.total_cost }}">
+                        <input type="hidden" name="service_type" value="{{ quote.service_type }}">
+                        <button class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-check-circle me-2"></i> Book This Quote</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card glass-card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-list-check me-2"></i>Tariff Breakdown</h5>
+                
+                {% if breakdown %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Charge Type</th>
+                                <th>Description</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-center">Currency</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in breakdown %}
+                            <tr>
+                                <td class="fw-semibold">{{ item.chargeCode }}</td>
+                                <td>{{ item.description or 'Standard Charge' }}</td>
+                                <td class="text-end fw-bold text-dark">${{ "{:,.2f}".format(item.amount) }}</td>
+                                <td class="text-center text-muted">{{ item.currency or 'USD' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="2" class="text-end fw-bold">Total:</td>
+                                <td class="text-end fw-bold text-success fs-5">${{ "{:,.2f}".format(quote.total_cost) }}</td>
+                                <td class="text-center text-muted">USD</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-5">
+                    <i class="bi bi-receipt fs-1 text-muted mb-3 d-block"></i>
+                    <h5 class="text-secondary fw-semibold">No detailed breakdown available</h5>
+                    <p class="text-muted mb-0">The API did not provide a line-item breakdown for this quotation, or the quote has expired.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Print-specific styles for PDF generation */
+    @media print {
+        @page {
+            margin: 20mm;
+            size: A4;
+        }
+        body {
+            background-color: #fff !important;
+            font-size: 12pt;
+            color: #000;
+        }
+        /* Hide web application UI elements */
+        .sidebar, .navbar, .topbar, #sidebar, #header, nav, header {
+            display: none !important;
+        }
+        /* Hide buttons and interactive elements */
+        .btn, a.btn, button, form {
+            display: none !important;
+        }
+        /* Hide the back button row specifically */
+        .mb-4 > a.btn-outline-secondary {
+            display: none !important;
+        }
+        
+        /* Layout adjustments */
+        .container, .container-fluid, .main-content, #main-content {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        .row {
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        .col-lg-4, .col-lg-8 {
+            width: 100% !important;
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+            margin-bottom: 20px !important;
+        }
+        
+        /* Card styling for print */
+        .card, .glass-card {
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+            background: #fff !important;
+            break-inside: avoid;
+        }
+        
+        /* Show print header */
+        .print-only {
+            display: block !important;
+        }
+        .no-print {
+            display: none !important;
+        }
+        
+        /* Table styling */
+        .table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+        .table th, .table td {
+            border: 1px solid #ddd !important;
+            padding: 8px !important;
+        }
+        .table-light {
+            background-color: #f8f9fa !important;
+            -webkit-print-color-adjust: exact;
+        }
+    }
+    
+    /* Hide print header on screen */
+    .print-only {
+        display: none;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('print') === '1') {
+            // Slight delay to ensure styles and fonts are loaded before printing
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+    });
+</script>
+{% endblock %}

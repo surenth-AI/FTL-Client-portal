@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Update Operation Event{% endblock %}
+
+{% block content %}
+<style>
+    body { background-color: #F8FAFC; }
+    
+    .update-terminal-card {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    }
+    .update-terminal-header {
+        background-color: #F8FAFC;
+        border-bottom: 1px solid #E2E8F0;
+        padding: 1.5rem;
+        border-radius: 8px 8px 0 0;
+    }
+    .update-terminal-body { padding: 2rem; }
+    
+    .info-badge {
+        font-family: 'JetBrains Mono', monospace;
+        background-color: #F1F5F9;
+        color: #475569;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #E2E8F0;
+    }
+    
+    .vector-ribbon {
+        background-color: #F1F5F9;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #1E293B;
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-5 col-md-8">
+        
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small fw-bold">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}" class="text-decoration-none text-muted">Control Panel</a></li>
+                <li class="breadcrumb-item text-dark active" aria-current="page">Event Update</li>
+            </ol>
+        </nav>
+
+        <div class="update-terminal-card">
+            <div class="update-terminal-header d-flex align-items-start">
+                <div class="bg-primary bg-opacity-10 rounded p-2 me-3" style="border: 1px solid var(--primary-color);">
+                    <i class="bi bi-geo-alt-fill text-primary" style="font-size: 1.2rem;"></i>
+                </div>
+                <div>
+                    <h4 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">Update Dispatch State</h4>
+                    <p class="text-muted small mb-0">Inject direct geolocation operational events to reference <span class="info-badge">#{{ booking.id }}</span></p>
+                </div>
+            </div>
+            
+            <div class="update-terminal-body">
+                <!-- Contextual Ribbon -->
+                <div class="vector-ribbon">
+                    <span>{{ booking.origin }}</span>
+                    <i class="bi bi-arrow-right-short mx-2 text-muted" style="font-size: 1.2rem;"></i>
+                    <span class="text-primary">{{ booking.destination }}</span>
+                    <span class="ms-auto badge bg-white border text-dark" style="font-size: 0.65rem; font-weight: 700;">{{ booking.service_type }}</span>
+                </div>
+
+                <form method="POST" class="needs-validation" novalidate>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="letter-spacing: 0.05em;">1. Target Operational Stage</label>
+                        <select name="status" class="form-select fw-bold" required style="font-size: 0.85rem;">
+                            <option value="Booked" {% if booking.status == 'Booked' %}selected{% endif %}>Booked</option>
+                            <option value="Booking Confirmed" {% if booking.status == 'Booking Confirmed' %}selected{% endif %}>Booking Confirmed</option>
+                            <option value="Cargo Received" {% if booking.status == 'Cargo Received' %}selected{% endif %}>Cargo Received</option>
+                            <option value="Loaded" {% if booking.status == 'Loaded' %}selected{% endif %}>Loaded</option>
+                            <option value="Sailed" {% if booking.status == 'Sailed' %}selected{% endif %}>Sailed</option>
+                            <option value="Arrived" {% if booking.status == 'Arrived' %}selected{% endif %}>Arrived</option>
+                            <option value="Delivered" {% if booking.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                        </select>
+                        <div class="form-text text-muted" style="font-size: 0.7rem;">Select the official shipment status to propagate down current supply chains.</div>
+                    </div>
+
+                    <div class="mb-4 pb-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="letter-spacing: 0.05em;">2. Event Localization Node</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-compass"></i></span>
+                            <input type="text" name="location" class="form-control border-start-0 fw-bold" style="font-size: 0.85rem;" placeholder="e.g. Shanghai Hub, CY Terminal" required>
+                        </div>
+                        <div class="form-text text-muted" style="font-size: 0.7rem;">Input the specific physical coordinate or port terminal name.</div>
+                    </div>
+
+                    <div class="border-top pt-3">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 mb-2 shadow-sm d-flex align-items-center justify-content-center" style="border-radius: 6px; font-size: 0.85rem;">
+                            <i class="bi bi-cloud-upload me-2"></i> Commit State Mutation
+                        </button>
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-link w-100 text-decoration-none text-muted small fw-bold" style="font-size: 0.75rem;">
+                            Abort and Return
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-4 border-0 rounded-3 p-3 d-flex align-items-start" style="background-color: #E0F2FE; color: #0369A1; font-size: 0.75rem;">
+            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+            <div>
+                <strong>Automated Dispatch Logic:</strong> Committing this event triggers instant notification vectors to the allocated client dashboard and replicates coordinates across global visibility channels.
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
