@@ -209,7 +209,11 @@
         {% if current_user.is_authenticated %}
         <aside class="sidebar">
             <div class="d-flex align-items-center mb-4 ps-2">
+                {% if not (current_user.is_authenticated and current_user.company and current_user.company.ftl_code == 'AXE') %}
                 <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="65" class="navbar-logo">
+                {% else %}
+                <h4 class="text-white fw-bold mb-0 ms-2 mt-2">AxeGlobal</h4>
+                {% endif %}
             </div>
 
             
@@ -349,7 +353,11 @@
                         <button class="btn text-white d-lg-none me-3" onclick="document.querySelector('.sidebar').classList.toggle('show')">
                             <i class="bi bi-list fs-3"></i>
                         </button>
+                        {% if not (current_user.company and current_user.company.ftl_code == 'AXE') %}
                         <img src="{{ system_logo_url }}" alt="Logo" height="40" class="ms-3 d-none d-md-block navbar-logo topbar-logo">
+                        {% else %}
+                        <h4 class="text-dark fw-bold mb-0 ms-3 d-none d-md-block topbar-logo">AxeGlobal</h4>
+                        {% endif %}
                     {% else %}
                         <a href="/">
                             <img src="{{ system_logo_url }}" alt="Fast Transit Line" height="50" class="navbar-logo">
