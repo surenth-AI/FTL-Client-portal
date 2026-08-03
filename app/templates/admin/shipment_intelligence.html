@@ -11,15 +11,15 @@
   --dashboard-text: #1E293B;
   --dashboard-muted: #64748B;
   
-  --violet: #8B5CF6;
-  --violet2: #A78BFA;
-  --purple: #C026D3;
-  --cyan: #06B6D4;
-  --cyan2: #22D3EE;
-  --pink: #EC4899;
-  --green: #10B981;
-  --amber: #F59E0B;
-  --red: #EF4444;
+  --violet: #6366f1; /* Indigo 500 */
+  --violet2: #818cf8; /* Indigo 400 */
+  --purple: #8b5cf6; /* Violet 500 */
+  --cyan: #0ea5e9; /* Sky 500 */
+  --cyan2: #38bdf8; /* Sky 400 */
+  --pink: #d946ef; /* Fuchsia 500 */
+  --green: #10b981; /* Emerald 500 */
+  --amber: #f59e0b; /* Amber 500 */
+  --red: #ef4444; /* Red 500 */
   --r: 16px;
 }
 
@@ -51,7 +51,7 @@ html[data-color-scheme='dark'] {
 .atlas-dashboard .top .right { display:flex; gap:10px; align-items:center; }
 .atlas-dashboard select, .atlas-dashboard .btn-atlas { font-family:inherit; font-size:.8rem; font-weight:600; border-radius:12px; padding:9px 14px; cursor:pointer; border:1px solid var(--dashboard-line); outline:none; }
 .atlas-dashboard select { background:var(--dashboard-card); color:var(--dashboard-text); }
-.atlas-dashboard .btn-atlas { background:linear-gradient(135deg,var(--violet),var(--purple)); color:#fff; border:none; box-shadow:0 6px 20px -6px rgba(139,92,246,.7); }
+.atlas-dashboard .btn-atlas { background:var(--dashboard-card); color:var(--dashboard-text); border:1px solid var(--dashboard-line); box-shadow:0 2px 6px -2px rgba(0,0,0,.05); }
 .atlas-dashboard .btn-atlas:hover { filter:brightness(1.1); }
 
 /* pills */
@@ -69,12 +69,12 @@ html[data-color-scheme='dark'] {
 .atlas-dashboard .kpi .num { font-size:2.15rem; font-weight:800; letter-spacing:-.03em; margin:10px 0 4px; }
 .atlas-dashboard .kpi .num small { font-size:1rem; font-weight:600; color:inherit; opacity:.75; margin-left:2px; }
 .atlas-dashboard .kpi .sub { font-size:.74rem; color:var(--dashboard-muted); }
-.atlas-dashboard .kpi.grad-v { background:linear-gradient(135deg,#7C3AED 0%,#A855F7 55%,#C084FC 100%); border:none; box-shadow:0 14px 34px -12px rgba(139,92,246,.65); }
-.atlas-dashboard .kpi.grad-c { background:linear-gradient(135deg,#0891B2 0%,#22D3EE 60%,#67E8F9 100%); border:none; box-shadow:0 14px 34px -12px rgba(34,211,238,.5); }
-.atlas-dashboard .kpi.grad-v .lbl, .atlas-dashboard .kpi.grad-c .lbl, .atlas-dashboard .kpi.grad-v .sub, .atlas-dashboard .kpi.grad-c .sub { color:rgba(255,255,255,.9); }
-.atlas-dashboard .kpi.grad-v .num, .atlas-dashboard .kpi.grad-c .num { color:#fff; }
-.atlas-dashboard .kpi.grad-v::after, .atlas-dashboard .kpi.grad-c::after { content:""; position:absolute; width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.14); top:-60px; right:-40px; }
-.atlas-dashboard .kpi.grad-v .pill, .atlas-dashboard .kpi.grad-c .pill { background:rgba(255,255,255,.22); color:#fff; }
+.atlas-dashboard .kpi.grad-v { background:linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%); border:1px solid var(--dashboard-line); box-shadow:0 8px 24px -12px rgba(99,102,241,.15); }
+.atlas-dashboard .kpi.grad-c { background:linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%); border:1px solid var(--dashboard-line); box-shadow:0 8px 24px -12px rgba(14,165,233,.15); }
+.atlas-dashboard .kpi.grad-v .lbl, .atlas-dashboard .kpi.grad-c .lbl, .atlas-dashboard .kpi.grad-v .sub, .atlas-dashboard .kpi.grad-c .sub { color:rgba(0,0,0,.6); }
+.atlas-dashboard .kpi.grad-v .num, .atlas-dashboard .kpi.grad-c .num { color:rgba(0,0,0,.8); }
+.atlas-dashboard .kpi.grad-v::after, .atlas-dashboard .kpi.grad-c::after { content:""; position:absolute; width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.4); top:-60px; right:-40px; }
+.atlas-dashboard .kpi.grad-v .pill, .atlas-dashboard .kpi.grad-c .pill { background:rgba(0,0,0,.08); color:rgba(0,0,0,.7); }
 
 /* grid */
 .atlas-dashboard .grid-container { display:grid; grid-template-columns:1fr 1fr 330px; gap:16px; }
@@ -91,7 +91,7 @@ html[data-color-scheme='dark'] .atlas-dashboard .acard { box-shadow:0 10px 30px 
 .atlas-dashboard .chartbox.small { height:205px; }
 
 /* float badge */
-.atlas-dashboard .float-badge { position:absolute; top:26px; left:44%; background:linear-gradient(135deg,var(--violet),var(--purple)); color:#fff; font-size:.72rem; font-weight:700; padding:5px 11px; border-radius:9px; box-shadow:0 8px 22px -6px rgba(139,92,246,.8); z-index:10;}
+.atlas-dashboard .float-badge { position:absolute; top:26px; left:44%; background:linear-gradient(135deg,var(--violet),var(--purple)); color:var(--dashboard-text); font-size:.72rem; font-weight:700; padding:5px 11px; border-radius:9px; box-shadow:0 8px 22px -6px rgba(139,92,246,.8); z-index:10;}
 .atlas-dashboard .float-badge::after { content:""; position:absolute; left:50%; bottom:-5px; transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--purple); border-bottom:none; }
 
 /* legend */
@@ -99,7 +99,7 @@ html[data-color-scheme='dark'] .atlas-dashboard .acard { box-shadow:0 10px 30px 
 .atlas-dashboard .legend i { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:1px; }
 
 /* pipeline card */
-.atlas-dashboard .holo { border-radius:var(--r); padding:18px 20px; position:relative; overflow:hidden; color:#fff; background:linear-gradient(150deg,#241B45 0%,#3B2A73 45%,#1B1533 100%); border:1px solid rgba(167,139,250,.28); box-shadow:0 16px 38px -14px rgba(88,58,183,.6); }
+.atlas-dashboard .holo { border-radius:var(--r); padding:18px 20px; position:relative; overflow:hidden; color:var(--dashboard-text); background:linear-gradient(150deg,#241B45 0%,#3B2A73 45%,#1B1533 100%); border:1px solid rgba(167,139,250,.28); box-shadow:0 16px 38px -14px rgba(88,58,183,.6); }
 .atlas-dashboard .holo .wave { position:absolute; inset:0; opacity:.5; }
 .atlas-dashboard .holo .lbl { font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.6); }
 .atlas-dashboard .holo .num { font-size:1.9rem; font-weight:800; letter-spacing:-.02em; margin:6px 0 12px; position:relative; }
@@ -146,6 +146,18 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
 .atlas-dashboard .fade-in { opacity:0; transform:translateY(12px); animation:fadeInDash .5s ease forwards; }
 @keyframes fadeInDash { to { opacity:1; transform:none; } }
 @media(prefers-reduced-motion:reduce){ .atlas-dashboard .fade-in { animation:none; opacity:1; transform:none; } }
+
+/* carrier popup */
+.atlas-dashboard .carrier-popup-wrapper { position: relative; text-align: center; margin-top: 10px; }
+.atlas-dashboard .carrier-popup { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--dashboard-card); border: 1px solid var(--dashboard-line); border-radius: 8px; padding: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 100; min-width: 200px; text-align: left; margin-bottom: 10px;}
+html[data-color-scheme='dark'] .atlas-dashboard .carrier-popup { box-shadow: 0 10px 30px -18px rgba(0,0,0,.9); }
+.atlas-dashboard .carrier-popup.show { display: block; }
+.atlas-dashboard .carrier-popup-header { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.75rem; font-weight: 600; color: var(--amber); border-bottom: 1px solid var(--dashboard-line); padding-bottom: 6px;}
+.atlas-dashboard .carrier-popup-header span { cursor: pointer; }
+.atlas-dashboard .carrier-popup-list { max-height: 200px; overflow-y: auto; }
+.atlas-dashboard .carrier-popup-list label { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; margin-bottom: 8px; cursor: pointer; }
+.atlas-dashboard .carrier-popup-list input { cursor: pointer; accent-color: var(--dashboard-text); width: 14px; height: 14px;}
+
 </style>
 {% endblock %}
 
@@ -169,7 +181,6 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
                 <option>Last 30 days</option>
                 <option>Last 12 weeks</option>
             </select>
-            <button class="btn-atlas">＋ Add widget</button>
         </div>
     </div>
     
@@ -186,12 +197,12 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
         <div class="sub">Quotes, Manual</div>
       </div>
       <div class="kpi fade-in" style="animation-delay:.15s">
-        <div class="lbl">Profit (API Required) <span class="pill g">+12%</span></div>
+        <div class="lbl">Profit <span class="pill g">+12%</span></div>
         <div class="num">146</div>
         <div class="sub">Bookings last 4 wks vs 130 prior</div>
       </div>
       <div class="kpi fade-in" style="animation-delay:.2s">
-        <div class="lbl">Loss (API Required) <span class="pill a">WATCH</span></div>
+        <div class="lbl">Loss <span class="pill a">WATCH</span></div>
         <div class="num">61<small>%</small></div>
         <div class="sub">Volume held by 5 of 14 accounts</div>
       </div>
@@ -216,16 +227,26 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
   
       <!-- right column -->
       <div class="rightcol">
-        <div class="holo fade-in" style="animation-delay:.3s">
-          <svg class="wave" viewBox="0 0 330 150" preserveAspectRatio="none">
-            <path d="M0 110 C60 70 90 130 150 95 S260 40 330 78" fill="none" stroke="rgba(167,139,250,.8)" stroke-width="2.5"/>
-            <path d="M0 120 C70 90 110 140 170 108 S270 60 330 95" fill="none" stroke="rgba(103,232,249,.5)" stroke-width="2"/>
-          </svg>
-          <div class="lbl">Total pipeline · premium</div>
-          <div class="num">$4,280,400</div>
-          <div class="digits">QT26 •• 4187 •• 0731</div>
-          <div class="foot"><span>ATLAS FREIGHT LINE</span><span>VALID THRU 08/26</span></div>
+      <!-- doughnut: carrier -->
+      <div class="acard fade-in" style="animation-delay:.45s">
+        <div class="head-row">
+          <div><h3>Carrier mix</h3><div class="hint">Share of sailings · dependence check</div></div>
+          <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
         </div>
+        <div class="chartbox small"><canvas id="chCarrier"></canvas></div>
+        <div class="carrier-popup-wrapper">
+          <a href="#" id="showCarriersLink" style="font-size:0.75rem; color:var(--cyan); text-decoration:none; font-weight:600;">Show all carriers</a>
+          <div id="carrierPopup" class="carrier-popup">
+             <div class="carrier-popup-header">
+               <span id="selectAllCarriers">Select all</span>
+               <span id="clearCarriers">Clear</span>
+             </div>
+             <div class="carrier-popup-list" id="carrierList">
+               <!-- populated by js -->
+             </div>
+          </div>
+        </div>
+      </div>
   
         <div class="acard fade-in" style="animation-delay:.35s">
           <div class="head-row">
@@ -239,6 +260,7 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
           <div class="arow"><div class="ic r">⚠</div><div class="tx"><b>AR Risk</b><small>Pending collections</small></div><div class="amt" style="color:var(--red)">$412K<small>at risk</small></div></div>
           <div class="arow"><div class="ic a">⏱</div><div class="tx"><b>6 cut-offs ≤ 48h</b><small>VGM / docs / customs open</small></div><div class="amt">6<small>vessels</small></div></div>
           <div class="arow"><div class="ic v">☣</div><div class="tx"><b>HAZMAT share</b><small>31 of 368 live bookings</small></div><div class="amt">8.4%<small>IMO flagged</small></div></div>
+          <div style="text-align:center; margin-top:12px;"><a href="#" style="font-size:0.75rem; color:var(--cyan); text-decoration:none; font-weight:600;">Show more</a></div>
         </div>
   
         <div class="acard fade-in" style="animation-delay:.4s">
@@ -254,38 +276,24 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
           <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4194 · Elbe Machinery</b><small>INNSA → BEANR</small></div><div class="amt">$71K<small>2d left</small></div></div>
           <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4201 · Kaveri Auto</b><small>INMAA → DEHAM</small></div><div class="amt">$58K<small>4d left</small></div></div>
           <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4215 · Delta Polymers</b><small>INMAA → SGSIN</small></div><div class="amt">$34K<small>6d left</small></div></div>
+          <div style="text-align:center; margin-top:12px;"><a href="#" style="font-size:0.75rem; color:var(--cyan); text-decoration:none; font-weight:600;">Show more</a></div>
         </div>
       </div>
   
-      <!-- doughnut: carrier -->
-      <div class="acard fade-in" style="animation-delay:.45s">
+      <!-- shipment status -->
+      <div class="acard span2 fade-in" style="animation-delay:.45s">
         <div class="head-row">
-          <div><h3>Carrier mix</h3><div class="hint">Share of sailings · dependence check</div></div>
-          <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+          <div><h3>Shipment Status</h3><div class="hint">Completed vs Incomplete</div></div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <select id="shipmentTypeFilter" aria-label="Type" style="padding:4px 8px;font-size:.65rem;border-radius:6px;">
+              <option value="all">All Types</option>
+              <option value="export">Export</option>
+              <option value="import">Import</option>
+            </select>
+            <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+          </div>
         </div>
-        <div class="chartbox small"><canvas id="chCarrier"></canvas></div>
-        <div class="legend" style="justify-content:center;margin-top:10px;flex-wrap:wrap">
-          <span><i style="background:#8B5CF6"></i>MSC</span><span><i style="background:#06B6D4"></i>Maersk</span>
-          <span><i style="background:#EC4899"></i>CMA</span><span><i style="background:#67E8F9"></i>Hapag</span>
-          <span><i style="background:#A78BFA"></i>ONE</span>
-        </div>
-      </div>
-  
-      <!-- ring: booked vs expired -->
-      <div class="acard fade-in" style="animation-delay:.5s">
-        <div class="head-row">
-          <div><h3>Quote outcome (30d)</h3><div class="hint">Booked vs expired vs open</div></div>
-          <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
-        </div>
-        <div class="chartbox small">
-          <canvas id="chOutcome"></canvas>
-          <div class="center-lb"><div><b>151</b><small>quotes issued</small></div></div>
-        </div>
-        <div class="legend" style="justify-content:center;margin-top:10px">
-          <span><i style="background:#C026D3"></i>Booked 47</span>
-          <span><i style="background:#06B6D4"></i>Open 76</span>
-          <span><i style="background:var(--dashboard-line)"></i>Expired 28</span>
-        </div>
+        <div class="chartbox small"><canvas id="chShipmentStatus"></canvas></div>
       </div>
   
       <!-- lanes as goal rows -->
@@ -309,13 +317,21 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
         <div class="lane"><div class="ring" style="--p:41;--rc:#A78BFA"><b>41%</b></div>
           <div class="tx"><b>Delta Polymers</b><small>Plastics · Antwerp</small></div>
           <div class="v1">$486K<small>revenue</small></div><div class="v2">1,090<small>CBM</small></div></div>
+        <div style="text-align:center; margin-top:12px;"><a href="#" style="font-size:0.75rem; color:var(--cyan); text-decoration:none; font-weight:600;">Show more</a></div>
       </div>
   
-      <!-- weekday bars -->
+      <!-- weekday bars -> client profit line -->
       <div class="acard fade-in" style="animation-delay:.6s">
         <div class="head-row">
-          <div><h3>Client specific ETD-ETA</h3><div class="hint">Estimated vs Actual overall performance</div></div>
-          <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+          <div><h3>Client specific profit</h3><div class="hint">Monthly profit trends per top client</div></div>
+          <div style="display:flex; gap:10px; align-items:center;">
+             <select id="clientProfitFilter" aria-label="Client" style="padding:4px 8px;font-size:.65rem;border-radius:6px;">
+                <option value="nordchem" selected>NordChem BV</option>
+                <option value="elbe">Elbe Machinery</option>
+                <option value="all">All Top Clients</option>
+             </select>
+             <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+          </div>
         </div>
         <div class="chartbox small"><canvas id="chDays"></canvas></div>
       </div>
@@ -343,6 +359,18 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Dynamic theme colors
     const isDark = document.documentElement.getAttribute('data-color-scheme') === 'dark';
+
+    const style = getComputedStyle(document.body);
+    const getVar = (name) => style.getPropertyValue(name).trim();
+    const cyanMain = getVar('--cyan');
+    const violet = getVar('--violet');
+    const violet2 = getVar('--violet2');
+    const purple = getVar('--purple');
+    const pink = getVar('--pink');
+    const green = getVar('--green');
+    const amber = getVar('--amber');
+    const red = getVar('--red');
+
     
     Chart.defaults.font.family="'Inter',sans-serif";
     Chart.defaults.color = isDark ? '#8A87A0' : '#64748B';
@@ -367,17 +395,17 @@ document.addEventListener("DOMContentLoaded", function() {
         return g;
     }
     
-    const cyanMain = isDark ? '#22D3EE' : '#06B6D4';
+    
     
     /* 1 · trend: glowing lines + area fills */
     {
         const ctx = document.getElementById('chTrend').getContext('2d');
         new Chart(ctx,{type:'line',data:{labels:weeks,datasets:[
-        {label:'Quotes',data:quotesW,borderColor:'#A78BFA',borderWidth:2.5,tension:.45,
+        {label:'Quotes',data:quotesW,borderColor:violet2,borderWidth:2.5,tension:.45,
         pointRadius:(x)=>x.dataIndex===9?5:0,pointBackgroundColor:'#C084FC',pointBorderColor:'#fff',pointBorderWidth:2,
-        fill:true,backgroundColor:vGrad(ctx,'rgba(139,92,246,.30)','rgba(139,92,246,0)')},
+        fill:true,backgroundColor:vGrad(ctx, isDark ? 'rgba(139,92,246,.30)' : 'rgba(139,165,201,.30)', 'transparent')},
         {label:'Bookings',data:bookW,borderColor:cyanMain,borderWidth:2.5,tension:.45,pointRadius:0,
-        fill:true,backgroundColor:vGrad(ctx, isDark ? 'rgba(34,211,238,.22)' : 'rgba(6,182,212,.22)','rgba(34,211,238,0)')},
+        fill:true,backgroundColor:vGrad(ctx, isDark ? 'rgba(34,211,238,.22)' : 'rgba(139,195,201,.40)', 'transparent')},
         {label:'Quotes trend',data:quotesW.map(v=>v*0.92),borderColor:'rgba(167,139,250,.35)',borderDash:[5,6],
         borderWidth:1.5,tension:.45,pointRadius:0}]},
         options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt},
@@ -387,33 +415,130 @@ document.addEventListener("DOMContentLoaded", function() {
     
     /* 2 · carrier doughnut */
     {
-        const ctx = document.getElementById('chCarrier').getContext('2d');
-        new Chart(ctx,{type:'doughnut',data:{labels:['MSC','Maersk','CMA CGM','Hapag','ONE','Other'],
-        datasets:[{data:[31,24,17,13,9,6],borderWidth:3,borderColor: isDark ? '#161326' : '#FFFFFF',borderRadius:6,
-        backgroundColor:['#8B5CF6',cyanMain,'#EC4899','#67E8F9','#A78BFA', isDark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)']}]},
+        const carrierData = [
+            {name: 'MSC', val: 31, col: violet},
+            {name: 'Maersk', val: 24, col: cyanMain},
+            {name: 'CMA CGM', val: 17, col: pink},
+            {name: 'Hapag-Lloyd', val: 13, col: '#67E8F9'},
+            {name: 'Evergreen', val: 10, col: green},
+            {name: 'ONE Line', val: 9, col: violet2},
+            {name: 'Emirates SkyCargo', val: 8, col: amber},
+            {name: 'Qatar Airways Cargo', val: 7, col: red},
+            {name: 'Cathay Cargo', val: 6, col: getVar('--cyan2')},
+            {name: 'Other', val: 5, col: '#9CA3AF'}
+        ];
+        
+        let selectedCarriers = new Set(carrierData.map(c => c.name));
+
+        const ctxC = document.getElementById('chCarrier').getContext('2d');
+        const chCarrier = new Chart(ctxC,{type:'doughnut',data:{labels:[], datasets:[{data:[],backgroundColor:[],borderWidth:2,borderColor: 'transparent',borderRadius:4}]},
         options:{maintainAspectRatio:false,cutout:'68%',
         plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}}}}});
+
+        function updateCarrierChart() {
+            const filtered = carrierData.filter(c => selectedCarriers.has(c.name));
+            chCarrier.data.labels = filtered.map(c => c.name);
+            chCarrier.data.datasets[0].data = filtered.map(c => c.val);
+            chCarrier.data.datasets[0].backgroundColor = filtered.map(c => c.col);
+            chCarrier.update();
+        }
+        
+        const listContainer = document.getElementById('carrierList');
+        carrierData.forEach(c => {
+            const lbl = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = true;
+            cb.value = c.name;
+            cb.addEventListener('change', (e) => {
+                if(e.target.checked) selectedCarriers.add(c.name);
+                else selectedCarriers.delete(c.name);
+                updateCarrierChart();
+            });
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(c.name));
+            listContainer.appendChild(lbl);
+        });
+
+        document.getElementById('showCarriersLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('carrierPopup').classList.toggle('show');
+        });
+        document.getElementById('selectAllCarriers').addEventListener('click', () => {
+            selectedCarriers = new Set(carrierData.map(c => c.name));
+            listContainer.querySelectorAll('input').forEach(i => i.checked = true);
+            updateCarrierChart();
+        });
+        document.getElementById('clearCarriers').addEventListener('click', () => {
+            selectedCarriers.clear();
+            listContainer.querySelectorAll('input').forEach(i => i.checked = false);
+            updateCarrierChart();
+        });
+
+        // hide on outside click
+        document.addEventListener('click', (e) => {
+            const pop = document.getElementById('carrierPopup');
+            const link = document.getElementById('showCarriersLink');
+            if(!pop.contains(e.target) && e.target !== link) {
+                pop.classList.remove('show');
+            }
+        });
+
+        updateCarrierChart();
     }
     
-    /* 3 · quote outcome ring */
+    /* 3 · shipment status grouped bars */
     {
-        const ctx = document.getElementById('chOutcome').getContext('2d');
-        new Chart(ctx,{type:'doughnut',data:{labels:['Booked','Open','Expired'],
-        datasets:[{data:[47,76,28],borderWidth:3,borderColor: isDark ? '#161326' : '#FFFFFF',borderRadius:10,
-        backgroundColor:['#C026D3',cyanMain, isDark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)']}]},
-        options:{maintainAspectRatio:false,cutout:'74%',rotation:-100,
-        plugins:{legend:{display:false},tooltip:tt}}});
+        const ctx = document.getElementById('chShipmentStatus').getContext('2d');
+        const shipmentChart = new Chart(ctx,{type:'bar',data:{labels:['W32','W33','W34','W35','W36','W37'],
+        datasets:[
+            {label:'Export Completed',data:[25,22,30,28,32,18],backgroundColor:green,stack:'Export',borderRadius:4,category:'export'},
+            {label:'Export Incomplete',data:[8,9,5,7,4,12],backgroundColor:isDark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)',stack:'Export',borderRadius:4,category:'export'},
+            {label:'Import Completed',data:[17,16,21,18,23,12],backgroundColor:violet,stack:'Import',borderRadius:4,category:'import'},
+            {label:'Import Incomplete',data:[4,5,4,4,4,10],backgroundColor:isDark ? 'rgba(255,255,255,.24)' : 'rgba(0,0,0,.15)',stack:'Import',borderRadius:4,category:'import'}
+        ]},
+        options:{maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom'},tooltip:tt},
+        scales:{y:{beginAtZero:true,stacked:true,grid:{drawTicks:false},border:{display:false}},
+                x:{stacked:true,grid:{display:false},border:{display:false}}}}});
+
+        document.getElementById('shipmentTypeFilter').addEventListener('change', function(e) {
+            const val = e.target.value;
+            shipmentChart.data.datasets.forEach(ds => {
+                if (val === 'all') {
+                    ds.hidden = false;
+                } else {
+                    ds.hidden = (ds.category !== val);
+                }
+            });
+            shipmentChart.update();
+        });
     }
     
-    /* 4 · weekday bars — cyan→violet gradient */
+    /* 4 · client profit line */
     {
         const ctx = document.getElementById('chDays').getContext('2d');
-        const g=vGrad(ctx, isDark ? '#67E8F9' : '#06B6D4','#8B5CF6');
-        new Chart(ctx,{type:'bar',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat'],
-        datasets:[{data:[38,26,31,44,52,18],backgroundColor:g,borderRadius:8,barPercentage:.55}]},
-        options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt},
+        const profitChart = new Chart(ctx,{type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun'],
+        datasets:[
+            {label:'NordChem BV',data:[120,190,150,220,290,240],borderColor:violet,backgroundColor:'rgba(139,92,246,0.1)',borderWidth:2.5,tension:0.4,fill:true, client:'nordchem'},
+            {label:'Elbe Machinery',data:[80,120,180,140,200,250],borderColor:cyanMain,backgroundColor:isDark ? 'rgba(34,211,238,0.1)' : 'rgba(6,182,212,0.1)',borderWidth:2.5,tension:0.4,fill:true, client:'elbe'}
+        ]},
+        options:{maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom'},tooltip:tt},
         scales:{y:{beginAtZero:true,grid:{drawTicks:false},border:{display:false}},
                 x:{grid:{display:false},border:{display:false}}}}});
+
+        profitChart.data.datasets.forEach(ds => {
+            if(ds.client !== 'nordchem') ds.hidden = true;
+        });
+        profitChart.update();
+
+        document.getElementById('clientProfitFilter')?.addEventListener('change', (e) => {
+            const val = e.target.value;
+            profitChart.data.datasets.forEach(ds => {
+                if(val === 'all') ds.hidden = false;
+                else ds.hidden = (ds.client !== val);
+            });
+            profitChart.update();
+        });
     }
     
     /* 5 · branch: bars + conversion line */
