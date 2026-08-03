@@ -76,6 +76,13 @@ html[data-color-scheme='dark'] {
 .atlas-dashboard .kpi.grad-v::after, .atlas-dashboard .kpi.grad-c::after { content:""; position:absolute; width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.4); top:-60px; right:-40px; }
 .atlas-dashboard .kpi.grad-v .pill, .atlas-dashboard .kpi.grad-c .pill { background:rgba(0,0,0,.08); color:rgba(0,0,0,.7); }
 
+html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-v { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-color: rgba(99,102,241,.3); box-shadow: 0 10px 30px -18px rgba(0,0,0,.8); }
+html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-c { background: linear-gradient(135deg, #082f49 0%, #0c4a6e 100%); border-color: rgba(14,165,233,.3); box-shadow: 0 10px 30px -18px rgba(0,0,0,.8); }
+html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-v .lbl, html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-c .lbl, html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-v .sub, html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-c .sub { color: rgba(255,255,255,.7); }
+html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-v .num, html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-c .num { color: #ffffff; }
+html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-v .pill, html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-c .pill { background: rgba(255,255,255,.15); color: #ffffff; }
+html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-v::after, html[data-color-scheme='dark'] .atlas-dashboard .kpi.grad-c::after { background: rgba(255,255,255,.05); }
+
 /* grid */
 .atlas-dashboard .grid-container { display:grid; grid-template-columns:1fr 1fr 330px; gap:16px; }
 .atlas-dashboard .acard { background:var(--dashboard-card); border:1px solid var(--dashboard-line); border-radius:var(--r); padding:18px 20px; min-width:0; box-shadow:0 8px 24px -12px rgba(0,0,0,.08); transition:transform 0.2s;}
