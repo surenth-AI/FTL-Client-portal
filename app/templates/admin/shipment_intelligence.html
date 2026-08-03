@@ -159,10 +159,10 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
         <div class="right">
             <select aria-label="Branch">
                 <option>All branches</option>
-                <option>MAA · Chennai</option>
-                <option>RTM · Rotterdam</option>
                 <option>ANR · Antwerp</option>
-                <option>SIN · Singapore</option>
+                <option>NLD · Netherlands</option>
+                <option>RTM · Rotterdam</option>
+                <option>LEH · Le Havre (France)</option>
             </select>
             <select aria-label="Period">
                 <option>This quarter</option>
@@ -176,22 +176,22 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
     <!-- KPI TILES -->
     <div class="kpis">
       <div class="kpi grad-v fade-in" style="animation-delay:.05s">
-        <div class="lbl">Quoted Pipeline (active)</div>
-        <div class="num">$4.28<small>M</small></div>
-        <div class="sub">128 quotes across 8 corridors</div>
+        <div class="lbl">Total (AR)</div>
+        <div class="num">$Total<small></small></div>
+        <div class="sub">Pending: $...</div>
       </div>
       <div class="kpi grad-c fade-in" style="animation-delay:.1s">
-        <div class="lbl">Quote → Booking</div>
-        <div class="num">31<small>%</small></div>
-        <div class="sub">Trailing 4 weeks · +2.1 pt</div>
+        <div class="lbl">Revise booking</div>
+        <div class="num">Total shipment<small></small></div>
+        <div class="sub">Quotes, Manual</div>
       </div>
       <div class="kpi fade-in" style="animation-delay:.15s">
-        <div class="lbl">Booking momentum <span class="pill g">+12%</span></div>
+        <div class="lbl">Profit (API Required) <span class="pill g">+12%</span></div>
         <div class="num">146</div>
         <div class="sub">Bookings last 4 wks vs 130 prior</div>
       </div>
       <div class="kpi fade-in" style="animation-delay:.2s">
-        <div class="lbl">Top-5 concentration <span class="pill a">WATCH</span></div>
+        <div class="lbl">Loss (API Required) <span class="pill a">WATCH</span></div>
         <div class="num">61<small>%</small></div>
         <div class="sub">Volume held by 5 of 14 accounts</div>
       </div>
@@ -203,7 +203,10 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
       <div class="acard span2 fade-in" style="animation-delay:.25s">
         <div class="head-row">
           <div><h3>Bookings Overview</h3><div class="hint">Quotes requested vs bookings won · weekly</div></div>
-          <div class="legend"><span><i style="background:var(--violet)"></i>Quotes</span><span><i style="background:var(--cyan)"></i>Bookings</span></div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div class="legend"><span><i style="background:var(--violet)"></i>Quotes</span><span><i style="background:var(--cyan)"></i>Bookings</span></div>
+            <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+          </div>
         </div>
         <div class="chartbox big">
           <div class="float-badge">W36 · 49 quotes</div>
@@ -225,17 +228,28 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
         </div>
   
         <div class="acard fade-in" style="animation-delay:.35s">
-          <div class="head-row"><h3>Risk radar</h3><span class="pill r">4 alerts</span></div>
-          <div class="hint">Act within 48h – 7d</div>
-          <div class="arow"><div class="ic r">⚠</div><div class="tx"><b>7 quotes expiring ≤ 7d</b><small>Unbooked demand</small></div><div class="amt" style="color:var(--red)">$412K<small>at risk</small></div></div>
+          <div class="head-row">
+            <div><h3>Risk radar</h3><div class="hint">Act within 48h – 7d</div></div>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span class="pill r">4 alerts</span>
+              <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+            </div>
+          </div>
+          <div class="arow"><div class="ic r">⚠</div><div class="tx"><b>AP Risk</b><small>High priority</small></div><div class="amt" style="color:var(--red)">$105K<small>at risk</small></div></div>
+          <div class="arow"><div class="ic r">⚠</div><div class="tx"><b>AR Risk</b><small>Pending collections</small></div><div class="amt" style="color:var(--red)">$412K<small>at risk</small></div></div>
           <div class="arow"><div class="ic a">⏱</div><div class="tx"><b>6 cut-offs ≤ 48h</b><small>VGM / docs / customs open</small></div><div class="amt">6<small>vessels</small></div></div>
           <div class="arow"><div class="ic v">☣</div><div class="tx"><b>HAZMAT share</b><small>31 of 368 live bookings</small></div><div class="amt">8.4%<small>IMO flagged</small></div></div>
-          <div class="arow"><div class="ic c">✦</div><div class="tx"><b>4 registrations &gt; 5d</b><small>Oldest waiting 11 days</small></div><div class="amt">4<small>pending</small></div></div>
         </div>
   
         <div class="acard fade-in" style="animation-delay:.4s">
-          <div class="head-row"><h3>Expiring quotes</h3><span class="pill v">follow-up</span></div>
-          <div class="hint">Sorted by value at risk</div>
+          <div class="head-row">
+            <div><h3>Expiring quotes</h3><div class="hint">Sorted by value at risk</div></div>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span class="pill v">follow-up</span>
+              <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+            </div>
+          </div>
+
           <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4187 · NordChem BV</b><small>INMAA → NLRTM</small></div><div class="amt">$96K<small>1d left</small></div></div>
           <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4194 · Elbe Machinery</b><small>INNSA → BEANR</small></div><div class="amt">$71K<small>2d left</small></div></div>
           <div class="arow"><div class="ic v">◈</div><div class="tx"><b>QT-26-4201 · Kaveri Auto</b><small>INMAA → DEHAM</small></div><div class="amt">$58K<small>4d left</small></div></div>
@@ -245,8 +259,10 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
   
       <!-- doughnut: carrier -->
       <div class="acard fade-in" style="animation-delay:.45s">
-        <div class="head-row"><h3>Carrier mix</h3></div>
-        <div class="hint">Share of sailings · dependence check</div>
+        <div class="head-row">
+          <div><h3>Carrier mix</h3><div class="hint">Share of sailings · dependence check</div></div>
+          <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+        </div>
         <div class="chartbox small"><canvas id="chCarrier"></canvas></div>
         <div class="legend" style="justify-content:center;margin-top:10px;flex-wrap:wrap">
           <span><i style="background:#8B5CF6"></i>MSC</span><span><i style="background:#06B6D4"></i>Maersk</span>
@@ -257,8 +273,10 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
   
       <!-- ring: booked vs expired -->
       <div class="acard fade-in" style="animation-delay:.5s">
-        <div class="head-row"><h3>Quote outcome (30d)</h3></div>
-        <div class="hint">Booked vs expired vs open</div>
+        <div class="head-row">
+          <div><h3>Quote outcome (30d)</h3><div class="hint">Booked vs expired vs open</div></div>
+          <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+        </div>
         <div class="chartbox small">
           <canvas id="chOutcome"></canvas>
           <div class="center-lb"><div><b>151</b><small>quotes issued</small></div></div>
@@ -272,26 +290,33 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
   
       <!-- lanes as goal rows -->
       <div class="acard span2 fade-in" style="animation-delay:.55s">
-        <div class="head-row"><h3>Top trade lanes</h3><span class="pill g">by quoted value</span></div>
-        <div class="hint">Ring = share of corridor capacity quoted this quarter</div>
+        <div class="head-row">
+          <div><h3>Top performing clients</h3><div class="hint">Ring = share of total revenue this quarter</div></div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <span class="pill g">by value</span>
+            <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+          </div>
+        </div>
         <div class="lane"><div class="ring" style="--p:78;--rc:#8B5CF6"><b>78%</b></div>
-          <div class="tx"><b>INMAA → NLRTM</b><small>Chennai · Rotterdam · weekly MSC + Maersk</small></div>
-          <div class="v1">$918K<small>quoted</small></div><div class="v2">2,140<small>CBM</small></div></div>
+          <div class="tx"><b>NordChem BV</b><small>Chemicals & Polymers · Rotterdam</small></div>
+          <div class="v1">$918K<small>revenue</small></div><div class="v2">2,140<small>CBM</small></div></div>
         <div class="lane"><div class="ring" style="--p:64;--rc:var(--cyan)"><b>64%</b></div>
-          <div class="tx"><b>INMAA → DEHAM</b><small>Chennai · Hamburg · Hapag-Lloyd EPIC</small></div>
-          <div class="v1">$742K<small>quoted</small></div><div class="v2">1,730<small>CBM</small></div></div>
+          <div class="tx"><b>Elbe Machinery</b><small>Industrial Equipment · Hamburg</small></div>
+          <div class="v1">$742K<small>revenue</small></div><div class="v2">1,730<small>CBM</small></div></div>
         <div class="lane"><div class="ring" style="--p:52;--rc:#EC4899"><b>52%</b></div>
-          <div class="tx"><b>CNSHA → INMAA</b><small>Shanghai · Chennai · import leg</small></div>
-          <div class="v1">$603K<small>quoted</small></div><div class="v2">1,420<small>CBM</small></div></div>
+          <div class="tx"><b>Kaveri Auto</b><small>Automotive Parts · Chennai</small></div>
+          <div class="v1">$603K<small>revenue</small></div><div class="v2">1,420<small>CBM</small></div></div>
         <div class="lane"><div class="ring" style="--p:41;--rc:#A78BFA"><b>41%</b></div>
-          <div class="tx"><b>INNSA → BEANR</b><small>Nhava Sheva · Antwerp · CMA CGM</small></div>
-          <div class="v1">$486K<small>quoted</small></div><div class="v2">1,090<small>CBM</small></div></div>
+          <div class="tx"><b>Delta Polymers</b><small>Plastics · Antwerp</small></div>
+          <div class="v1">$486K<small>revenue</small></div><div class="v2">1,090<small>CBM</small></div></div>
       </div>
   
       <!-- weekday bars -->
       <div class="acard fade-in" style="animation-delay:.6s">
-        <div class="head-row"><h3>Bookings / week day</h3></div>
-        <div class="hint">When demand lands · staffing signal</div>
+        <div class="head-row">
+          <div><h3>Client specific ETD-ETA</h3><div class="hint">Estimated vs Actual overall performance</div></div>
+          <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+        </div>
         <div class="chartbox small"><canvas id="chDays"></canvas></div>
       </div>
   
@@ -299,7 +324,10 @@ html[data-color-scheme='dark'] .atlas-dashboard .lane .v2 { color:var(--cyan2); 
       <div class="acard span2 fade-in" style="animation-delay:.65s">
         <div class="head-row">
           <div><h3>Branch scorecard</h3><div class="hint">Bookings vs conversion rate</div></div>
-          <div class="legend"><span><i style="background:#8B5CF6"></i>Bookings</span><span><i style="background:var(--cyan)"></i>Conversion %</span></div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div class="legend"><span><i style="background:#8B5CF6"></i>Bookings</span><span><i style="background:var(--cyan)"></i>Conversion %</span></div>
+            <button class="btn-atlas" style="padding:4px 8px;font-size:.65rem;border-radius:6px;min-width:auto;">Export</button>
+          </div>
         </div>
         <div class="chartbox small"><canvas id="chBranch"></canvas></div>
       </div>
