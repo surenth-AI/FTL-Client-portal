@@ -2,6 +2,7 @@
 {% block title %}Atlas Dashboard{% endblock %}
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <style>
 /* CSS Variables for Light Mode */
 :root {
@@ -500,11 +501,20 @@ document.addEventListener("DOMContentLoaded", function() {
         const shipmentChart = new Chart(ctx,{type:'bar',data:{labels:['W32','W33','W34','W35','W36','W37'],
         datasets:[
             {label:'Export Completed',data:[25,22,30,28,32,18],backgroundColor:green,stack:'Export',borderRadius:4,category:'export'},
-            {label:'Export Incomplete',data:[8,9,5,7,4,12],backgroundColor:isDark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)',stack:'Export',borderRadius:4,category:'export'},
+            {label:'Export Incomplete',data:[8,9,5,7,4,12],backgroundColor:isDark ? 'rgba(255,255,255,.14)' : '#94a3b8',stack:'Export',borderRadius:4,category:'export'},
             {label:'Import Completed',data:[17,16,21,18,23,12],backgroundColor:violet,stack:'Import',borderRadius:4,category:'import'},
-            {label:'Import Incomplete',data:[4,5,4,4,4,10],backgroundColor:isDark ? 'rgba(255,255,255,.24)' : 'rgba(0,0,0,.15)',stack:'Import',borderRadius:4,category:'import'}
+            {label:'Import Incomplete',data:[4,5,4,4,4,10],backgroundColor:isDark ? 'rgba(255,255,255,.24)' : '#cbd5e1',stack:'Import',borderRadius:4,category:'import'}
         ]},
-        options:{maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom'},tooltip:tt},
+        plugins: [ChartDataLabels],
+        options:{maintainAspectRatio:false,plugins:{
+            legend:{display:true,position:'bottom'},
+            tooltip:tt,
+            datalabels: {
+                color: isDark ? '#ffffff' : '#ffffff',
+                font: { weight: 'bold', size: 10 },
+                formatter: (value) => value > 0 ? value : ''
+            }
+        },
         scales:{y:{beginAtZero:true,stacked:true,grid:{drawTicks:false},border:{display:false}},
                 x:{stacked:true,grid:{display:false},border:{display:false}}}}});
 
