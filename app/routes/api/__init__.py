@@ -26,7 +26,7 @@ ATLAS_SHARED_TOKEN = "1"
 
 def check_auth(req):
     auth_header = req.headers.get('Authorization')
-    return auth_header == f"Bearer {ATLAS_SHARED_TOKEN}"
+    return auth_header == ATLAS_SHARED_TOKEN
 
 
 # ─────────────────────────────────────────────────────────────
@@ -265,7 +265,7 @@ def api_sync():
     tags:
       - ERP Sync API
     security:
-      - BearerAuth: []
+      - ApiKeyAuth: []
     parameters:
       - in: body
         name: body
@@ -416,7 +416,7 @@ def api_deactivate():
     tags:
       - ERP Sync API
     security:
-      - BearerAuth: []
+      - ApiKeyAuth: []
     parameters:
       - in: body
         name: body
@@ -464,7 +464,7 @@ def get_active_users():
     tags:
       - User Management API
     security:
-      - BearerAuth: []
+      - ApiKeyAuth: []
     parameters:
       - in: query
         name: erp_customer_code

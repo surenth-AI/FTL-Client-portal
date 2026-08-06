@@ -27,11 +27,11 @@ SWAGGER_CONFIG = {
     "swagger_ui": True,
     "specs_route": "/apidocs/",
     "securityDefinitions": {
-        "BearerAuth": {
+        "ApiKeyAuth": {
             "type": "apiKey",
             "name": "Authorization",
             "in": "header",
-            "description": "Enter: **Bearer 1** (the shared Atlas ERP token)"
+            "description": "Enter: **1** (the shared Atlas ERP token)"
         }
     }
 }
