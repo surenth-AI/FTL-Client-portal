@@ -437,27 +437,72 @@ def api_deactivate():
 @api_bp.route('/users/active', methods=['GET'])
 def get_active_users():
     """
-    List all currently activated users in the portal.
+    List all currently activated users in the portal, optionally filtered by company.
     ---
     tags:
       - User Management API
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: query
+        name: erp_customer_code
+        type: string
+        required: false
+        description: Filter by Atlas ERP customer code to get only users for a specific company.
+        example: CUST-10042
+      - in: query
+        name: company_id
+        type: integer
+        required: false
+        description: Filter by portal company ID to get only users for that company.
     responses:
       200:
         description: List of active users returned successfully.
+      401:
+        description: Unauthorized.
     """
-    active_users = User.query.filter_by(status='activated').all()
+    if not check_auth(request):
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    # Optional company/tenant filters from query params
+    erp_code = request.args.get('erp_customer_code', '').strip()
+    company_id = request.args.get('company_id', '').strip()
+
+    query = User.query.filter(User.status.in_(['active', 'activated']))
+
+    if erp_code:
+        query = query.filter_by(erp_customer_code=erp_code)
+    elif company_id:
+        try:
+            query = query.filter_by(company_id=int(company_id))
+        except ValueError:
+            return jsonify({"success": False, "message": "Invalid company_id. Must be an integer."}), 400
+
+    active_users = query.all()
+
     user_data = []
     for user in active_users:
         user_data.append({
             "id": user.id,
             "name": user.name,
             "email": user.email,
+            "mobile": user.mobile,
             "role": user.role,
-            "department": user.department
+            "department": user.department,
+            "status": user.status,
+            "erp_customer_code": user.erp_customer_code,
+            "registration_id": user.registration_id,
+            "company_id": user.company_id,
+            "company_name": user.company.name if user.company else None
         })
-    
+
     return jsonify({
         "success": True,
+        "total": len(user_data),
+        "filters_applied": {
+            "erp_customer_code": erp_code or None,
+            "company_id": int(company_id) if company_id else None
+        },
         "active_users": user_data
     }), 200
 
