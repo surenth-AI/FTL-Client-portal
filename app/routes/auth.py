@@ -146,8 +146,9 @@ def register_user():
         import uuid
         from datetime import datetime, timezone
         try:
+            reg_id = str(uuid.uuid4())
             rn_data = {
-                "registrationId": str(uuid.uuid4()),
+                "registrationId": reg_id,
                 "email": form.email.data,
                 "fullName": f"{form.first_name.data} {form.last_name.data}",
                 "phone": form.mobile.data or "",
@@ -159,6 +160,9 @@ def register_user():
             requests.post('http://realnexus.comit.cloud:5000/api/Registrations', 
                           headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
                           json=rn_data, timeout=10)
+            # Store registrationId on user so it can be returned to Atlas ERP on activation
+            user.registration_id = reg_id
+            db.session.commit()
         except Exception as e:
             print(f"Error posting to Realnexus: {e}")
         
@@ -253,8 +257,9 @@ def login():
         import uuid
         from datetime import datetime, timezone
         try:
+            reg_id = str(uuid.uuid4())
             rn_data = {
-                "registrationId": str(uuid.uuid4()),
+                "registrationId": reg_id,
                 "email": user_form.email.data,
                 "fullName": f"{user_form.first_name.data} {user_form.last_name.data}",
                 "phone": user_form.mobile.data or "",
@@ -266,6 +271,9 @@ def login():
             requests.post('http://realnexus.comit.cloud:5000/api/Registrations', 
                           headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
                           json=rn_data, timeout=10)
+            # Store registrationId on user so it can be returned to Atlas ERP on activation
+            user.registration_id = reg_id
+            db.session.commit()
         except Exception as e:
             print(f"Error posting to Realnexus: {e}")
         

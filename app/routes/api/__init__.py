@@ -355,8 +355,33 @@ def api_sync():
         except Exception as e:
             print(f"[api_sync] Failed to send activation email: {e}")
 
+        # 3. Return registrationID back to Atlas ERP
+        if user.registration_id:
+            try:
+                import requests as _req
+                import datetime as _dt
+                erp_callback_url = 'http://realnexus.comit.cloud:5000/api/Registrations/activate'
+                _req.post(
+                    erp_callback_url,
+                    headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
+                    json={
+                        'registrationId': user.registration_id,
+                        'email': user.email,
+                        'portalUserId': user.id,
+                        'activatedAt': _dt.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+                    },
+                    timeout=10
+                )
+                print(f"[api_sync] Sent registrationID {user.registration_id} back to Atlas ERP for {user.email}")
+            except Exception as e:
+                print(f"[api_sync] Failed to notify Atlas ERP of registrationID: {e}")
+
     if is_now_active:
-        return jsonify({"success": True, "message": "User account has been successfully activated."}), 200
+        return jsonify({
+            "success": True,
+            "message": "User account has been successfully activated.",
+            "registrationId": user.registration_id
+        }), 200
 
     return jsonify({"success": True, "message": "User sync completed successfully."}), 200
 
