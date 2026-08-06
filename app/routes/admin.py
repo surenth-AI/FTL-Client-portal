@@ -107,6 +107,7 @@ def dashboard():
 @admin_required
 def manage_users():
     page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 25, type=int)
     q = request.args.get('q', '', type=str)
     
     query = User.query.filter_by(role='customer')
@@ -114,7 +115,7 @@ def manage_users():
         search = f"%{q}%"
         query = query.filter((User.name.ilike(search)) | (User.email.ilike(search)))
         
-    pagination = query.order_by(User.id.desc()).paginate(page=page, per_page=25, error_out=False)
+    pagination = query.order_by(User.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
     if current_user.role == 'super_admin':
         staff = User.query.filter(User.role != 'customer').all()
@@ -233,7 +234,8 @@ def shipment_intelligence():
 @admin_required
 def view_rates():
     page = request.args.get('page', 1, type=int)
-    pagination = Rate.query.order_by(Rate.id.desc()).paginate(page=page, per_page=50, error_out=False)
+    per_page = request.args.get('per_page', 50, type=int)
+    pagination = Rate.query.order_by(Rate.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return render_template('admin/rates.html', pagination=pagination, rates=pagination.items)
 
 @admin.route('/rates/upload', methods=['GET', 'POST'])

@@ -59,14 +59,17 @@ class Config:
         SQLALCHEMY_DATABASE_URI = f"mssql+pyodbc:///?odbc_connect={params}"
     else:
         # Fallback to local SQLite database if no Azure settings are defined
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'axeglobal.db')
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'ftl_data.db')
 
+    # -------------------------------------------------------------
+    # Database Performance & Stability Tuning
+    # -------------------------------------------------------------
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     if azure_conn_str or db_server:
         SQLALCHEMY_ENGINE_OPTIONS = {
             'pool_size': 10,
             'max_overflow': 20,
-            'pool_recycle': 1800,
+            'pool_recycle': 300,  # Reduced from 1800 to 300 for Azure SQL idle dropping
             'pool_pre_ping': True,
             'pool_timeout': 30
         }

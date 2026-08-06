@@ -194,15 +194,17 @@ def my_quotes():
     from sqlalchemy import or_
     from datetime import timedelta
     
-    quotes = Booking.query.filter(
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    pagination = Booking.query.filter(
         Booking.user_id == current_user.id,
         or_(Booking.status == 'Saved Quote', Booking.status == 'Booked')
-    ).order_by(Booking.created_at.desc()).all()
+    ).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
     quote_data = []
     now = datetime.utcnow()
     
-    for q in quotes:
+    for q in pagination.items:
         valid_until = q.created_at + timedelta(days=30)
         
         if q.status == 'Booked':
@@ -220,7 +222,7 @@ def my_quotes():
             'valid_until': valid_until.strftime('%Y-%m-%d')
         })
         
-    return render_template('customer/my_quotes.html', quote_data=quote_data)
+    return render_template('customer/my_quotes.html', quote_data=quote_data, pagination=pagination)
 
 @customer.route('/save-quote', methods=['POST'])
 @login_required
@@ -309,6 +311,16 @@ def save_quote():
         flash(error_msg, 'danger')
         return redirect(url_for('customer.rate_results'))
 
+
+    cargo_ready = query.get('cargo_ready_date')
+    etd_date = None
+    if cargo_ready:
+        from datetime import datetime
+        try:
+            etd_date = datetime.strptime(cargo_ready, '%Y-%m-%d')
+        except:
+            pass
+
     booking = Booking(
         user_id=current_user.id,
         origin=origin,
@@ -318,7 +330,8 @@ def save_quote():
         total_cost=float(total_cost) if total_cost else 0.0,
         service_type=service_type,
         api_booking_ref=quote_number,
-        status='Saved Quote'
+        status='Saved Quote',
+        etd=etd_date
     )
     db.session.add(booking)
     db.session.commit()
@@ -378,6 +391,54 @@ def quote_detail(quote_id):
             print(f"Failed to load cached quote breakdown: {e}")
 
     return render_template('customer/quote_detail.html', quote=quote, breakdown=breakdown)
+
+@customer.route('/api/quote/<int:quote_id>/breakdown')
+@login_required
+def api_quote_breakdown(quote_id):
+    if current_user.role not in ['customer', 'agent']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    quote = Booking.query.filter_by(id=quote_id, user_id=current_user.id).first()
+    if not quote:
+        return jsonify({'error': 'Quote not found'}), 404
+        
+    breakdown = []
+    if quote.api_booking_ref:
+        import requests
+        headers = {'accept': 'application/json', 'x-api-key': '1'}
+        try:
+            api_id = quote.api_booking_ref.split('-')[-1] if '-' in quote.api_booking_ref else quote.api_booking_ref
+            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=5)
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                data = resp_json.get('quotation', resp_json)
+                tariff = data.get('tariff', data)
+                if isinstance(tariff, dict):
+                    breakdown = tariff.get('lines') or []
+        except Exception as e:
+            pass
+
+    # Fallback to cached API response if available
+    if not breakdown:
+        import os
+        import tempfile
+        import json
+        temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
+        try:
+            if os.path.exists(temp_file):
+                with open(temp_file, 'r', encoding='utf-8') as f:
+                    cached_data = json.load(f)
+                    data = cached_data.get('quotation', cached_data)
+                    header = data.get('header', data)
+                    quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
+                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
+                        tariff = data.get('tariff', data)
+                        if isinstance(tariff, dict):
+                            breakdown = tariff.get('lines') or []
+        except Exception:
+            pass
+
+    return jsonify({'breakdown': breakdown or []})
 
 @customer.route('/quote/<int:quote_id>/download_pdf')
 @login_required
@@ -679,7 +740,16 @@ def rates():
             else:
                 print("Constructed Payload:", json.dumps(payload, indent=2))
                 print("API ERROR:", api_resp.status_code, api_resp.text)
-                flash(f"Failed to create quotation. API responded with status {api_resp.status_code}. Error details: {api_resp.text}", "danger")
+                
+                # Parse the error message if possible
+                error_msg = api_resp.text
+                try:
+                    err_json = api_resp.json()
+                    error_msg = err_json.get('message', err_json.get('error', api_resp.text))
+                except Exception:
+                    pass
+                
+                flash(f"Failed to create quotation: {error_msg}", "danger")
                 return redirect(url_for('customer.rates'))
         except Exception as e:
             flash(f"API Error: {str(e)}", "danger")
@@ -881,11 +951,22 @@ def new_booking():
         if quote_data and quote_data.user_id != current_user.id:
             quote_data = None # security check
             
+    
+    # Fetch Countries
+    from app.services.master_data import get_code_list
+    try:
+        countries_api = get_code_list('countrycode')
+        countries = [c.to_dict() for c in countries_api] if countries_api else []
+    except Exception as ex:
+        print("Error fetching countries:", ex)
+        countries = []
+
     return render_template('customer/new_booking.html', 
                          origins=origins, 
                          destinations=destinations,
                          query=session.get('search_query', {}),
-                         quote_data=quote_data)
+                         quote_data=quote_data,
+                         countries=countries)
 
 @customer.route('/rate-results')
 @login_required
@@ -1208,8 +1289,10 @@ def booking_request():
 @customer.route('/my-shipments')
 @login_required
 def my_shipments():
-    shipments = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
-    return render_template('customer/shipments.html', shipments=shipments)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    pagination = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return render_template('customer/shipments.html', shipments=pagination.items, pagination=pagination)
 
 @customer.route('/shipment/<int:booking_id>')
 @login_required

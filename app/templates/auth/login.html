@@ -99,7 +99,7 @@
                             <button onclick="setView('login')" class="btn btn-sm btn-light border rounded-3 fw-semibold hover-scale-active"><i class="bi bi-x-lg"></i></button>
                         </div>
 
-                        <form method="POST" class="col-lg-9 mx-auto">
+                        <form method="POST" class="col-lg-9 mx-auto" autocomplete="off">
                             {{ user_form.hidden_tag() }}
                             
                             <!-- Row 1: Referral Code & Company Name -->
@@ -108,7 +108,7 @@
                                     <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Company Referral Code <span class="text-muted fw-normal lowercase font-monospace text-none" style="font-size: 0.75rem;">(Optional)</span></label>
                                     <div class="input-group input-group-custom border-primary-subtle">
                                         <span class="input-group-text bg-transparent"><i class="bi bi-key-fill text-primary icon-animate"></i></span>
-                                        {{ user_form.ftl_code(class="form-control border-start-0 ps-0", placeholder="FTL-BE-001") }}
+                                        {{ user_form.ftl_code(class="form-control border-start-0 ps-0", placeholder="Enter referral code") }}
                                     </div>
                                     <div class="smaller text-muted mt-1"><i class="bi bi-info-circle me-1"></i>Optional. Provided by your admin.</div>
                                     {% for error in user_form.ftl_code.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
@@ -117,7 +117,7 @@
                                     <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Company Full Name</label>
                                     <div class="input-group input-group-custom">
                                         <span class="input-group-text bg-transparent"><i class="bi bi-building text-muted icon-animate"></i></span>
-                                        {{ user_form.company_name(class="form-control border-start-0 ps-0", placeholder="Fast Transit Line") }}
+                                        {{ user_form.company_name(class="form-control border-start-0 ps-0", placeholder="Enter your company name") }}
                                     </div>
                                     {% for error in user_form.company_name.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
                                 </div>
@@ -187,14 +187,14 @@
 
                             <!-- Row 4: Password & Repeat Password -->
                             <div class="row g-3 mb-4">
-                                <div class="col-md-6">
+                                <div class="col-md-6 position-relative">
                                     <label class="form-label fw-bold text-dark mb-1 ls-1 text-uppercase smaller">Password</label>
                                     <div class="input-group input-group-custom">
                                         <span class="input-group-text bg-transparent"><i class="bi bi-lock-fill text-muted icon-animate"></i></span>
                                         {{ user_form.password(class="form-control border-start-0 ps-0", placeholder="••••••••", id="reg-pw") }}
                                     </div>
                                     {% for error in user_form.password.errors %}<div class="text-danger smaller mt-1">{{ error }}</div>{% endfor %}
-                                    <div id="pw-rules-reg" class="mt-2 px-3 py-2 rounded-3 smaller" style="display:none; background:#f8fafc; border:1.5px solid #e2e8f0;">
+                                    <div id="pw-rules-reg" class="mt-2 px-3 py-2 rounded-3 smaller" style="display:none; position: absolute; bottom: calc(100% + 5px); top: auto; left: 0; width: 100%; z-index: 1050; background:#fff; border:1px solid #e2e8f0; box-shadow: 0 -10px 25px rgba(0,0,0,0.15);">
                                         <div class="fw-semibold text-muted mb-1" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:.05em;">Password requirements</div>
                                         <ul class="list-unstyled mb-0" id="pw-rules-list">
                                             <li id="rg-len"   class="text-muted py-1 border-bottom" style="transition:all 0.3s ease;"><i class="bi bi-circle me-2"></i>At least 12 characters</li>

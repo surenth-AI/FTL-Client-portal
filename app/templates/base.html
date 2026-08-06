@@ -443,12 +443,44 @@
             <div class="container-fluid px-lg-5 py-4">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
+                        
+                        {# Separate messages into errors and normal alerts #}
+                        {% set error_messages = [] %}
+                        {% set normal_messages = [] %}
+                        
                         {% for category, message in messages %}
+                            {% if category in ['danger', 'error'] %}
+                                {% set _ = error_messages.append(message) %}
+                            {% else %}
+                                {% set _ = normal_messages.append((category, message)) %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {# Render normal messages as Bootstrap alerts #}
+                        {% for category, message in normal_messages %}
                             <div class="alert alert-{{ category }} alert-dismissible fade show glass-card border-0 mb-4">
-                                <i class="bi bi-info-circle me-2"></i> {{ message }}
+                                <i class="bi bi-{% if category == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i> {{ message }}
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
                             </div>
                         {% endfor %}
+
+                        {# Render error messages using SweetAlert2 #}
+                        {% if error_messages %}
+                            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    {% for msg in error_messages %}
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error!',
+                                            text: {{ msg | tojson | safe }},
+                                            confirmButtonColor: '#2563eb'
+                                        });
+                                    {% endfor %}
+                                });
+                            </script>
+                        {% endif %}
+                        
                     {% endif %}
                 {% endwith %}
 

@@ -1436,7 +1436,6 @@
         }
     
 </style>
-<div class="container">
 
         <div class="page-header">
             <h1 class="page-title">Create Booking</h1>
@@ -1457,7 +1456,7 @@
                         <span class="mode-icon-small">✈️</span>
                         <span class="mode-text">Air Freight</span>
                     </button>
-                    <button class="mode-option" id="quoteTabHeader" onclick="window.location.href=`{{ url_for('customer.my_quotes') }}`">
+                    <button class="mode-option" id="quoteTabHeader" onclick="selectBookingMode('quote')">
                         <span class="mode-icon-small">📌</span>
                         <span class="mode-text">Convert from a Quote</span>
                     </button>
@@ -1566,66 +1565,82 @@
                             <h3 class="route-section-title">📍 Origin <span class="from-quote-tag"
                                     id="originFromQuoteTag" style="display:none;">From Quote</span></h3>
                             <div class="form-grid">
-                                <div class="form-group">
-                                    <label class="form-label">Type <span class="required">*</span></label>
-                                    <select class="form-select" id="originType">
-                                        <option value="door">Door</option>
-                                        <option value="port">Port</option>
-                                    </select>
+                                    <div class="form-group">
+                                        <label class="form-label">Type <span class="required">*</span></label>
+                                        <select class="form-select" id="originType"
+                                            onchange="handleLocationTypeChange('origin')">
+                                            <option value="door">Door</option>
+                                            <option value="port">Port</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Country <span class="required">*</span></label>
+                                        <select class="form-select" id="originCountry"
+                                            onchange="handleCountryChange('origin')">
+                                            <option value="">Select country</option>
+                                            <option value="US">United States</option>
+                                            <option value="CN">China</option>
+                                            <option value="GB">United Kingdom</option>
+                                            <option value="DE">Germany</option>
+                                            <option value="ES">Spain</option>
+                                            <option value="FR">France</option>
+                                            <option value="NL">Netherlands</option>
+                                            <option value="BE">Belgium</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="originLocationGroup">
+                                        <label class="form-label" id="originLocationLabel">City <span
+                                                class="required">*</span></label>
+                                        <div class="searchable-select">
+                                            <input type="text" class="form-input searchable-input" id="originLocation"
+                                                placeholder="Search by city name or zip code"
+                                                onfocus="showDropdown('origin')" oninput="filterLocations('origin')"
+                                                autocomplete="off">
+                                            <div class="searchable-dropdown" id="originDropdown"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Country <span class="required">*</span></label>
-                                    <select class="form-select" id="originCountry">
-                                        <option value="">Select country</option>
-                                        <option value="US">United States</option>
-                                        <option value="CN">China</option>
-                                        <option value="GB">United Kingdom</option>
-                                        <option value="DE">Germany</option>
-                                        <option value="ES">Spain</option>
-                                        <option value="FR">France</option>
-                                        <option value="NL">Netherlands</option>
-                                        <option value="BE">Belgium</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">City / Port <span class="required">*</span></label>
-                                    <input type="text" class="form-input" id="originLocation"
-                                        placeholder="Search by city name or zip code">
-                                </div>
-                            </div>
                         </div>
 
                         <div class="route-section">
                             <h3 class="route-section-title">📍 Destination <span class="from-quote-tag"
                                     id="destFromQuoteTag" style="display:none;">From Quote</span></h3>
                             <div class="form-grid">
-                                <div class="form-group">
-                                    <label class="form-label">Type <span class="required">*</span></label>
-                                    <select class="form-select" id="destType">
-                                        <option value="door">Door</option>
-                                        <option value="port">Port</option>
-                                    </select>
+                                    <div class="form-group">
+                                        <label class="form-label">Type <span class="required">*</span></label>
+                                        <select class="form-select" id="destType"
+                                            onchange="handleLocationTypeChange('dest')">
+                                            <option value="door">Door</option>
+                                            <option value="port">Port</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Country <span class="required">*</span></label>
+                                        <select class="form-select" id="destCountry"
+                                            onchange="handleCountryChange('dest')">
+                                            <option value="">Select country</option>
+                                            <option value="US">United States</option>
+                                            <option value="CN">China</option>
+                                            <option value="GB">United Kingdom</option>
+                                            <option value="DE">Germany</option>
+                                            <option value="ES">Spain</option>
+                                            <option value="FR">France</option>
+                                            <option value="NL">Netherlands</option>
+                                            <option value="BE">Belgium</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="destLocationGroup">
+                                        <label class="form-label" id="destLocationLabel">City <span
+                                                class="required">*</span></label>
+                                        <div class="searchable-select">
+                                            <input type="text" class="form-input searchable-input" id="destLocation"
+                                                placeholder="Search by city name or zip code"
+                                                onfocus="showDropdown('dest')" oninput="filterLocations('dest')"
+                                                autocomplete="off">
+                                            <div class="searchable-dropdown" id="destDropdown"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Country <span class="required">*</span></label>
-                                    <select class="form-select" id="destCountry">
-                                        <option value="">Select country</option>
-                                        <option value="US">United States</option>
-                                        <option value="CN">China</option>
-                                        <option value="GB">United Kingdom</option>
-                                        <option value="DE">Germany</option>
-                                        <option value="ES">Spain</option>
-                                        <option value="FR">France</option>
-                                        <option value="NL">Netherlands</option>
-                                        <option value="BE">Belgium</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">City / Port <span class="required">*</span></label>
-                                    <input type="text" class="form-input" id="destLocation"
-                                        placeholder="Search by city name or zip code">
-                                </div>
-                            </div>
                         </div>
 
                         <div class="route-section">
@@ -1635,8 +1650,14 @@
                                     <div class="sailing-vessel" id="sailingVesselText">—</div>
                                     <div class="sailing-dates" id="sailingDatesText">—</div>
                                 </div>
-                                <button type="button" class="btn btn-secondary btn-small"
-                                    onclick="toggleSailingPicker()">Change Sailing</button>
+                                <div style="display:flex; align-items:flex-end; gap: 1rem;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label" for="cargoReadyDate" style="font-size: 0.75rem; color: var(--text-secondary);">Cargo Ready Date <span class="required">*</span></label>
+                                        <input type="date" class="form-input" id="cargoReadyDate" onchange="filterSailingsByDate()" required style="padding: 0.25rem 0.5rem; min-height: 32px;">
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-small"
+                                        onclick="toggleSailingPicker()" style="height: 32px;">Change Sailing</button>
+                                </div>
                             </div>
                             <div class="sailing-picker" id="sailingPicker">
                                 <div class="picker-list" id="sailingPickerList"></div>
@@ -1703,11 +1724,7 @@
                                     <label class="form-label">Customer Reference / PO Number</label>
                                     <input type="text" class="form-input" id="customerRef" placeholder="e.g. PO-44213">
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Requested Cargo Ready Date <span
-                                            class="required">*</span></label>
-                                    <input type="date" class="form-input" id="cargoReadyDate" required>
-                                </div>
+
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Special Instructions</label>
@@ -1968,7 +1985,7 @@
 
             </div>
         </div>
-    </div>
+
 
     <!-- Custom Alert Modal -->
     <div class="custom-alert-overlay" id="customAlertOverlay" onclick="closeCustomAlert()">
@@ -1979,6 +1996,157 @@
     </div>
 
     <script>
+        
+        // ---- API-based Location Data & Functions ----
+        const apiCountries = {{ countries | tojson | safe }};
+        window.fetchedPortsCache = { origin: {}, dest: {} };
+
+        const selectedLocations = {
+            origin: null,
+            dest: null
+        };
+
+        function handleLocationTypeChange(locationType) {
+            const type = document.getElementById(locationType + 'Type').value;
+            const label = document.getElementById(locationType + 'LocationLabel');
+            const input = document.getElementById(locationType + 'Location');
+
+            if (type === 'door') {
+                if (label) label.innerHTML = 'City <span class="required">*</span>';
+                if (input) input.placeholder = 'Search by city name or zip code';
+            } else {
+                if (label) label.innerHTML = 'Port <span class="required">*</span>';
+                if (input) input.placeholder = 'Search by port name or UN code';
+            }
+
+            // Clear selection
+            selectedLocations[locationType] = null;
+            if (input) input.value = '';
+            
+            populateCountries(locationType, type);
+        }
+
+        function populateCountries(locationType, type) {
+            const countrySelect = document.getElementById(locationType + 'Country');
+            if (!countrySelect) return;
+            const currentValue = countrySelect.value;
+            countrySelect.innerHTML = '<option value="">Select country</option>';
+            
+            // Sort apiCountries by name, filtering out empty keys
+            const sorted = [...apiCountries].filter(c => c.code && c.name).sort((a, b) => a.name.localeCompare(b.name));
+            sorted.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.code;
+                option.textContent = c.name;
+                countrySelect.appendChild(option);
+            });
+            
+            if (currentValue && sorted.some(c => c.code === currentValue)) {
+                countrySelect.value = currentValue;
+            }
+        }
+
+        function handleCountryChange(locationType) {
+            // Clear location when country changes
+            selectedLocations[locationType] = null;
+            const locInput = document.getElementById(locationType + 'Location');
+            if (locInput) locInput.value = '';
+        }
+
+        function showDropdown(locationType) {
+            const countryEl = document.getElementById(locationType + 'Country');
+            const country = countryEl ? countryEl.value : null;
+            if (!country) {
+                alert('Please select a country first');
+                return;
+            }
+            filterLocations(locationType);
+        }
+
+        async function filterLocations(locationType) {
+            const country = document.getElementById(locationType + 'Country').value;
+            const type = document.getElementById(locationType + 'Type').value;
+            const inputEl = document.getElementById(locationType + 'Location');
+            const searchTerm = inputEl ? inputEl.value.toLowerCase() : '';
+            const dropdown = document.getElementById(locationType + 'Dropdown');
+            if (!dropdown) return;
+
+            if (!country) {
+                dropdown.classList.remove('show');
+                return;
+            }
+
+            if (type === 'door') {
+                dropdown.classList.remove('show');
+                selectedLocations[locationType] = { name: searchTerm, code: '' };
+                return;
+            }
+
+            dropdown.innerHTML = '<div class="dropdown-item text-center text-muted"><div class="spinner-border spinner-border-sm" role="status" style="width: 1rem; height: 1rem;"></div> Loading ports...</div>';
+            dropdown.classList.add('show');
+
+            // Fetch from cache or API
+            let locations = window.fetchedPortsCache[locationType][country];
+            if (!locations) {
+                try {
+                    const resp = await fetch(`/customer/api/get-ports/${locationType}/${country}`);
+                    if (resp.ok) {
+                        locations = await resp.json();
+                        window.fetchedPortsCache[locationType][country] = locations;
+                    } else {
+                        locations = [];
+                    }
+                } catch (e) {
+                    console.error('Error fetching ports:', e);
+                    locations = [];
+                }
+            }
+
+            const filtered = locations.filter(loc => {
+                const uncode = loc.code || '';
+                return loc.name.toLowerCase().includes(searchTerm) ||
+                    uncode.toLowerCase().includes(searchTerm);
+            });
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div class="dropdown-no-results">No results found</div>';
+            } else {
+                dropdown.innerHTML = filtered.map(loc => {
+                    const code = loc.code || '';
+                    return `
+                        <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\'")}', '${code.replace(/'/g, "\'")}')">
+                            <div class="dropdown-item-name">${loc.name}</div>
+                            <div class="dropdown-item-code">${code}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            dropdown.classList.add('show');
+        }
+
+        function selectLocation(locationType, name, code) {
+            selectedLocations[locationType] = { name, code };
+            const input = document.getElementById(locationType + 'Location');
+            if (input) input.value = `${name} (${code})`;
+            const dropdown = document.getElementById(locationType + 'Dropdown');
+            if (dropdown) dropdown.classList.remove('show');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.searchable-select')) {
+                document.querySelectorAll('.searchable-dropdown').forEach(d => d.classList.remove('show'));
+            }
+        });
+        
+        // Initialize dynamic countries on load
+        document.addEventListener('DOMContentLoaded', function() {
+            populateCountries('origin', 'port');
+            populateCountries('dest', 'port');
+        });
+        // ------------------------------------------
+
+
         function showAlert(message) {
             const overlay = document.getElementById('customAlertOverlay');
             const messageEl = document.getElementById('customAlertMessage');
@@ -2016,6 +2184,26 @@
         ];
         let selectedSailingIndex = 0;
 
+        
+        function filterSailingsByDate() {
+            const dateStr = document.getElementById('cargoReadyDate').value;
+            if (dateStr) {
+                sailings = mockSailings.filter(s => new Date(s.etd) >= new Date(dateStr));
+            } else {
+                sailings = [...mockSailings];
+            }
+            selectedSailingIndex = 0;
+            if (sailings.length > 0) {
+                renderSailingCard();
+            } else {
+                document.getElementById('sailingVesselText').innerHTML = 'No available sailings';
+                document.getElementById('sailingDatesText').textContent = 'Please choose a different date';
+            }
+            if (document.getElementById('sailingPicker').classList.contains('show')) {
+                renderSailingPickerList();
+            }
+        }
+        
         function renderSailingCard() {
             const s = sailings[selectedSailingIndex];
             document.getElementById('sailingVesselText').innerHTML = `${s.vessel} · Voyage ${s.voyage}` + (selectedSailingIndex === 0 ? '<span class="sailing-default-tag">Next Available</span>' : '');
@@ -2080,37 +2268,50 @@
             }
         };
 
+        function clearLinkedQuote() {
+            if (linkedQuote) {
+                document.getElementById('linkedQuoteBanner').classList.remove('show');
+                document.getElementById('originFromQuoteTag').style.display = 'none';
+                document.getElementById('destFromQuoteTag').style.display = 'none';
+                document.getElementById('cargoFromQuoteTag').style.display = 'none';
+                linkedQuote = null;
+                updateRateSummary();
+            }
+        }
+
         function selectBookingMode(mode) {
             bookingMode = mode;
             document.getElementById('oceanTabHeader').classList.toggle('active', mode === 'ocean');
             document.getElementById('airTabHeader').classList.toggle('active', mode === 'air');
             document.getElementById('quoteTabHeader').classList.toggle('active', mode === 'quote');
+            
             const airBanner = document.getElementById('airBanner');
             const stepsRibbon = document.getElementById('stepsRibbon');
             const panelsContainer = document.querySelector('.panels-container');
+            const quotePicker = document.getElementById('quotePicker');
+
             if (mode === 'air') {
                 airBanner.style.display = 'block';
                 stepsRibbon.style.display = 'none';
                 panelsContainer.style.display = 'none';
-                document.getElementById('quotePicker').classList.remove('show');
-            } else {
+                if (quotePicker) quotePicker.classList.remove('show');
+                clearLinkedQuote();
+            } else if (mode === 'ocean') {
                 airBanner.style.display = 'none';
                 stepsRibbon.style.display = 'flex';
                 panelsContainer.style.display = 'block';
-            }
-            if (mode === 'quote') {
-                if (!linkedQuote) {
-                    document.getElementById('quotePicker').classList.add('show');
-                }
-            } else {
-                document.getElementById('quotePicker').classList.remove('show');
+                if (quotePicker) quotePicker.classList.remove('show');
+                clearLinkedQuote();
+            } else if (mode === 'quote') {
+                airBanner.style.display = 'none';
                 if (linkedQuote) {
-                    document.getElementById('linkedQuoteBanner').classList.remove('show');
-                    document.getElementById('originFromQuoteTag').style.display = 'none';
-                    document.getElementById('destFromQuoteTag').style.display = 'none';
-                    document.getElementById('cargoFromQuoteTag').style.display = 'none';
-                    linkedQuote = null;
-                    updateRateSummary();
+                    stepsRibbon.style.display = 'flex';
+                    panelsContainer.style.display = 'block';
+                    if (quotePicker) quotePicker.classList.remove('show');
+                } else {
+                    stepsRibbon.style.display = 'none';
+                    panelsContainer.style.display = 'none';
+                    if (quotePicker) quotePicker.classList.add('show');
                 }
             }
         }
@@ -2119,40 +2320,98 @@
             showAlert('Please contact us:\n\nEmail: quotes@fasttransitline.com\nPhone: +1 (555) 123-4567\n\nOur team will respond within 24 hours.');
         }
 
+        
         function useQuote(ref) {
             linkedQuote = ref;
             const q = quoteData[ref];
-            document.getElementById('quotePicker').classList.remove('show');
+            selectBookingMode('quote');
             document.getElementById('linkedQuoteBanner').classList.add('show');
             document.getElementById('linkedRef').textContent = ref;
             document.getElementById('linkedRouteText').textContent = q.route;
             document.getElementById('linkedPrice').textContent = q.price;
+            
+            // Extract country from location if not provided
+            let orgCountry = q.originCountry;
+            let destCountry = q.destCountry;
+            
+            // Extract from UNCODE e.g., (ESBCN) -> ES
+            const orgMatch = q.originLocation.match(/\(([A-Z]{2})[A-Z]{3}\)/);
+            if (orgMatch && !orgCountry) orgCountry = orgMatch[1];
+            
+            const destMatch = q.destLocation.match(/\(([A-Z]{2})[A-Z]{3}\)/);
+            if (destMatch && !destCountry) destCountry = destMatch[1];
+
             // Prefill route
-            document.getElementById('originType').value = q.originType;
-            document.getElementById('originCountry').value = q.originCountry;
-            document.getElementById('originLocation').value = q.originLocation;
-            document.getElementById('destType').value = q.destType;
-            document.getElementById('destCountry').value = q.destCountry;
-            document.getElementById('destLocation').value = q.destLocation;
+            document.getElementById('originType').value = q.originType || 'port';
+            handleLocationTypeChange('origin');
+            const oc = document.getElementById('originCountry');
+            if (oc && orgCountry) oc.value = orgCountry;
+            
+            const ol = document.getElementById('originLocation');
+            if (ol) ol.value = q.originLocation;
+            if (orgCountry) {
+                 selectedLocations.origin = { name: q.originLocation.split('(')[0].trim(), code: orgMatch ? (orgMatch[1]+orgMatch[2] || '') : '' };
+            }
+
+            document.getElementById('destType').value = q.destType || 'port';
+            handleLocationTypeChange('dest');
+            const dc = document.getElementById('destCountry');
+            if (dc && destCountry) dc.value = destCountry;
+            
+            const dl = document.getElementById('destLocation');
+            if (dl) dl.value = q.destLocation;
+            if (destCountry) {
+                 selectedLocations.dest = { name: q.destLocation.split('(')[0].trim(), code: destMatch ? (destMatch[1]+destMatch[2] || '') : '' };
+            }
+
             document.getElementById('originFromQuoteTag').style.display = 'inline-block';
             document.getElementById('destFromQuoteTag').style.display = 'inline-block';
+            
+            if (q.readyDate) {
+                const crd = document.getElementById('cargoReadyDate');
+                if (crd) {
+                    crd.value = q.readyDate;
+                    if (typeof filterSailingsByDate === 'function') filterSailingsByDate();
+                }
+            }
+            
+            // Update route section label
+            const originText = q.originLocation;
+            const destText = q.destLocation;
+            document.getElementById('routeValue').textContent = `${originText} → ${destText}`;
+            document.getElementById('routeValue').classList.remove('section-placeholder');
+            document.getElementById('routeValue').classList.add('section-value');
+            document.getElementById('routeSection').classList.add('completed');
+
             // Prefill cargo — ensure at least one item exists, then fill the first
             if (document.querySelectorAll('.cargo-item').length === 0) addCargoItem();
             const firstItem = document.querySelector('.cargo-item');
             const itemId = firstItem.id;
-            document.getElementById(`${itemId}-pieces`).value = q.pieces;
-            document.getElementById(`${itemId}-package`).value = q.packageType;
-            document.getElementById(`${itemId}-goods`).value = q.goodsType;
-            document.getElementById(`${itemId}-weight`).value = q.weight;
-            document.getElementById(`${itemId}-volume`).value = q.volume;
+            const piecesEl = document.getElementById(`${itemId}-pieces`);
+            if (piecesEl) piecesEl.value = q.pieces;
+            
+            const pkgEl = document.getElementById(`${itemId}-package`);
+            if (pkgEl) pkgEl.value = q.packageType;
+            
+            const goodsEl = document.getElementById(`${itemId}-goods`);
+            if (goodsEl) goodsEl.value = q.goodsType;
+            
+            const wEl = document.getElementById(`${itemId}-weight`);
+            if (wEl) wEl.value = q.weight;
+            
+            const vEl = document.getElementById(`${itemId}-volume`);
+            if (vEl) vEl.value = q.volume;
+            
             document.getElementById('cargoFromQuoteTag').style.display = 'inline-block';
             updateDocumentRequirements();
             updateRateSummary();
+            updateReview();
             showAlert('Quote ' + ref + ' linked. Route and cargo details have been pre-filled — feel free to adjust them.');
         }
-
+    
         function changeQuote() {
-            document.getElementById('quotePicker').classList.add('show');
+            clearLinkedQuote();
+            selectBookingMode('quote');
         }
 
         function filterPicker() {
@@ -2904,7 +3163,8 @@
                     packageType: "pallets",
                     goodsType: "GENERAL",
                     weight: 1000,
-                    volume: 2
+                    volume: 2,
+                    readyDate: holder.dataset.readydate
                 };
                 
                 // Switch to quote mode
@@ -2925,6 +3185,7 @@
          data-route="{{ quote_data.origin | default('') }} → {{ quote_data.destination | default('') }}"
          data-origin="{{ quote_data.origin | default('') }}"
          data-dest="{{ quote_data.destination | default('') }}" 
+         data-readydate="{{ quote_data.etd.strftime('%Y-%m-%d') if quote_data.etd else (quote_data.created_at.strftime('%Y-%m-%d') if quote_data.created_at else '') }}"
          style="display:none;"></div>
     {% endif %}
 

@@ -13,12 +13,12 @@
                 <p class="text-muted small text-uppercase fw-bold tracking-widest">Register under an existing customer</p>
             </div>
 
-            <form method="POST">
+            <form method="POST" autocomplete="off">
                 {{ form.hidden_tag() }}
                 
                 <div class="mb-4">
                     <label class="form-label">FTL Company Code</label>
-                    {{ form.ftl_code(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. FTL-BE-001") }}
+                    {{ form.ftl_code(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter referral code", autocomplete="off") }}
                     {% for error in form.ftl_code.errors %}
                         <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
@@ -27,7 +27,7 @@
 
                 <div class="mb-4">
                     <label class="form-label">Full Name</label>
-                    {{ form.name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter your full name") }}
+                    {{ form.name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter your full name", autocomplete="off") }}
                     {% for error in form.name.errors %}
                         <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
@@ -35,7 +35,7 @@
 
                 <div class="mb-4">
                     <label class="form-label">Work Email ID</label>
-                    {{ form.email(class="form-control bg-white-5 border-white-10 text-white", placeholder="your.name@company.com") }}
+                    {{ form.email(class="form-control bg-white-5 border-white-10 text-white", placeholder="your.name@company.com", autocomplete="off") }}
                     {% for error in form.email.errors %}
                         <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
@@ -43,13 +43,13 @@
                 </div>
 
                 <div class="row g-3 mb-5">
-                    <div class="col-md-6">
+                    <div class="col-md-6 position-relative">
                         <label class="form-label">Password</label>
-                        {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••", id="ru-pw") }}
+                        {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••", id="ru-pw", autocomplete="new-password") }}
                         {% for error in form.password.errors %}
                             <div class="text-danger small mt-1">{{ error }}</div>
                         {% endfor %}
-                        <div id="pw-rules-ru" class="mt-2 px-3 py-2 rounded-3 small" style="display:none; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);">
+                        <div id="pw-rules-ru" class="mt-2 px-3 py-2 rounded-3 small" style="display:none; position: absolute; bottom: calc(100% + 5px); top: auto; left: 0; width: 100%; z-index: 1050; box-shadow: 0 -10px 25px rgba(0,0,0,0.5); backdrop-filter: blur(10px); background:rgba(30,41,59,0.95); border:1px solid rgba(255,255,255,0.15);">
                             <div class="fw-semibold mb-1 text-white-50" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:.05em;">Password requirements</div>
                             <ul class="list-unstyled mb-0">
                                 <li id="ru-len"   class="text-white-50 py-1 border-bottom border-white-10"><i class="bi bi-circle me-2"></i>At least 12 characters</li>

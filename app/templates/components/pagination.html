@@ -1,0 +1,64 @@
+{% macro render_pagination(pagination, endpoint) %}
+{% if pagination and pagination.pages > 0 %}
+<div class="d-flex align-items-center justify-content-between mt-4 mb-2 flex-wrap gap-3 pagination-container">
+    <!-- Rows per page selector -->
+    <div class="d-flex align-items-center">
+        <span class="text-muted small me-2">Rows per page:</span>
+        <select class="form-select form-select-sm border-0 shadow-sm rounded bg-white text-dark w-auto" 
+                onchange="updatePerPage(this.value, '{{ url_for(endpoint, **request.args) }}')">
+            <option value="10" {% if request.args.get('per_page', 10, type=int) == 10 %}selected{% endif %}>10</option>
+            <option value="25" {% if request.args.get('per_page')|int == 25 %}selected{% endif %}>25</option>
+            <option value="50" {% if request.args.get('per_page')|int == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if request.args.get('per_page')|int == 100 %}selected{% endif %}>100</option>
+        </select>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Pagination">
+        <ul class="pagination d-flex align-items-center m-0" style="gap: 0.25rem;">
+            <!-- Previous Button -->
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %} m-0">
+                <a class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2" 
+                   href="{{ url_for(endpoint, **dict(request.args, page=pagination.prev_num)) if pagination.has_prev else '#' }}">
+                    ← Previous
+                </a>
+            </li>
+            
+            <!-- Page Numbers -->
+            <div class="d-flex" style="gap: 0.25rem;">
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                            <a class="page-link shadow-sm rounded border-0 {% if page_num == pagination.page %}bg-primary text-white fw-bold{% else %}bg-white text-dark{% endif %}" 
+                               href="{{ url_for(endpoint, **dict(request.args, page=page_num)) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link border-0 bg-transparent text-muted">...</span></li>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Next Button -->
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %} m-0">
+                <a class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2" 
+                   href="{{ url_for(endpoint, **dict(request.args, page=pagination.next_num)) if pagination.has_next else '#' }}">
+                    Next →
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script>
+    if (typeof window.updatePerPage === 'undefined') {
+        window.updatePerPage = function(value, baseUrl) {
+            let url = new URL(baseUrl, window.location.origin);
+            url.searchParams.set('per_page', value);
+            url.searchParams.set('page', '1'); // Reset to page 1
+            window.location.href = url.toString();
+        };
+    }
+</script>
+{% endif %}
+{% endmacro %}

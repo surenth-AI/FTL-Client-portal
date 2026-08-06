@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from "components/pagination.html" import render_pagination %}
 {% block title %}Operational Feed{% endblock %}
 
 {% block content %}
@@ -168,5 +169,8 @@
             </tbody>
         </table>
     </div>
+</div>
+<div class="px-3">
+    {{ render_pagination(pagination, 'customer.my_shipments') }}
 </div>
 {% endblock %}

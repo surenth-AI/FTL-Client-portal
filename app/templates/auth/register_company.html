@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% block title %}Register Company{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-10 col-xl-8">
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-lg-5 col-md-7">
         <div class="card glass-card p-4 p-md-5 rounded-4 border-white-10 shadow-lg">
             <!-- Branding Header -->
             <div class="text-center mb-5">
@@ -13,7 +13,7 @@
                 <p class="text-muted small text-uppercase fw-bold tracking-widest">Establish your corporate account</p>
             </div>
 
-            <form method="POST">
+            <form method="POST" autocomplete="off">
                 {{ form.hidden_tag() }}
                 
                 <!-- Section 1: Company Information -->
@@ -28,7 +28,7 @@
                     <div class="row g-4">
                         <div class="col-12">
                             <label class="form-label">Registered Company Name</label>
-                            {{ form.company_name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter full legal company name") }}
+                            {{ form.company_name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Enter full legal company name", autocomplete="off") }}
                             {% for error in form.company_name.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
@@ -36,47 +36,47 @@
                         
                         <div class="col-12">
                             <label class="form-label">Full Address</label>
-                            {{ form.address(class="form-control bg-white-5 border-white-10 text-white", placeholder="Street, Building, Suite") }}
+                            {{ form.address(class="form-control bg-white-5 border-white-10 text-white", placeholder="Street, Building, Suite", autocomplete="off") }}
                             {% for error in form.address.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-12">
                             <label class="form-label">Zip Code</label>
-                            {{ form.zip_code(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. 2000", id="zip_code") }}
+                            {{ form.zip_code(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. 2000", id="zip_code", autocomplete="off") }}
                             {% for error in form.zip_code.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                         
-                        <div class="col-md-4">
+                        <div class="col-12">
                             <label class="form-label">City</label>
-                            {{ form.city(class="form-control bg-white-5 border-white-10 text-white", placeholder="City", id="city") }}
+                            {{ form.city(class="form-control bg-white-5 border-white-10 text-white", placeholder="City", id="city", autocomplete="off") }}
                             {% for error in form.city.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                         
-                        <div class="col-md-4">
+                        <div class="col-12">
                             <label class="form-label">Country</label>
-                            {{ form.country(class="form-control bg-white-5 border-white-10 text-white", placeholder="Country", id="country") }}
+                            {{ form.country(class="form-control bg-white-5 border-white-10 text-white", placeholder="Country", id="country", autocomplete="off") }}
                             {% for error in form.country.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">BTW/VAT Number</label>
-                            {{ form.vat_number(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. BE0123456789") }}
+                            {{ form.vat_number(class="form-control bg-white-5 border-white-10 text-white", placeholder="e.g. BE0123456789", autocomplete="off") }}
                             {% for error in form.vat_number.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">EORI Number</label>
-                            {{ form.eori_number(class="form-control bg-white-5 border-white-10 text-white", placeholder="European Registration Number") }}
+                            {{ form.eori_number(class="form-control bg-white-5 border-white-10 text-white", placeholder="European Registration Number", autocomplete="off") }}
                             {% for error in form.eori_number.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
@@ -94,37 +94,37 @@
                     </div>
                     
                     <div class="row g-4">
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">Full Name</label>
-                            {{ form.contact_name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Contact Person Name") }}
+                            {{ form.contact_name(class="form-control bg-white-5 border-white-10 text-white", placeholder="Contact Person Name", autocomplete="off") }}
                             {% for error in form.contact_name.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">Mobile Number</label>
-                            {{ form.mobile(class="form-control bg-white-5 border-white-10 text-white", placeholder="+32 000 00 00 00") }}
+                            {{ form.mobile(class="form-control bg-white-5 border-white-10 text-white", placeholder="+32 000 00 00 00", autocomplete="off") }}
                             {% for error in form.mobile.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                         <div class="col-12">
                             <label class="form-label">Email ID (User ID)</label>
-                            {{ form.contact_email(class="form-control bg-white-5 border-white-10 text-white", placeholder="email@company.com") }}
+                            {{ form.contact_email(class="form-control bg-white-5 border-white-10 text-white", placeholder="email@company.com", autocomplete="off") }}
                             {% for error in form.contact_email.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">Password</label>
-                            {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                            {{ form.password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••", autocomplete="new-password") }}
                             {% for error in form.password.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">Re-enter Password</label>
-                            {{ form.confirm_password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••") }}
+                            {{ form.confirm_password(class="form-control bg-white-5 border-white-10 text-white", placeholder="••••••••", autocomplete="new-password") }}
                             {% for error in form.confirm_password.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/pagination.html" import render_pagination %}
 
 {% block title %}My Quotes{% endblock %}
 
@@ -253,7 +254,86 @@
     .download-link { font-size: 0.78rem; color: var(--mq-primary-blue); display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none; cursor: pointer; background: none; border: none; font-family: inherit; font-weight: 600;}
     .download-link:hover { color: var(--mq-primary-blue-dark); text-decoration: underline;}
 
+    
     .breakdown-toggle {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--mq-primary-green-dark);
+        background: var(--mq-green-bg);
+        border: none;
+        border-radius: 6px;
+        padding: 0.4rem 0.75rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: background 0.15s ease;
+    }
+    .breakdown-toggle:hover { background: #d1fae5; }
+    .breakdown-toggle .chev { transition: transform 0.2s ease; font-size: 0.65rem; }
+    .breakdown-toggle.open .chev { transform: rotate(180deg); }
+
+    .breakdown-panel {
+        display: none;
+        background: var(--mq-bg-white);
+        border-top: 1px solid var(--mq-border-color);
+        padding: 1.25rem;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+    .breakdown-panel.open {
+        display: block;
+    }
+    .breakdown-inner {
+        width: 100%;
+        margin: 0 auto;
+    }
+    .breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+        font-size: 0.78rem;
+    }
+    .breakdown-table th,
+    .breakdown-table td {
+        padding: 0.6rem 0.8rem;
+        text-align: left;
+        border-bottom: 1px solid var(--mq-border-color);
+    }
+    .breakdown-table th {
+        font-weight: 600;
+        color: var(--mq-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.7rem;
+    }
+    .breakdown-table th.num,
+    .breakdown-table td.num {
+        text-align: right;
+    }
+    .breakdown-table .code-cell {
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: var(--mq-primary-blue-dark);
+        background: #eff6ff;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+    }
+    .breakdown-table .base-cell {
+        font-size: 0.75rem;
+        color: var(--mq-text-secondary);
+        background: var(--mq-bg-gray);
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        border: 1px solid var(--mq-border-color);
+    }
+    .breakdown-table .final-cell {
+        font-weight: 700;
+        color: var(--mq-text-primary);
+    }
+
+    /* removed old toggle */
+    .old-toggle {
         font-size: 0.78rem;
         font-weight: 600;
         color: var(--mq-primary-green-dark);
@@ -421,7 +501,7 @@
                         <a class="terms-link" href="#">📄 Terms &amp; conditions ↗</a>
                         
                         <span style="color:var(--mq-border-color);">|</span>
-                        <a href="{{ url_for('customer.quote_detail', quote_id=q.id) }}" class="breakdown-toggle" style="text-decoration: none;">📊 View Breakdown</a>
+                        <button onclick="toggleQuoteBreakdown({{ q.id }}, this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
 
                         <!-- Requested Feature: PDF / Email Download -->
                         <span style="color:var(--mq-border-color);">|</span>
@@ -429,9 +509,21 @@
                         <button class="download-link" onclick="alert('Email Quote feature coming soon!')">✉ Email Quote</button>
                     </div>
                 </div>
+
+                <!-- Inline Breakdown Panel -->
+                <div id="breakdown-panel-{{ q.id }}" class="breakdown-panel" style="background: var(--mq-bg-gray);">
+                    <div class="breakdown-inner">
+                        <div id="breakdown-content-{{ q.id }}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading breakdown...
+                        </div>
+                    </div>
+                </div>
             </div>
         {% endfor %}
     </div>
+
+    <!-- Pagination -->
+    {{ render_pagination(pagination, 'customer.my_quotes') }}
 
     <!-- Empty state -->
     <div class="empty-state" id="emptyState" {% if not quote_data %}style="display:block;"{% endif %}>
@@ -444,6 +536,114 @@
 </div>
 
 <script>
+    function toggleQuoteBreakdown(quoteId, btn) {
+        const panel = document.getElementById('breakdown-panel-' + quoteId);
+        const contentDiv = document.getElementById('breakdown-content-' + quoteId);
+        const isOpen = panel.classList.contains('open');
+
+        if (isOpen) {
+            panel.classList.remove('open');
+            btn.classList.remove('open');
+            btn.innerHTML = '📊 View Breakdown <span class="chev">▾</span>';
+        } else {
+            panel.classList.add('open');
+            btn.classList.add('open');
+            btn.innerHTML = '📊 Hide Breakdown <span class="chev">▴</span>';
+
+            if (!panel.dataset.loaded) {
+                fetch(`/api/quote/${quoteId}/breakdown`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.breakdown && data.breakdown.length > 0) {
+                            let rows = '';
+                            data.breakdown.forEach(line => {
+                                const chargeCode = line.chargeCode || line.id || 'N/A';
+                                const description = line.chargeName || line.description || 'Standard Charge';
+                                const unitCode = line.unitCode || 'ACT';
+                                const qty = line.quantity || 1;
+                                const curr = line.currency || 'USD';
+                                const amt = parseFloat(line.amount).toFixed(2);
+                                
+                                rows += `<tr>
+                                    <td><span class="code-cell">${chargeCode}</span></td>
+                                    <td>${description}</td>
+                                    <td><span class="base-cell">${unitCode}</span></td>
+                                    <td class="num">${qty}</td>
+                                    <td class="num">${curr} ${amt}</td>
+                                    <td class="num fx-cell">1 ${curr} = 1.0000 USD</td>
+                                    <td class="num final-cell">USD ${amt}</td>
+                                </tr>`;
+                            });
+
+                            contentDiv.innerHTML = `
+                                <table class="breakdown-table" style="background: var(--mq-bg-white); border: 1px solid var(--mq-border-color); border-radius: 8px; overflow: hidden; margin-bottom: 0;">
+                                    <thead style="background: #f1f5f9;">
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Name</th>
+                                            <th>Base</th>
+                                            <th class="num">Units</th>
+                                            <th class="num">Unit Price</th>
+                                            <th class="num">Rate of Exchange</th>
+                                            <th class="num">Final Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${rows}
+                                    </tbody>
+                                </table>`;
+                        } else {
+                            contentDiv.innerHTML = `<div class="py-4 text-center">No breakdown details available for this quote.</div>`;
+                        }
+                        panel.dataset.loaded = "true";
+                    })
+                    .catch(err => {
+                        contentDiv.innerHTML = `<div class="py-4 text-center text-danger">Failed to load breakdown.</div>`;
+                    });
+            }
+        }
+    }
+
+    // High-performance AJAX Pagination
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('click', function(e) {
+            let target = e.target.closest('.pagination .page-link');
+            if (target && target.getAttribute('href') && target.getAttribute('href') !== '#') {
+                e.preventDefault();
+                let url = target.getAttribute('href');
+                let offersList = document.querySelector('.offers-list');
+                let paginationNav = document.querySelector('.pagination-container') || target.closest('nav');
+                
+                if (offersList) offersList.style.opacity = '0.5';
+                
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        let parser = new DOMParser();
+                        let doc = parser.parseFromString(html, 'text/html');
+                        
+                        let newOffers = doc.querySelector('.offers-list');
+                        if (newOffers && offersList) {
+                            offersList.innerHTML = newOffers.innerHTML;
+                            offersList.style.opacity = '1';
+                        }
+                        
+                        let newNav = doc.querySelector('.pagination-container') || doc.querySelector('.pagination').parentNode;
+                        if (newNav && paginationNav) {
+                            paginationNav.innerHTML = newNav.innerHTML;
+                        }
+                        
+                        window.history.pushState({path: url}, '', url);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    })
+                    .catch(err => {
+                        console.error('Pagination failed', err);
+                        window.location.href = url; 
+                    });
+            }
+        });
+    });
+
     function copyRef(el) {
         const ref = el.dataset.ref;
         navigator.clipboard?.writeText(ref).catch(() => {});
