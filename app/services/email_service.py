@@ -149,3 +149,41 @@ class SystemMailer:
         </div>
         """
         return SystemMailer.send_email(settings.receiver_email, subject, html)
+
+    @staticmethod
+    def send_account_activated(user_name, user_email, login_url, erp_customer_code=None):
+        """
+        Sent to the customer when Atlas ERP activates their portal account.
+        """
+        code_line = f"<li><strong>Your Customer Code:</strong> {erp_customer_code}</li>" if erp_customer_code else ""
+        subject = "Your FTL Portal Account is Now Active"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; color: #1a1a2e; background: #f9fafb; border-radius: 10px;">
+            <div style="text-align:center; margin-bottom: 24px;">
+                <h1 style="color: #0d47a1; font-size: 1.6rem; margin-bottom: 4px;">Account Activated ✅</h1>
+                <p style="color: #555; font-size: 0.95rem;">Fast Transit Line – Client Portal</p>
+            </div>
+            <p style="font-size: 1rem;">Hi <strong>{user_name}</strong>,</p>
+            <p style="font-size: 0.95rem; line-height: 1.6;">
+                Great news! Your account on the <strong>FTL Client Portal</strong> has been reviewed and 
+                <span style="color: #059669; font-weight: 600;">activated</span>. You can now log in and 
+                start managing your shipments, quotes, and bookings.
+            </p>
+            <ul style="font-size: 0.95rem; line-height: 2;">
+                <li><strong>Email:</strong> {user_email}</li>
+                {code_line}
+            </ul>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{login_url}" 
+                   style="display:inline-block; padding: 12px 30px; background-color: #0d47a1; 
+                          color: #fff; text-decoration: none; border-radius: 6px; font-size: 1rem; font-weight: 600;">
+                    Log In to Portal →
+                </a>
+            </div>
+            <p style="font-size: 0.85rem; color: #888;">
+                If you have any questions, please contact our team. Do not reply to this email directly.
+            </p>
+        </div>
+        """
+        return SystemMailer.send_email(user_email, subject, html)
+

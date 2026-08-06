@@ -293,6 +293,9 @@ def api_sync():
               type: string
             deactivation_reason:
               type: string
+            erpCustomerCode:
+              type: string
+              example: CUST-10042
     responses:
       200:
         description: User sync completed successfully.
@@ -311,12 +314,18 @@ def api_sync():
     if not user:
         return jsonify({"success": False, "message": f"User {email} not found in Portal."}), 404
 
+    was_already_active = user.status in ['active', 'activated']
+
     if 'status' in data:
         user.status = data['status']
     if 'rejection_reason' in data:
         user.rejection_reason = data['rejection_reason']
     if 'deactivation_reason' in data:
         user.deactivation_reason = data['deactivation_reason']
+
+    # 1. Store erpCustomerCode when ERP sends it
+    if 'erpCustomerCode' in data and data['erpCustomerCode']:
+        user.erp_customer_code = data['erpCustomerCode']
 
     if 'account_ids' in data:
         UserAccountMapping.query.filter_by(user_id=user.id).delete()
@@ -330,7 +339,23 @@ def api_sync():
 
     db.session.commit()
 
-    if data.get('status') and data.get('status').lower() in ['active', 'activated']:
+    is_now_active = data.get('status', '').lower() in ['active', 'activated']
+
+    # 2. Send account-activated email to user if this is a fresh activation
+    if is_now_active and not was_already_active:
+        try:
+            from app.services.email_service import SystemMailer
+            login_url = url_for('auth.login', _external=True)
+            SystemMailer.send_account_activated(
+                user_name=user.name,
+                user_email=user.email,
+                login_url=login_url,
+                erp_customer_code=user.erp_customer_code
+            )
+        except Exception as e:
+            print(f"[api_sync] Failed to send activation email: {e}")
+
+    if is_now_active:
         return jsonify({"success": True, "message": "User account has been successfully activated."}), 200
 
     return jsonify({"success": True, "message": "User sync completed successfully."}), 200

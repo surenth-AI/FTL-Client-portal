@@ -53,6 +53,7 @@ class User(db.Model, UserMixin):
     department = db.Column(db.String(50)) # export, import, warehouse, finance
     status = db.Column(db.String(20), default='pending_verification') # pending_verification, pending_approval, activated, rejected, deactivated
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    erp_customer_code = db.Column(db.String(100), nullable=True) # Atlas ERP erpCustomerCode sent on activation
     
     # Relationships
     accounts = db.relationship('UserAccountMapping', backref='user', lazy=True, cascade="all, delete-orphan")
