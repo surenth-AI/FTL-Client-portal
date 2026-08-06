@@ -7,7 +7,7 @@ Unified API Blueprint — contains:
 from flask import Blueprint, jsonify, request, url_for
 from werkzeug.security import generate_password_hash
 from app import db
-from app.models.models import User, UserAccountMapping, UserBranchMapping
+from app.models.models import User, UserAccountMapping, UserBranchMapping, Company
 from datetime import datetime, timedelta
 import secrets
 import uuid
@@ -296,6 +296,12 @@ def api_sync():
             erpCustomerCode:
               type: string
               example: CUST-10042
+            companyId:
+              type: integer
+              example: 3
+            companyName:
+              type: string
+              example: "Global Logistics BV"
     responses:
       200:
         description: User sync completed successfully.
@@ -326,6 +332,22 @@ def api_sync():
     # 1. Store erpCustomerCode when ERP sends it
     if 'erpCustomerCode' in data and data['erpCustomerCode']:
         user.erp_customer_code = data['erpCustomerCode']
+
+    # 2. Store company details if provided
+    company_id_val = data.get('companyId') or data.get('company_id')
+    company_name_val = data.get('companyName') or data.get('company_name')
+
+    if company_id_val:
+        company = Company.query.get(company_id_val)
+        if company:
+            user.company_id = company.id
+    elif company_name_val:
+        company = Company.query.filter_by(name=company_name_val.strip()).first()
+        if not company:
+            company = Company(name=company_name_val.strip(), status='active')
+            db.session.add(company)
+            db.session.flush()
+        user.company_id = company.id
 
     if 'account_ids' in data:
         UserAccountMapping.query.filter_by(user_id=user.id).delete()
