@@ -1,23 +1,37 @@
 {% extends 'base.html' %}
 {% block title %}Edit User{% endblock %}
 {% block content %}
-<div class="row justify-content-center pt-5">
-    <div class="col-md-6">
+<div class="row justify-content-center pt-4">
+    <div class="col-md-7 col-lg-6">
         <div class="card glass-card p-5 border-white-10">
-            <div class="text-center mb-5">
-                <div class="h1 text-accent-glow mb-3"><i class="bi bi-pencil-square"></i></div>
-                <h3 class="text-white fw-bold mb-1">Modify User Access</h3>
-                <p class="text-muted small">Update role and department for <strong>{{ user.name }}</strong></p>
+            <div class="text-center mb-4">
+                <div class="h1 text-accent-glow mb-3"><i class="bi bi-person-gear"></i></div>
+                <h3 class="text-white fw-bold mb-1">Manage User</h3>
+                <p class="text-muted small">Editing access and ERP linkage for <strong class="text-white">{{ user.name }}</strong></p>
             </div>
 
             <form method="POST">
-                <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Full Name</label>
+
+                <!-- Basic Info -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Full Name</label>
                     <input type="text" name="name" class="form-control bg-white-5 border-white-10 text-white" value="{{ user.name }}" required>
                 </div>
 
-                <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Access Role</label>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Email</label>
+                    <input type="email" class="form-control bg-white-5 border-white-10 text-muted" value="{{ user.email }}" disabled>
+                    <div class="form-text text-muted" style="font-size: 0.7rem;">Email cannot be changed here.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Mobile</label>
+                    <input type="text" name="mobile" class="form-control bg-white-5 border-white-10 text-white" value="{{ user.mobile or '' }}" placeholder="+31 6 0000 0000">
+                </div>
+
+                <!-- Role & Department -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Access Role</label>
                     <select name="role" id="role-select" class="form-select bg-white-5 border-white-10 text-white" onchange="toggleDept()">
                         <option value="customer" {% if user.role == 'customer' %}selected{% endif %} class="bg-dark">Customer</option>
                         <option value="operation_executive" {% if user.role == 'operation_executive' %}selected{% endif %} class="bg-dark">Operation Executive</option>
@@ -26,8 +40,8 @@
                     </select>
                 </div>
 
-                <div class="mb-5" id="dept-section" style="display: {% if user.role == 'operation_executive' %}block{% else %}none{% endif %};">
-                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Department Assignment</label>
+                <div class="mb-3" id="dept-section" style="display: {% if user.role == 'operation_executive' %}block{% else %}none{% endif %};">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Department Assignment</label>
                     <select name="department" class="form-select bg-white-5 border-white-10 text-white">
                         <option value="export" {% if user.department == 'export' %}selected{% endif %} class="bg-dark">Export</option>
                         <option value="import" {% if user.department == 'import' %}selected{% endif %} class="bg-dark">Import</option>
@@ -36,8 +50,43 @@
                     </select>
                 </div>
 
+                <!-- Account Status -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Account Status</label>
+                    <select name="status" class="form-select bg-white-5 border-white-10 text-white">
+                        <option value="pending_ops" {% if user.status == 'pending_ops' %}selected{% endif %} class="bg-dark">Pending Approval</option>
+                        <option value="activated" {% if user.status in ['activated','active'] %}selected{% endif %} class="bg-dark">Activated</option>
+                        <option value="rejected" {% if user.status == 'rejected' %}selected{% endif %} class="bg-dark">Rejected</option>
+                        <option value="deactivated" {% if user.status == 'deactivated' %}selected{% endif %} class="bg-dark">Deactivated</option>
+                    </select>
+                </div>
+
+                <!-- ERP Fields (read-only info + editable ERP code) -->
+                <hr class="border-white-10 my-4">
+                <p class="text-muted small text-uppercase fw-bold mb-3" style="letter-spacing: 0.06em;">ERP Linkage</p>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">ERP Customer Code</label>
+                    <input type="text" name="erp_customer_code" class="form-control bg-white-5 border-white-10 text-white" value="{{ user.erp_customer_code or '' }}" placeholder="e.g. CUST-10042">
+                    <div class="form-text text-muted" style="font-size: 0.7rem;">Set by Atlas ERP on activation. Can be manually corrected here.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Registration ID <span class="text-muted fw-normal">(read-only)</span></label>
+                    <input type="text" class="form-control bg-white-5 border-white-10 text-muted" value="{{ user.registration_id or '—' }}" disabled style="font-family: monospace; font-size: 0.8rem;">
+                    <div class="form-text text-muted" style="font-size: 0.7rem;">UUID generated at registration, returned to Atlas ERP after activation.</div>
+                </div>
+
+                <!-- Company info (read-only) -->
+                {% if user.company %}
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Company</label>
+                    <input type="text" class="form-control bg-white-5 border-white-10 text-muted" value="{{ user.company.name }} ({{ user.company.country or '—' }})" disabled>
+                </div>
+                {% endif %}
+
                 <div class="d-grid gap-3">
-                    <button type="submit" class="btn btn-premium py-3 rounded-pill fw-bold text-uppercase tracking-widest shadow-accent">
+                    <button type="submit" class="btn btn-premium py-3 rounded-pill fw-bold text-uppercase shadow-accent">
                         SAVE CHANGES <i class="bi bi-save ms-2"></i>
                     </button>
                     <a href="{{ url_for('admin.manage_users') }}" class="btn btn-link text-muted text-decoration-none small text-center">

@@ -132,11 +132,17 @@ def edit_user(user_id):
     if request.method == 'POST':
         user.name = request.form.get('name')
         user.role = request.form.get('role')
+        user.mobile = request.form.get('mobile') or None
+        user.status = request.form.get('status', user.status)
         user.department = request.form.get('department') if user.role == 'operation_executive' else None
+        erp_code = request.form.get('erp_customer_code', '').strip()
+        if erp_code:
+            user.erp_customer_code = erp_code
         db.session.commit()
         flash(f'User {user.name} updated successfully.', 'success')
         return redirect(url_for('admin.manage_users'))
     return render_template('admin/edit_user.html', user=user)
+
 
 
 @admin.route('/user/create', methods=['GET', 'POST'])
