@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify
+﻿from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify
 from flask_login import login_required, current_user
 from app.models.models import Rate, Booking, TrackingEvent, CargoItem, BookingAttachment, ShippingInstruction
 from app.services.rate_engine import RateEngine
@@ -961,12 +961,29 @@ def new_booking():
         print("Error fetching countries:", ex)
         countries = []
 
+    # Fetch valid quotes for the quote picker
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    my_quotes = Booking.query.filter(
+        Booking.user_id == current_user.id,
+        Booking.status == 'Saved Quote'
+    ).order_by(Booking.created_at.desc()).limit(100).all()
+
+    valid_quotes = []
+    for q in my_quotes:
+        valid_until = q.created_at + timedelta(days=30)
+        if valid_until >= now:
+            computed_status = 'Expiring Soon' if (valid_until - now).days <= 2 else 'Active'
+            q.computed_status = computed_status
+            valid_quotes.append(q)
+
     return render_template('customer/new_booking.html', 
                          origins=origins, 
                          destinations=destinations,
                          query=session.get('search_query', {}),
                          quote_data=quote_data,
-                         countries=countries)
+                         countries=countries,
+                         valid_quotes=valid_quotes)
 
 @customer.route('/rate-results')
 @login_required
