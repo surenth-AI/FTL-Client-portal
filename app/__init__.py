@@ -112,7 +112,8 @@ def create_app(config_class=Config):
                 ('password_reset_token', 'VARCHAR(256) NULL'),
                 ('password_reset_token_expiry', 'DATETIME NULL'),
                 ('deactivation_reason', 'VARCHAR(1000) NULL'),
-                ('rejection_reason', 'VARCHAR(1000) NULL')
+                ('rejection_reason', 'VARCHAR(1000) NULL'),
+                ('erp_contact_id', 'INTEGER NULL')
             ]:
                 try:
                     db.session.execute(db.text(f"ALTER TABLE user ADD {col} {col_type};"))
@@ -120,7 +121,17 @@ def create_app(config_class=Config):
                 except Exception:
                     db.session.rollback()
 
-            from app.models.models import SystemSetting
+            # Safe self-healing for booking columns
+            try:
+                db.session.execute(db.text("ALTER TABLE [booking] ADD uuid VARCHAR(100) NULL;"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                try:
+                    db.session.execute(db.text("ALTER TABLE booking ADD COLUMN uuid VARCHAR(100) NULL;"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
             try:
                 s = SystemSetting.query.first()
                 if not s:
@@ -263,11 +274,25 @@ def seed_admin():
             email='customer@demo.com',
             password_hash=generate_password_hash('Customer@123456!'),
             role='customer',
-            status='active'
+            status='active',
+            erp_contact_id=11612
         )
         db.session.add(demo_customer)
         db.session.commit()
         print("Demo customer created: customer@demo.com / Customer@123456!")
+    else:
+        demo_customer.erp_contact_id = 11612
+        db.session.commit()
+
+    from app.models.models import UserBranchMapping, UserAccountMapping
+    # Ensure branch 23 is mapped
+    if not UserBranchMapping.query.filter_by(user_id=demo_customer.id, branch_id='23').first():
+        db.session.add(UserBranchMapping(user_id=demo_customer.id, branch_id='23'))
+    # Ensure account 4294 is mapped
+    if not UserAccountMapping.query.filter_by(user_id=demo_customer.id, account_id='4294').first():
+        db.session.add(UserAccountMapping(user_id=demo_customer.id, account_id='4294'))
+    db.session.commit()
+    print("Demo customer mappings seeded/verified.")
 
 
 def seed_lookups():

@@ -1056,6 +1056,10 @@
             background: rgba(255, 255, 255, 0.4);
         }
 
+        .searchable-select {
+            position: relative;
+        }
+
         .searchable-dropdown {
             position: absolute;
             top: 100%;
@@ -1557,7 +1561,7 @@
                     <div class="panel-content">
                         <div class="panel-header-with-action">
                             <h2 class="panel-title">Where is this shipment going?</h2>
-                            <button type="button" class="btn btn-primary" onclick="saveRoute()">Continue</button>
+                            <button type="button" class="btn btn-primary" onclick="saveRoute()" id="routeActionBtn">Continue</button>
                         </div>
 
                         <div class="route-section">
@@ -2101,24 +2105,26 @@
                 }
             }
 
+            // Filter by search term
+            const searchWords = searchTerm.replace(/[()]/g, ' ').trim().split(/\s+/).filter(w => w);
             const filtered = locations.filter(loc => {
-                const uncode = loc.code || '';
-                return loc.name.toLowerCase().includes(searchTerm) ||
-                    uncode.toLowerCase().includes(searchTerm);
-            });
+                if (searchWords.length === 0) return true;
+                const locText = `${loc.name} ${loc.code}`.toLowerCase();
+                return searchWords.every(word => locText.includes(word));
+            }).map(loc => ({
+                name: loc.name,
+                code: loc.code
+            }));
 
             if (filtered.length === 0) {
-                dropdown.innerHTML = '<div class="dropdown-no-results">No results found</div>';
+                dropdown.innerHTML = '<div class="dropdown-no-results">*No services listed for now</div>';
             } else {
-                dropdown.innerHTML = filtered.map(loc => {
-                    const code = loc.code || '';
-                    return `
-                        <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\'")}', '${code.replace(/'/g, "\'")}')">
-                            <div class="dropdown-item-name">${loc.name}</div>
-                            <div class="dropdown-item-code">${code}</div>
-                        </div>
-                    `;
-                }).join('');
+                dropdown.innerHTML = filtered.map(loc => `
+                    <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\\'")}', '${loc.code}')">
+                        <div class="dropdown-item-name">${loc.name}</div>
+                        <div class="dropdown-item-code">${loc.code}</div>
+                    </div>
+                `).join('');
             }
             dropdown.classList.add('show');
         }
@@ -2129,6 +2135,11 @@
             if (input) input.value = `${name} (${code})`;
             const dropdown = document.getElementById(locationType + 'Dropdown');
             if (dropdown) dropdown.classList.remove('show');
+            
+            // Automatically fetch real schedules if both origin and dest are selected
+            if (selectedLocations.origin && selectedLocations.dest) {
+                fetchRealSchedules();
+            }
         }
 
         // Close dropdowns when clicking outside
@@ -2159,51 +2170,112 @@
         window.alert = showAlert;
         let bookingMode = 'ocean'; // 'ocean' | 'air' | 'quote'
         let linkedQuote = null;
-        const sailings = [{
-            vessel: 'MSC Anna',
-            voyage: '224W',
-            etd: '2026-07-10',
-            eta: '2026-07-22',
-            transit: '12 days'
-        },
-        {
-            vessel: 'CMA CGM Brest',
-            voyage: '118E',
-            etd: '2026-07-14',
-            eta: '2026-07-27',
-            transit: '13 days'
-        },
-        {
-            vessel: 'Maersk Edinburgh',
-            voyage: '305N',
-            etd: '2026-07-17',
-            eta: '2026-07-30',
-            transit: '13 days'
-        }
-        ];
+        const dummySailings = [];
+        let mockSailings = [];
+        let sailings = [];
         let selectedSailingIndex = 0;
 
-        
-        function filterSailingsByDate() {
-            const dateStr = document.getElementById('cargoReadyDate').value;
-            if (dateStr) {
-                sailings = mockSailings.filter(s => new Date(s.etd) >= new Date(dateStr));
-            } else {
-                sailings = [...mockSailings];
+        async function fetchRealSchedules() {
+            let pol = selectedLocations.origin ? selectedLocations.origin.code : '';
+            let pod = selectedLocations.dest ? selectedLocations.dest.code : '';
+            
+            if (!pol) {
+                const originVal = document.getElementById('originLocation')?.value || '';
+                const match = originVal.match(/\(([^)]+)\)/);
+                if (match) pol = match[1].trim();
             }
+            if (!pod) {
+                const destVal = document.getElementById('destLocation')?.value || '';
+                const match = destVal.match(/\(([^)]+)\)/);
+                if (match) pod = match[1].trim();
+            }
+            
+            if (!pol || !pod) {
+                console.warn('Cannot fetch schedules: Port codes not found in inputs.');
+                return;
+            }
+            
+            try {
+                const cargoReadyDate = document.getElementById('cargoReadyDate')?.value || '';
+                let url = `/customer/api/get-schedules?portOfLoading=${pol}&portOfDischarge=${pod}&product=lcl`;
+                if (cargoReadyDate) {
+                    url += `&closingDate=${cargoReadyDate}`;
+                }
+                const resp = await fetch(url);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data && data.length > 0) {
+                        mockSailings = data.map(s => {
+                            let transitText = 'TBA';
+                            const etdStr = s.etd || s.estimatedTimeOfDeparture || '';
+                            const etaStr = s.eta || s.estimatedTimeOfArrival || '';
+                            if (etdStr && etaStr) {
+                                try {
+                                    const etdDate = new Date(etdStr.substring(0, 10));
+                                    const etaDate = new Date(etaStr.substring(0, 10));
+                                    const diffTime = Math.abs(etaDate - etdDate);
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    transitText = `${diffDays} days`;
+                                } catch (e) {
+                                    console.error('Error calculating transit:', e);
+                                }
+                            }
+                            return {
+                                vessel: s.vesselName || s.vessel || 'TBA',
+                                voyage: s.voyageNumber || s.voyage || 'TBA',
+                                etd: etdStr.substring(0, 10),
+                                eta: etaStr.substring(0, 10),
+                                transit: transitText
+                            };
+                        });
+                        
+                        mockSailings.sort((a, b) => a.etd.localeCompare(b.etd));
+                        sailings = [...mockSailings];
+                        selectedSailingIndex = 0;
+                        renderSailingCard();
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch real schedules:', err);
+            }
+            
+            mockSailings = [];
+            sailings = [];
             selectedSailingIndex = 0;
-            if (sailings.length > 0) {
-                renderSailingCard();
+            renderSailingCard();
+        }
+
+        
+        async function filterSailingsByDate() {
+            if (selectedLocations.origin && selectedLocations.dest) {
+                await fetchRealSchedules();
             } else {
-                document.getElementById('sailingVesselText').innerHTML = 'No available sailings';
-                document.getElementById('sailingDatesText').textContent = 'Please choose a different date';
-            }
-            if (document.getElementById('sailingPicker').classList.contains('show')) {
-                renderSailingPickerList();
+                const dateStr = document.getElementById('cargoReadyDate').value;
+                if (dateStr) {
+                    sailings = mockSailings.filter(s => new Date(s.etd) >= new Date(dateStr));
+                } else {
+                    sailings = [...mockSailings];
+                }
+                selectedSailingIndex = 0;
+                if (sailings.length > 0) {
+                    renderSailingCard();
+                } else {
+                    document.getElementById('sailingVesselText').innerHTML = 'No available sailings';
+                    document.getElementById('sailingDatesText').textContent = 'Please choose a different date';
+                }
+                if (document.getElementById('sailingPicker').classList.contains('show')) {
+                    renderSailingPickerList();
+                }
             }
         }
         
         function renderSailingCard() {
+            if (sailings.length === 0) {
+                document.getElementById('sailingVesselText').innerHTML = 'No available sailings';
+                document.getElementById('sailingDatesText').textContent = 'Please choose a different route or date';
+                return;
+            }
             const s = sailings[selectedSailingIndex];
             document.getElementById('sailingVesselText').innerHTML = `${s.vessel} · Voyage ${s.voyage}` + (selectedSailingIndex === 0 ? '<span class="sailing-default-tag">Next Available</span>' : '');
             document.getElementById('sailingDatesText').textContent = `ETD ${s.etd} → ETA ${s.eta} · ${s.transit} transit`;
@@ -2308,7 +2380,7 @@
         }
 
         
-        function useQuote(ref) {
+        async function useQuote(ref) {
             linkedQuote = ref;
             const q = quoteData[ref];
             selectBookingMode('quote');
@@ -2322,11 +2394,11 @@
             let destCountry = q.destCountry;
             
             // Extract from UNCODE e.g., (ESBCN) -> ES
-            const orgMatch = q.originLocation.match(/\(([A-Z]{2})[A-Z]{3}\)/);
-            if (orgMatch && !orgCountry) orgCountry = orgMatch[1];
+            const orgMatch = q.originLocation.match(/\(([^)]+)\)/);
+            if (orgMatch && !orgCountry) orgCountry = orgMatch[1].substring(0, 2);
             
-            const destMatch = q.destLocation.match(/\(([A-Z]{2})[A-Z]{3}\)/);
-            if (destMatch && !destCountry) destCountry = destMatch[1];
+            const destMatch = q.destLocation.match(/\(([^)]+)\)/);
+            if (destMatch && !destCountry) destCountry = destMatch[1].substring(0, 2);
 
             // Prefill route
             document.getElementById('originType').value = q.originType || 'port';
@@ -2337,7 +2409,7 @@
             const ol = document.getElementById('originLocation');
             if (ol) ol.value = q.originLocation;
             if (orgCountry) {
-                 selectedLocations.origin = { name: q.originLocation.split('(')[0].trim(), code: orgMatch ? (orgMatch[1]+orgMatch[2] || '') : '' };
+                 selectedLocations.origin = { name: q.originLocation.split('(')[0].trim(), code: orgMatch ? orgMatch[1].trim() : '' };
             }
 
             document.getElementById('destType').value = q.destType || 'port';
@@ -2348,7 +2420,7 @@
             const dl = document.getElementById('destLocation');
             if (dl) dl.value = q.destLocation;
             if (destCountry) {
-                 selectedLocations.dest = { name: q.destLocation.split('(')[0].trim(), code: destMatch ? (destMatch[1]+destMatch[2] || '') : '' };
+                 selectedLocations.dest = { name: q.destLocation.split('(')[0].trim(), code: destMatch ? destMatch[1].trim() : '' };
             }
 
             document.getElementById('originFromQuoteTag').style.display = 'inline-block';
@@ -2358,17 +2430,20 @@
                 const crd = document.getElementById('cargoReadyDate');
                 if (crd) {
                     crd.value = q.readyDate;
-                    if (typeof filterSailingsByDate === 'function') filterSailingsByDate();
                 }
             }
             
+            await fetchRealSchedules();
+            
             // Update route section label
+            const s = sailings[selectedSailingIndex];
             const originText = q.originLocation;
             const destText = q.destLocation;
-            document.getElementById('routeValue').textContent = `${originText} → ${destText}`;
-            document.getElementById('routeValue').classList.remove('section-placeholder');
-            document.getElementById('routeValue').classList.add('section-value');
-            document.getElementById('routeSection').classList.add('completed');
+            if (s) {
+                setHeaderValue('route', `${originText} → ${destText} · 🚢 ${s.vessel} (${s.etd})`);
+            } else {
+                setHeaderValue('route', `${originText} → ${destText}`);
+            }
 
             // Prefill cargo — ensure at least one item exists, then fill the first
             if (document.querySelectorAll('.cargo-item').length === 0) addCargoItem();
@@ -2497,15 +2572,34 @@
             document.getElementById(sectionPrefix + 'Section').classList.add('completed');
         }
 
-        function saveRoute() {
+        async function saveRoute() {
             const originLoc = document.getElementById('originLocation').value;
             const destLoc = document.getElementById('destLocation').value;
             if (!originLoc || !destLoc) {
                 showAlert('Please fill in both origin and destination.');
                 return;
             }
+            
+            const saveBtn = document.getElementById('routeActionBtn');
+            const originalText = saveBtn ? saveBtn.textContent : 'Continue';
+            if (saveBtn) {
+                saveBtn.textContent = 'Loading...';
+                saveBtn.disabled = true;
+            }
+            
+            await fetchRealSchedules();
+            
+            if (saveBtn) {
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            }
+            
             const s = sailings[selectedSailingIndex];
-            setHeaderValue('route', `${originLoc} → ${destLoc} · 🚢 ${s.vessel} (${s.etd})`);
+            if (s) {
+                setHeaderValue('route', `${originLoc} → ${destLoc} · 🚢 ${s.vessel} (${s.etd})`);
+            } else {
+                setHeaderValue('route', `${originLoc} → ${destLoc}`);
+            }
             togglePanel('route');
             setTimeout(() => togglePanel('cargo'), 300);
         }

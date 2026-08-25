@@ -55,6 +55,8 @@ class User(db.Model, UserMixin):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
     erp_customer_code = db.Column(db.String(100), nullable=True) # Atlas ERP erpCustomerCode sent on activation
     registration_id = db.Column(db.String(36), nullable=True) # UUID generated at registration, returned to Atlas ERP on activation
+    erp_contact_id = db.Column(db.Integer, nullable=True) # Atlas ERP contact ID
+
     
     # Relationships
     accounts = db.relationship('UserAccountMapping', backref='user', lazy=True, cascade="all, delete-orphan")
@@ -108,6 +110,8 @@ class Booking(db.Model):
     customer_ref = db.Column(db.String(100), nullable=True)
     traffic_type = db.Column(db.String(50), nullable=True) # EX/IM
     api_booking_ref = db.Column(db.String(100), nullable=True)
+    uuid = db.Column(db.String(100), nullable=True)
+
     
     cargo_items = db.relationship('CargoItem', backref='booking', lazy=True, cascade="all, delete-orphan")
     attachments = db.relationship('BookingAttachment', backref='booking', lazy=True, cascade="all, delete-orphan")

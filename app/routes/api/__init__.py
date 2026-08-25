@@ -787,3 +787,83 @@ def request_info(reg_id):
         return jsonify({'message': 'Info requested'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/Quotations', methods=['GET'])
+def get_quotations():
+    """
+    List quotations stored in the portal database.
+    ---
+    tags:
+      - Quotations API
+    """
+    account_id = request.args.get('accountId')
+    reference = request.args.get('reference')
+    valid_on = request.args.get('validOn')
+    traffic_type = request.args.get('trafficType')
+    page = max(int(request.args.get('page', 1)), 1)
+    page_size = max(int(request.args.get('pageSize', 20)), 1)
+    
+    from app.models.models import Booking
+    query = Booking.query.filter(Booking.status.in_(['Saved Quote', 'Booked']))
+    
+    if account_id:
+        from app.models.models import UserAccountMapping
+        user_ids = [m.user_id for m in UserAccountMapping.query.filter_by(account_id=str(account_id)).all()]
+        query = query.filter(Booking.user_id.in_(user_ids)) if user_ids else query.filter(Booking.user_id == -1)
+        
+    if reference:
+        query = query.filter(Booking.api_booking_ref.like(f"%{reference}%") | Booking.customer_ref.like(f"%{reference}%"))
+        
+    if traffic_type:
+        query = query.filter_by(traffic_type=traffic_type)
+        
+    if valid_on:
+        try:
+            valid_dt = datetime.strptime(valid_on, '%Y-%m-%d')
+            start_date = valid_dt - timedelta(days=30)
+            query = query.filter(Booking.created_at >= start_date, Booking.created_at <= valid_dt)
+        except Exception:
+            pass
+            
+    pagination = query.order_by(Booking.created_at.desc()).paginate(page=page, per_page=page_size, error_out=False)
+    
+    items = []
+    for q in pagination.items:
+        valid_until_dt = q.created_at + timedelta(days=30)
+        items.append({
+            "header": {
+                "quotationId": q.id,
+                "quoPrefix1": "QUO",
+                "quoPrefix2": q.created_at.strftime('%Y'),
+                "uuid": str(uuid.uuid4()),
+                "branchId": 1,
+                "customerId": account_id or 1,
+                "customerReference": q.customer_ref or "",
+                "trafficType": q.traffic_type or "EX",
+                "freightTransportMode": "10",
+                "freightTransportType": "10CN" if q.service_type == "LCL" else "FCL",
+                "movementType": "2",
+                "cargoClassification": "1",
+                "incoTerm": q.freight_terms or "FOB",
+                "validFrom": q.created_at.strftime('%Y-%m-%d'),
+                "validUntil": valid_until_dt.strftime('%Y-%m-%d'),
+                "currency": "USD",
+                "routing": {
+                    "polLocation": q.origin,
+                    "podLocation": q.destination
+                },
+                "totalCost": q.total_cost,
+                "status": q.status
+            },
+            "tariff": {
+                "lines": []
+            }
+        })
+        
+    return jsonify({
+        'total': pagination.total,
+        'page': page,
+        'pageSize': page_size,
+        'items': items
+    }), 200

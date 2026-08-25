@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify
 from flask_login import login_required, current_user
 from app.models.models import Rate, Booking, TrackingEvent, CargoItem, BookingAttachment, ShippingInstruction
 from app.services.rate_engine import RateEngine
@@ -192,36 +192,178 @@ def my_quotes():
         return redirect(url_for('index'))
         
     from sqlalchemy import or_
-    from datetime import timedelta
+    from datetime import timedelta, datetime
     
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    pagination = Booking.query.filter(
-        Booking.user_id == current_user.id,
-        or_(Booking.status == 'Saved Quote', Booking.status == 'Booked')
-    ).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
+    customer_id = 1
+    if current_user.accounts:
+        try: customer_id = int(current_user.accounts[0].account_id)
+        except: pass
+        
     quote_data = []
-    now = datetime.utcnow()
+    pagination = None
+    api_success = False
     
-    for q in pagination.items:
-        valid_until = q.created_at + timedelta(days=30)
-        
-        if q.status == 'Booked':
-            computed_status = 'Booked'
-        elif valid_until < now:
-            computed_status = 'Expired'
-        elif (valid_until - now).days <= 2:
-            computed_status = 'Expiring Soon'
-        else:
-            computed_status = 'Active'
+    # Try calling Atlas api/Quotations
+    try:
+        url = "http://realnexus.comit.cloud:5000/api/Quotations"
+        params = {
+            "accountId": customer_id,
+            "page": page,
+            "pageSize": per_page
+        }
+        if request.args.get('reference'):
+            params['reference'] = request.args.get('reference')
+        if request.args.get('validOn'):
+            params['validOn'] = request.args.get('validOn')
+        if request.args.get('trafficType'):
+            params['trafficType'] = request.args.get('trafficType')
             
-        quote_data.append({
-            'booking': q,
-            'computed_status': computed_status,
-            'valid_until': valid_until.strftime('%Y-%m-%d')
-        })
+        headers = {'accept': 'application/json', 'x-api-key': '1'}
+        resp = requests.get(url, params=params, headers=headers, timeout=5)
         
+        if resp.status_code == 200:
+            data = resp.json()
+            items = []
+            total_count = 0
+            
+            if isinstance(data, list):
+                items = data
+                total_count = len(data)
+            elif isinstance(data, dict):
+                items = data.get('items', data.get('quotations', data.get('quotes', [])))
+                total_count = data.get('pagination', {}).get('totalRecords', data.get('totalCount', data.get('total', len(items))))
+                
+            class MappedBooking:
+                def __init__(self, **kwargs):
+                    for k, v in kwargs.items():
+                        setattr(self, k, v)
+                        
+            now = datetime.utcnow()
+            for item in items:
+                # Unwrap if necessary
+                q_item = item.get('quotation', item)
+                header = q_item.get('header', q_item)
+                tariff = q_item.get('tariff', {}) or {}
+                lines = tariff.get('lines', []) or []
+                
+                quote_id = header.get('quotationId')
+                prefix1 = header.get('quoPrefix1', 'QUO')
+                prefix2 = header.get('quoPrefix2', '2026')
+                api_booking_ref = header.get('quoteNumber') or header.get('quotationNo') or f"{prefix1}-{prefix2}-{quote_id}"
+                
+                routing = header.get('routing', header.get('route', {}))
+                origin = header.get('polLocation') or routing.get('polLocation') or routing.get('porLocation') or "Unknown"
+                destination = header.get('podLocation') or routing.get('podLocation') or routing.get('delLocation') or "Unknown"
+                
+                created_on = header.get('createdOn')
+                try:
+                    if 'T' in created_on:
+                        cleaned_created = re.sub(r'\.\d+Z$', 'Z', created_on)
+                        if not cleaned_created.endswith('Z') and '+' not in cleaned_created:
+                            cleaned_created += 'Z'
+                        created_at = datetime.fromisoformat(cleaned_created.replace('Z', '+00:00'))
+                    else:
+                        created_at = datetime.strptime(created_on, '%Y-%m-%d')
+                except Exception:
+                    created_at = now
+                    
+                valid_until_str = header.get('validUntil')
+                try:
+                    if 'T' in valid_until_str:
+                        cleaned_until = re.sub(r'\.\d+Z$', 'Z', valid_until_str)
+                        if not cleaned_until.endswith('Z') and '+' not in cleaned_until:
+                            cleaned_until += 'Z'
+                        valid_until_dt = datetime.fromisoformat(cleaned_until.replace('Z', '+00:00'))
+                    else:
+                        valid_until_dt = datetime.strptime(valid_until_str, '%Y-%m-%d')
+                    valid_until = valid_until_dt.strftime('%Y-%m-%d')
+                except Exception:
+                    valid_until_dt = created_at + timedelta(days=30)
+                    valid_until = valid_until_dt.strftime('%Y-%m-%d')
+                    
+                total_cost = sum(float(line.get('amount') or 0) for line in lines)
+                if not total_cost and header.get('totalCost'):
+                    total_cost = float(header.get('totalCost'))
+                    
+                # Cross-reference status with local database
+                local_booking = Booking.query.filter_by(api_booking_ref=api_booking_ref).first()
+                status = local_booking.status if local_booking else "Saved Quote"
+                local_id = local_booking.id if local_booking else quote_id
+                
+                q = MappedBooking(
+                    id=local_id,
+                    origin=origin,
+                    destination=destination,
+                    total_cost=total_cost,
+                    selected_nvocc=header.get('nvoccName', 'API Quote'),
+                    service_type="LCL" if "LCL" in str(header.get('freightTransportType') or '').upper() else "FCL",
+                    api_booking_ref=api_booking_ref,
+                    created_at=created_at,
+                    status=status
+                )
+                
+                if status == 'Booked':
+                    computed_status = 'Booked'
+                elif valid_until_dt < now:
+                    computed_status = 'Expired'
+                elif (valid_until_dt - now).days <= 2:
+                    computed_status = 'Expiring Soon'
+                else:
+                    computed_status = 'Active'
+                    
+                quote_data.append({
+                    'booking': q,
+                    'computed_status': computed_status,
+                    'valid_until': valid_until
+                })
+                
+            class CustomPagination:
+                def __init__(self, items, page, per_page, total):
+                    self.items = items
+                    self.page = page
+                    self.per_page = per_page
+                    self.total = total
+                    self.pages = (total + per_page - 1) // per_page if per_page else 0
+                    self.has_prev = page > 1
+                    self.has_next = page < self.pages
+                    self.prev_num = page - 1
+                    self.next_num = page + 1
+                    
+            pagination = CustomPagination(quote_data, page, per_page, total_count)
+            api_success = True
+            
+    except Exception as e:
+        print(f"Error fetching from Quotations API: {e}")
+        
+    if not api_success:
+        # Fallback to local sqlite
+        pagination = Booking.query.filter(
+            Booking.user_id == current_user.id,
+            or_(Booking.status == 'Saved Quote', Booking.status == 'Booked')
+        ).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        
+        quote_data = []
+        now = datetime.utcnow()
+        for q in pagination.items:
+            valid_until = q.created_at + timedelta(days=30)
+            if q.status == 'Booked':
+                computed_status = 'Booked'
+            elif valid_until < now:
+                computed_status = 'Expired'
+            elif (valid_until - now).days <= 2:
+                computed_status = 'Expiring Soon'
+            else:
+                computed_status = 'Active'
+                
+            quote_data.append({
+                'booking': q,
+                'computed_status': computed_status,
+                'valid_until': valid_until.strftime('%Y-%m-%d')
+            })
+            
     return render_template('customer/my_quotes.html', quote_data=quote_data, pagination=pagination)
 
 @customer.route('/save-quote', methods=['POST'])
@@ -256,24 +398,45 @@ def save_quote():
     temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
     api_saved_successfully = False
     error_msg = "Failed to save quote via API. No valid quotation data or API response found."
+    uuid_val = None
     
     try:
         if os.path.exists(temp_file):
             with open(temp_file, 'r', encoding='utf-8') as f:
                 cached_data = json.load(f)
                 
-                # Format payload properly for saving the quote
-                q_payload = cached_data.get('quotation', cached_data)
-                header = q_payload.get('header', q_payload)
+                # Format payload properly for saving the quote (UUID-based flow)
+                q_item = cached_data.get('quotation', cached_data)
+                header = q_item.get('header', q_item)
+                uuid_val = header.get('uuid') or cached_data.get('uuid')
                 
-                # Fix dates to avoid "validUntil must be after validFrom" error
-                now = datetime.utcnow()
-                from datetime import timedelta
-                header['validFrom'] = now.isoformat() + "Z"
-                header['validUntil'] = (now + timedelta(days=30)).isoformat() + "Z"
+                branch_id = 1
+                customer_id = 1
+                if current_user.branches:
+                    try: branch_id = int(current_user.branches[0].branch_id)
+                    except: pass
+                if current_user.accounts:
+                    try: customer_id = int(current_user.accounts[0].account_id)
+                    except: pass
+
+                q_payload = {
+                    "uuid": uuid_val,
+                    "customerId": customer_id,
+                    "branchId": branch_id
+                }
+
+                print("\n" + "="*50)
+                print("SAVING QUOTE PAYLOAD:")
+                print(json.dumps(q_payload, indent=2))
+                print("="*50 + "\n")
 
                 headers = {'accept': 'application/json', 'x-api-key': '1', 'Content-Type': 'application/json'}
                 save_resp = requests.post('http://realnexus.comit.cloud:5000/api/Quotations', json=q_payload, headers=headers, timeout=10)
+                
+                print("\n" + "="*50)
+                print("SAVE RESPONSE:", save_resp.status_code)
+                print(save_resp.text)
+                print("="*50 + "\n")
                 if save_resp.status_code in [200, 201]:
                     r_data = save_resp.json()
                     
@@ -330,6 +493,7 @@ def save_quote():
         total_cost=float(total_cost) if total_cost else 0.0,
         service_type=service_type,
         api_booking_ref=quote_number,
+        uuid=uuid_val,
         status='Saved Quote',
         etd=etd_date
     )
@@ -356,14 +520,15 @@ def quote_detail(quote_id):
         import requests
         headers = {'accept': 'application/json', 'x-api-key': '1'}
         try:
-            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{quote.api_booking_ref}", headers=headers, timeout=10)
+            api_id = quote.api_booking_ref.split('-')[-1] if '-' in quote.api_booking_ref else quote.api_booking_ref
+            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
             if resp.status_code == 200:
                 resp_json = resp.json()
                 data = resp_json.get('quotation', resp_json)
                 tariff = data.get('tariff', data)
                 breakdown = tariff.get('lines', [])
             else:
-                print(f"API returned {resp.status_code} for {quote.api_booking_ref}: {resp.text}")
+                print(f"API returned {resp.status_code} for {api_id}: {resp.text}")
         except Exception as e:
             print("Failed to fetch quote breakdown:", e)
 
@@ -454,7 +619,8 @@ def download_pdf(quote_id):
         import requests
         headers = {'accept': 'application/json', 'x-api-key': '1'}
         try:
-            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{quote.api_booking_ref}", headers=headers, timeout=10)
+            api_id = quote.api_booking_ref.split('-')[-1] if '-' in quote.api_booking_ref else quote.api_booking_ref
+            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
             if resp.status_code == 200:
                 resp_json = resp.json()
                 data = resp_json.get('quotation', resp_json)
@@ -515,6 +681,7 @@ def rates():
         # Extract IDs from User Profile mappings
         branch_id = 1
         customer_id = 1
+        account_contact_id = current_user.erp_contact_id or current_user.id
         if current_user.branches:
             try: branch_id = int(current_user.branches[0].branch_id)
             except: pass
@@ -538,18 +705,11 @@ def rates():
             valid_from = valid_from_dt.strftime("%Y-%m-%d")
             
         valid_until = (valid_from_dt + timedelta(days=30)).strftime("%Y-%m-%d")
-        # Extract locodes from origin and destination
+        # Extract locodes and clean names from origin and destination
         origin_str = request.form.get("origin", "")
         dest_str = request.form.get("destination", "")
-        
-        import re
-        pol_locode = ""
-        m_pol = re.search(r'\(([^)]+)\)$', origin_str.strip())
-        if m_pol: pol_locode = m_pol.group(1).strip()
-        
-        pod_locode = ""
-        m_pod = re.search(r'\(([^)]+)\)$', dest_str.strip())
-        if m_pod: pod_locode = m_pod.group(1).strip()
+        origin_name, pol_locode = parse_location(origin_str)
+        dest_name, pod_locode = parse_location(dest_str)
 
         # --- API Mapping Rules ---
         # Map UI strings to Realnexus internal lookup codes
@@ -571,39 +731,32 @@ def rates():
         }
         mapped_mov = mov_map.get(mov_val, "2")
 
-        vas_codes = request.form.getlist('vas_code[]')
-        vas_list = []
-        for code in vas_codes:
-            vas = {"serviceCode": code}
-            if code == "INR" or code == "INS": 
-                vas["insuredValue"] = float(request.form.get("insurance_amount") or 0.0)
-                vas["insuredCurrency"] = request.form.get("insurance_currency", "USD")
-            vas_list.append(vas)
+        vas_list = request.form.getlist('vas_code[]')
 
         payload = {
             "branchId": branch_id,
             "customerId": customer_id,
-            "accountContactId": current_user.id,
-            "customerReference": request.form.get("customer_reference") or "WEB-QUOTE",
+            "accountContactId": account_contact_id,
+            "customerReference": request.form.get("customer_reference") or "",
             "trafficType": traffic_type,
             "freightTransportMode": mapped_mode,
             "freightTransportType": mapped_svc,
             "movementType": mapped_mov,
-            "cargoClassification": "11" if "HAZARDOUS" in goods_types else "12",
+            "cargoClassification": "1",
             "incoterm": request.form.get("freight_terms", ""),
             "validOn": valid_from,
             "currency": request.form.get("currency", "USD"),
-            "paymentMethod": request.form.get("payment_terms", ""),
+            "paymentMethod": "NS", # API currently only supports 'NS' and throws 500 on prepaid/collect
             "specialInstructions": request.form.get("special_instructions", ""),
             "route": {
-                "porLocode": "",
-                "porLocation": request.form.get("pickup_address", ""),
+                "porLocode": pol_locode,
+                "porLocation": origin_name,
                 "polLocode": pol_locode,
-                "polLocation": origin_str,
+                "polLocation": origin_name,
                 "podLocode": pod_locode,
-                "podLocation": dest_str,
-                "delLocode": "",
-                "delLocation": request.form.get("place_of_delivery", ""),
+                "podLocation": dest_name,
+                "delLocode": pod_locode,
+                "delLocation": dest_name,
                 "pickup": {
                     "location": request.form.get("pickup_address", "")
                 },
@@ -654,15 +807,14 @@ def rates():
                     "volume": float(item_volumes[i]) if i < len(item_volumes) and item_volumes[i] else 0.0,
                     "stackable": is_stackable,
                     "dimensions": {"amount": dim_amt, "length": dim_len, "width": dim_wid, "height": dim_hgt},
-                    "isHazardous": is_haz
-                }
-                if is_haz:
-                    cargo_item["imo"] = {
-                        "un": item_imo_uns[i] if i < len(item_imo_uns) and item_imo_uns[i] else "UNKNOWN", 
-                        "class": item_imo_classes[i] if i < len(item_imo_classes) and item_imo_classes[i] else "UNKNOWN", 
-                        "properShippingName": item_imo_names[i] if i < len(item_imo_names) and item_imo_names[i] else "UNKNOWN", 
-                        "packingGroup": item_imo_groups[i] if i < len(item_imo_groups) and item_imo_groups[i] else "UNKNOWN"
+                    "isHazardous": is_haz,
+                    "imo": {
+                        "un": item_imo_uns[i] if (is_haz and i < len(item_imo_uns) and item_imo_uns[i]) else "string", 
+                        "class": item_imo_classes[i] if (is_haz and i < len(item_imo_classes) and item_imo_classes[i]) else "string", 
+                        "properShippingName": item_imo_names[i] if (is_haz and i < len(item_imo_names) and item_imo_names[i]) else "string", 
+                        "packingGroup": item_imo_groups[i] if (is_haz and i < len(item_imo_groups) and item_imo_groups[i]) else "string"
                     }
+                }
                 payload["cargo"].append(cargo_item)
         else:
             cont_types = request.form.getlist('cont_type[]')
@@ -682,13 +834,13 @@ def rates():
                     "volume": float(c_volumes[i]) if i < len(c_volumes) and c_volumes[i] else 0.0,
                     "stackable": True,
                     "dimensions": {"amount": 0, "length": 0, "width": 0, "height": 0},
-                    "isHazardous": is_haz
-                }
-                if is_haz:
-                    cargo_item["imo"] = {
-                        "un": "UNKNOWN", "class": "UNKNOWN", "properShippingName": "UNKNOWN", "packingGroup": "UNKNOWN"
+                    "isHazardous": is_haz,
+                    "imo": {
+                        "un": "string", "class": "string", "properShippingName": "string", "packingGroup": "string"
                     }
+                }
                 payload["cargo"].append(cargo_item)
+
 
         try:
             headers = {'accept': 'application/json', 'x-api-key': '1', 'Content-Type': 'application/json'}
@@ -827,6 +979,43 @@ def api_get_ports(direction, country_code):
         return jsonify([])
     except Exception as e:
         print(f"Error fetching ports for {country_code}: {e}")
+    return jsonify([])
+
+
+@customer.route('/api/get-schedules')
+@login_required
+def api_get_schedules():
+    import requests
+    pol = request.args.get('portOfLoading')
+    pod = request.args.get('portOfDischarge')
+    product = request.args.get('product', 'lcl')
+    closing_date = request.args.get('closingDate')
+    branch_id = request.args.get('branchID')
+    
+    if not branch_id and current_user.branches:
+        try: branch_id = int(current_user.branches[0].branch_id)
+        except: pass
+    if not branch_id:
+        branch_id = 23
+        
+    url = f"http://realnexus.comit.cloud:5000/api/Schedules"
+    params = {
+        'portOfLoading': pol,
+        'portOfDischarge': pod,
+        'product': product,
+        'branchID': branch_id
+    }
+    if closing_date:
+        params['closingDate'] = closing_date
+        
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            return jsonify(resp.json())
+        return jsonify([])
+    except Exception as e:
+        print(f"Error fetching schedules: {e}")
     return jsonify([])
 
 
@@ -1069,7 +1258,14 @@ def rate_results():
                 
                 if pol_locode and pod_locode:
                     try:
-                        sched_url = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol_locode}&portOfDischarge={pod_locode}"
+                        branch_id = 23
+                        if current_user.branches:
+                            try: branch_id = int(current_user.branches[0].branch_id)
+                            except: pass
+                        valid_from = header.get('validFrom')
+                        sched_url = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol_locode}&portOfDischarge={pod_locode}&product=lcl&branchID={branch_id}"
+                        if valid_from:
+                            sched_url += f"&closingDate={valid_from[:10]}"
                         sched_resp = requests.get(sched_url, headers={'accept': 'application/json', 'x-api-key': '1'}, timeout=5)
                         if sched_resp.status_code == 200:
                             schedules = sched_resp.json()
