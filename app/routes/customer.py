@@ -868,8 +868,8 @@ def rates():
                 
                 # Mock up the rate results session so the redirect works nicely
                 session['search_query'] = {
-                    'origin': payload['route']['polLocation'],
-                    'destination': payload['route']['podLocation'],
+                    'origin': origin_str,
+                    'destination': dest_str,
                     'volume': sum(c['volume'] for c in payload['cargo']),
                     'service_type': service_type,
                     'cargo_items': payload['cargo'],
