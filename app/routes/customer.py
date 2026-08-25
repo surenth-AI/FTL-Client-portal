@@ -331,7 +331,18 @@ def my_quotes():
                     self.has_next = page < self.pages
                     self.prev_num = page - 1
                     self.next_num = page + 1
-                    
+
+                def iter_pages(self, left_edge=2, right_edge=2, left_current=2, right_current=4):
+                    last = 0
+                    for num in range(1, self.pages + 1):
+                        if (num <= left_edge or
+                                (num > self.page - left_current - 1 and num < self.page + right_current) or
+                                num > self.pages - right_edge):
+                            if last + 1 != num:
+                                yield None
+                            yield num
+                            last = num
+
             pagination = CustomPagination(quote_data, page, per_page, total_count)
             api_success = True
             
