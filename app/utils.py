@@ -15,3 +15,14 @@ def validate_password_strength(password):
         if not check(password):
             return False, message
     return True, None
+
+
+from concurrent.futures import ThreadPoolExecutor
+bg_executor = ThreadPoolExecutor(max_workers=4)
+
+def run_in_app_context(app, func, *args, **kwargs):
+    with app.app_context():
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            app.logger.error(f"Background task failed: {e}", exc_info=True)

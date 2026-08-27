@@ -157,12 +157,19 @@ def register_user():
                 "vat": "",
                 "createdOn": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
             }
-            requests.post('http://realnexus.comit.cloud:5000/api/Registrations', 
-                          headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
-                          json=rn_data, timeout=10)
             # Store registrationId on user so it can be returned to Atlas ERP on activation
             user.registration_id = reg_id
             db.session.commit()
+            
+            # Fire off API request in background thread
+            from app.utils import bg_executor
+            bg_executor.submit(
+                requests.post,
+                'http://realnexus.comit.cloud:5000/api/Registrations',
+                headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
+                json=rn_data,
+                timeout=10
+            )
         except Exception as e:
             print(f"Error posting to Realnexus: {e}")
         
@@ -200,7 +207,8 @@ def login():
     
     # 1. Handle Login Submit
     if login_form.validate_on_submit() and 'login-submit' in request.form:
-        user = query_with_retry(lambda: User.query.filter_by(email=login_form.email.data).first())
+        from sqlalchemy.orm import joinedload
+        user = query_with_retry(lambda: User.query.options(joinedload(User.company), joinedload(User.accounts)).filter_by(email=login_form.email.data).first())
         if user and check_password_hash(user.password_hash, login_form.password.data):
             if user.role not in ['super_admin', 'admin']:
                 if user.status not in ['active', 'activated']:
@@ -268,17 +276,34 @@ def login():
                 "vat": "",
                 "createdOn": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
             }
-            requests.post('http://realnexus.comit.cloud:5000/api/Registrations', 
-                          headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
-                          json=rn_data, timeout=10)
             # Store registrationId on user so it can be returned to Atlas ERP on activation
             user.registration_id = reg_id
             db.session.commit()
+            
+            # Fire off API request in background thread
+            from app.utils import bg_executor, run_in_app_context
+            bg_executor.submit(
+                requests.post,
+                'http://realnexus.comit.cloud:5000/api/Registrations',
+                headers={'accept': '*/*', 'x-api-key': '1', 'Content-Type': 'application/json'},
+                json=rn_data,
+                timeout=10
+            )
         except Exception as e:
             print(f"Error posting to Realnexus: {e}")
         
         company_display = company.name if company else f"{user_form.company_name.data or 'N/A'} ({user_form.city.data or 'N/A'}, {user_form.country.data or 'N/A'})"
-        SystemMailer.send_approval_request(user.name, user.email, company_display)
+        
+        # Send approval request email in background
+        app_obj = current_app._get_current_object()
+        bg_executor.submit(
+            run_in_app_context,
+            app_obj,
+            SystemMailer.send_approval_request,
+            user.name,
+            user.email,
+            company_display
+        )
         
         flash('Join request submitted! Awaiting Operations approval.', 'info')
         return redirect(url_for('auth.login'))
@@ -323,11 +348,18 @@ def forgot_password():
             db.session.commit()
             # Construct reset link
             reset_link = url_for('auth.reset_password', token=token, _external=True)
-            mail_sent = SystemMailer.send_password_reset(user.email, reset_link)
-            if mail_sent:
-                flash('An email has been sent with instructions to reset your password.', 'info')
-            else:
-                flash(f'SystemMailer failed. Check Admin SMTP config. (Simulated Link: {reset_link})', 'warning')
+            
+            # Send reset email in background
+            from app.utils import bg_executor, run_in_app_context
+            app_obj = current_app._get_current_object()
+            bg_executor.submit(
+                run_in_app_context,
+                app_obj,
+                SystemMailer.send_password_reset,
+                user.email,
+                reset_link
+            )
+            flash('An email has been sent with instructions to reset your password.', 'info')
         else:
             flash('If an account with that email exists, a password reset link has been sent.', 'info')
         return redirect(url_for('auth.login'))

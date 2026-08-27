@@ -407,126 +407,20 @@
             <button class="sort-chip" data-sort="expiring" onclick="sortQuotes('expiring', this)">⏳ Expiring soonest</button>
             <button class="sort-chip" data-sort="price" onclick="sortQuotes('price', this)">💲 Lowest price</button>
         </div>
-        <div class="results-count" id="resultsCount">Showing {{ quote_data|length }} quotes</div>
+                <div class="results-count" id="resultsCount">Loading...</div>
     </div>
 
     <div class="offers-list" id="offersList">
-        {% for item in quote_data %}
-            {% set q = item.booking %}
-            {% set c_status = item.computed_status %}
-            
-            <div class="offer-card {% if c_status == 'Expired' %}expired{% endif %}" 
-                 data-status="{{ c_status|lower|replace(' ', '') }}" 
-                 data-price="{{ q.total_cost }}" 
-                 data-saved="{{ q.created_at.strftime('%Y-%m-%d') }}" 
-                 data-validuntil="{{ item.valid_until }}" 
-                 data-ref="{{ q.api_booking_ref or 'FTL-QR-' ~ q.id }}" 
-                 data-route="{{ q.origin }} {{ q.destination }}" 
-                 data-service="{{ q.service_type }}">
-                
-                <div class="offer-badge-row">
-                    <div class="ref-eyebrow" onclick="copyRef(this)" data-ref="{{ q.api_booking_ref or 'FTL-QR-' ~ q.id }}">
-                        📌 Ref: <span class="ref-code">{{ q.api_booking_ref or 'FTL-QR-' ~ q.id }}</span> ⧉
-                    </div>
-                    
-                    {% if c_status == 'Active' %}
-                        <span class="status-pill active"><span class="dot"></span>Active</span>
-                    {% elif c_status == 'Expiring Soon' %}
-                        <span class="status-pill expiring"><span class="dot"></span>Expiring Soon</span>
-                    {% elif c_status == 'Booked' %}
-                        <span class="status-pill booked"><span class="dot"></span>Booked</span>
-                    {% elif c_status == 'Expired' %}
-                        <span class="status-pill expired"><span class="dot"></span>Expired</span>
-                    {% endif %}
-                </div>
-                
-                <div class="offer-main">
-                    <div class="offer-price-block">
-                        <div class="price-label">Total</div>
-                        <div class="price-amount"><span class="currency">USD</span>{{ "{:,.2f}".format(q.total_cost) }}</div>
-                        
-                        {% if c_status == 'Booked' %}
-                            <div class="price-valid">✅ Booked on {{ q.created_at.strftime('%Y-%m-%d') }}</div>
-                        {% elif c_status == 'Expired' %}
-                            <div class="price-valid bad">⚠ Expired on {{ item.valid_until }}</div>
-                        {% elif c_status == 'Expiring Soon' %}
-                            <div class="price-valid warn">⏳ Expires soon · {{ item.valid_until }}</div>
-                        {% else %}
-                            <div class="price-valid">📅 Valid until {{ item.valid_until }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="offer-details">
-                        <div class="carrier-row">
-                            <div class="carrier-logo">FTL</div>
-                            <div class="carrier-text">
-                                <div class="carrier-name">{{ q.selected_nvocc }}</div>
-                                <div class="service-name">{{ q.service_type }}</div>
-                            </div>
-                        </div>
-                        <div class="route-line">
-                            <span class="route-stop">{{ q.origin }}</span>
-                            <span class="route-arrow">→</span>
-                            <span class="route-stop">{{ q.destination }}</span>
-                        </div>
-                        <div class="routing-meta" style="margin-top:0.5rem;">
-                            <span class="meta-pill service">📦 {{ q.service_type }}</span>
-                        </div>
-                        <div class="charges-row">
-                            <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
-                            <span class="charge-pill included"><span class="dot"></span>Freight &amp; Surcharges</span>
-                            <span class="charge-pill excluded"><span class="dot"></span>Destination Port Charges</span>
-                        </div>
-                    </div>
-                    
-                    <div class="offer-actions">
-                        {% if c_status == 'Booked' %}
-                            <div class="booking-no">Booking No.<br><strong>{{ q.api_booking_ref or 'BK-FTL-' ~ q.id }}</strong></div>
-                            <!-- Assuming you have a route to view booking -->
-                            <a href="#" class="mq-btn mq-btn-view-booking" onclick="alert('View Booking feature pending backend support')">View Booking →</a>
-                        {% elif c_status == 'Expired' %}
-                            <div class="saved-on">Saved on<br><strong>{{ q.created_at.strftime('%Y-%m-%d') }}</strong></div>
-                            <a href="{{ url_for('customer.rates') }}" class="mq-btn mq-btn-outline">Request Updated Quote →</a>
-                        {% else %}
-                            <div class="saved-on">Saved on<br><strong>{{ q.created_at.strftime('%Y-%m-%d') }}</strong></div>
-                            
-                            <!-- The Book Action -->
-                            <a href="{{ url_for('customer.new_booking', quote_id=q.id) }}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="offer-footer">
-                    <div class="footer-links">
-                        <a class="terms-link" href="#">📄 Terms &amp; conditions ↗</a>
-                        
-                        <span style="color:var(--mq-border-color);">|</span>
-                        <button onclick="toggleQuoteBreakdown({{ q.id }}, this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
-
-                        <!-- Requested Feature: PDF / Email Download -->
-                        <span style="color:var(--mq-border-color);">|</span>
-                        <a href="{{ url_for('customer.download_pdf', quote_id=q.id) }}" class="download-link">📄 Download PDF</a>
-                        <button class="download-link" onclick="alert('Email Quote feature coming soon!')">✉ Email Quote</button>
-                    </div>
-                </div>
-
-                <!-- Inline Breakdown Panel -->
-                <div id="breakdown-panel-{{ q.id }}" class="breakdown-panel" style="background: var(--mq-bg-gray);">
-                    <div class="breakdown-inner">
-                        <div id="breakdown-content-{{ q.id }}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading breakdown...
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% endfor %}
+        <!-- Javascript populated -->
     </div>
 
     <!-- Pagination -->
-    {{ render_pagination(pagination, 'customer.my_quotes') }}
+    <nav class="pagination-container my-4" id="pagination-nav">
+        <!-- Javascript populated -->
+    </nav>
 
     <!-- Empty state -->
-    <div class="empty-state" id="emptyState" {% if not quote_data %}style="display:block;"{% endif %}>
+    <div class="empty-state" id="emptyState">
         <div class="icon">🔍</div>
         <div class="title">No quotes match your filters</div>
         <div class="desc">Try a different status filter or clear your search.</div>
@@ -536,6 +430,226 @@
 </div>
 
 <script>
+    let currentQuotes = [];
+    let currentPage = 1;
+    let currentStatus = 'all';
+
+    async function loadQuotes(page = 1) {
+        const offersList = document.getElementById('offersList');
+        const emptyState = document.getElementById('emptyState');
+        const resultsCount = document.getElementById('resultsCount');
+        
+        offersList.style.opacity = '0.5';
+        offersList.innerHTML = `
+            <div class="py-5 text-center text-muted w-100">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 small">Loading quotes directory...</p>
+            </div>
+        `;
+        emptyState.classList.remove('show');
+        
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ref = urlParams.get('reference') || '';
+            const validOn = urlParams.get('validOn') || '';
+            const traffic = urlParams.get('trafficType') || '';
+            
+            const response = await fetch(`/customer/api/my-quotes?page=${page}&reference=${ref}&validOn=${validOn}&trafficType=${traffic}`);
+            if (response.ok) {
+                const data = await response.json();
+                currentQuotes = data.quotes || [];
+                currentPage = data.page || 1;
+                
+                offersList.style.opacity = '1';
+                
+                if (currentQuotes.length > 0) {
+                    emptyState.classList.remove('show');
+                    offersList.style.display = 'flex';
+                    
+                    offersList.innerHTML = currentQuotes.map(item => {
+                        const q = item;
+                        const c_status = item.computed_status;
+                        const refCode = q.api_booking_ref || `FTL-QR-${q.id}`;
+                        
+                        let statusBadge = '';
+                        if (c_status === 'Active') {
+                            statusBadge = `<span class="status-pill active"><span class="dot"></span>Active</span>`;
+                        } else if (c_status === 'Expiring Soon') {
+                            statusBadge = `<span class="status-pill expiring"><span class="dot"></span>Expiring Soon</span>`;
+                        } else if (c_status === 'Booked') {
+                            statusBadge = `<span class="status-pill booked"><span class="dot"></span>Booked</span>`;
+                        } else if (c_status === 'Expired') {
+                            statusBadge = `<span class="status-pill expired"><span class="dot"></span>Expired</span>`;
+                        }
+                        
+                        let validText = '';
+                        if (c_status === 'Booked') {
+                            validText = `<div class="price-valid">✅ Booked on ${q.created_at}</div>`;
+                        } else if (c_status === 'Expired') {
+                            validText = `<div class="price-valid bad">⚠ Expired on ${item.valid_until}</div>`;
+                        } else if (c_status === 'Expiring Soon') {
+                            validText = `<div class="price-valid warn">⏳ Expires soon · ${item.valid_until}</div>`;
+                        } else {
+                            validText = `<div class="price-valid">📅 Valid until ${item.valid_until}</div>`;
+                        }
+                        
+                        let actionHtml = '';
+                        if (c_status === 'Booked') {
+                            actionHtml = `
+                                <div class="booking-no">Booking No.<br><strong>${q.api_booking_ref || 'BK-FTL-' + q.id}</strong></div>
+                                <a href="#" class="mq-btn mq-btn-view-booking" onclick="alert('View Booking feature pending backend support')">View Booking →</a>
+                            `;
+                        } else if (c_status === 'Expired') {
+                            actionHtml = `
+                                <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
+                                <a href="/customer/rates" class="mq-btn mq-btn-outline">Request Updated Quote →</a>
+                            `;
+                        } else {
+                            actionHtml = `
+                                <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
+                                <a href="/customer/new-booking?quote_id=${q.id}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
+                            `;
+                        }
+                        
+                        const formatPrice = parseFloat(q.total_cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        
+                        return `
+                            <div class="offer-card ${c_status === 'Expired' ? 'expired' : ''}" 
+                                 data-status="${c_status.toLowerCase().replace(' ', '')}" 
+                                 data-price="${q.total_cost}" 
+                                 data-saved="${q.created_at}" 
+                                 data-validuntil="${item.valid_until}" 
+                                 data-ref="${refCode}" 
+                                 data-route="${q.origin} ${q.destination}" 
+                                 data-service="${q.service_type}">
+                                
+                                <div class="offer-badge-row">
+                                    <div class="ref-eyebrow" onclick="copyRef(this)" data-ref="${refCode}">
+                                        📌 Ref: <span class="ref-code">${refCode}</span> ⧉
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+                                
+                                <div class="offer-main">
+                                    <div class="offer-price-block">
+                                        <div class="price-label">Total</div>
+                                        <div class="price-amount"><span class="currency">USD</span>${formatPrice}</div>
+                                        ${validText}
+                                    </div>
+                                    
+                                    <div class="offer-details">
+                                        <div class="carrier-row">
+                                            <div class="carrier-logo">FTL</div>
+                                            <div class="carrier-text">
+                                                <div class="carrier-name">${q.selected_nvocc}</div>
+                                                <div class="service-name">${q.service_type}</div>
+                                            </div>
+                                        </div>
+                                        <div class="route-line">
+                                            <span class="route-stop">${q.origin}</span>
+                                            <span class="route-arrow">→</span>
+                                            <span class="route-stop">${q.destination}</span>
+                                        </div>
+                                        <div class="routing-meta" style="margin-top:0.5rem;">
+                                            <span class="meta-pill service">📦 ${q.service_type}</span>
+                                        </div>
+                                        <div class="charges-row">
+                                            <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
+                                            <span class="charge-pill included"><span class="dot"></span>Freight &amp; Surcharges</span>
+                                            <span class="charge-pill excluded"><span class="dot"></span>Destination Port Charges</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="offer-actions">
+                                        ${actionHtml}
+                                    </div>
+                                </div>
+                                
+                                <div class="offer-footer">
+                                    <div class="footer-links">
+                                        <a class="terms-link" href="#">📄 Terms &amp; conditions ↗</a>
+                                        <span style="color:var(--mq-border-color);">|</span>
+                                        <button onclick="toggleQuoteBreakdown(${q.id}, this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
+                                        <span style="color:var(--mq-border-color);">|</span>
+                                        <a href="/customer/download_pdf?quote_id=${q.id}" class="download-link">📄 Download PDF</a>
+                                        <button class="download-link" onclick="alert('Email Quote feature coming soon!')">✉ Email Quote</button>
+                                    </div>
+                                </div>
+                                
+                                <div id="breakdown-panel-${q.id}" class="breakdown-panel" style="background: var(--mq-bg-gray);">
+                                    <div class="breakdown-inner">
+                                        <div id="breakdown-content-${q.id}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading breakdown...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    resultsCount.textContent = `Showing ${data.total} quotes`;
+                    renderLocalPagination(data);
+                    applyFilters(); // Re-apply current client-side filter states
+                } else {
+                    offersList.style.display = 'none';
+                    emptyState.classList.add('show');
+                    resultsCount.textContent = `Showing 0 quotes`;
+                    clearLocalPagination();
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load quotes:", e);
+            offersList.innerHTML = `<div class="py-5 text-center text-danger">Failed to retrieve quote records. Please try again later.</div>`;
+        }
+    }
+
+    function renderLocalPagination(data) {
+        const nav = document.getElementById('pagination-nav');
+        if (!nav) return;
+        
+        if (data.pages <= 1) {
+            nav.innerHTML = '';
+            return;
+        }
+        
+        let html = '<ul class="pagination justify-content-center">';
+        
+        // Previous button
+        if (data.has_prev) {
+            html += `<li class="page-item"><button class="page-link" onclick="loadQuotes(${data.page - 1})">« Prev</button></li>`;
+        } else {
+            html += `<li class="page-item disabled"><span class="page-link">« Prev</span></li>`;
+        }
+        
+        // Page numbers
+        for (let i = 1; i <= data.pages; i++) {
+            if (i === data.page) {
+                html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                html += `<li class="page-item"><button class="page-link" onclick="loadQuotes(${i})">${i}</button></li>`;
+            }
+        }
+        
+        // Next button
+        if (data.has_next) {
+            html += `<li class="page-item"><button class="page-link" onclick="loadQuotes(${data.page + 1})">Next »</button></li>`;
+        } else {
+            html += `<li class="page-item disabled"><span class="page-link">Next »</span></li>`;
+        }
+        
+        html += '</ul>';
+        nav.innerHTML = html;
+    }
+
+    function clearLocalPagination() {
+        const nav = document.getElementById('pagination-nav');
+        if (nav) nav.innerHTML = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadQuotes(1);
+    });
+
     function toggleQuoteBreakdown(quoteId, btn) {
         const panel = document.getElementById('breakdown-panel-' + quoteId);
         const contentDiv = document.getElementById('breakdown-content-' + quoteId);
@@ -604,46 +718,6 @@
         }
     }
 
-    // High-performance AJAX Pagination
-    document.addEventListener('DOMContentLoaded', function() {
-        document.body.addEventListener('click', function(e) {
-            let target = e.target.closest('.pagination .page-link');
-            if (target && target.getAttribute('href') && target.getAttribute('href') !== '#') {
-                e.preventDefault();
-                let url = target.getAttribute('href');
-                let offersList = document.querySelector('.offers-list');
-                let paginationNav = document.querySelector('.pagination-container') || target.closest('nav');
-                
-                if (offersList) offersList.style.opacity = '0.5';
-                
-                fetch(url)
-                    .then(response => response.text())
-                    .then(html => {
-                        let parser = new DOMParser();
-                        let doc = parser.parseFromString(html, 'text/html');
-                        
-                        let newOffers = doc.querySelector('.offers-list');
-                        if (newOffers && offersList) {
-                            offersList.innerHTML = newOffers.innerHTML;
-                            offersList.style.opacity = '1';
-                        }
-                        
-                        let newNav = doc.querySelector('.pagination-container') || doc.querySelector('.pagination').parentNode;
-                        if (newNav && paginationNav) {
-                            paginationNav.innerHTML = newNav.innerHTML;
-                        }
-                        
-                        window.history.pushState({path: url}, '', url);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    })
-                    .catch(err => {
-                        console.error('Pagination failed', err);
-                        window.location.href = url; 
-                    });
-            }
-        });
-    });
-
     function copyRef(el) {
         const ref = el.dataset.ref;
         navigator.clipboard?.writeText(ref).catch(() => {});
@@ -655,8 +729,6 @@
             el.innerHTML = original;
         }, 1200);
     }
-
-    let currentStatus = 'all';
 
     function filterStatus(status, chip) {
         currentStatus = status;

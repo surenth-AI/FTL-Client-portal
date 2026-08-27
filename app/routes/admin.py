@@ -50,7 +50,17 @@ def department_required(departments):
 
 # --- Analytics Helpers ---
 
+_bi_cache = {
+    'data': None,
+    'expires_at': 0
+}
+
 def get_bi_analytics():
+    import time
+    now = time.time()
+    if _bi_cache['data'] is not None and now < _bi_cache['expires_at']:
+        return _bi_cache['data']
+
     excel_path = r'D:\AXE Global\sevenlogs-Demo S1\Sample csv\BI Data\FMSBKG-20260413035735392.xls'
     fallback_bi = {
         'metrics': {'total_cbm': 4250.75, 'total_wgt': 125400.0, 'avg_cbm': 12.4, 'hazmat_ratio': 8.5, 'invoice_issues': 12, 'bl_issues': 5},
@@ -69,7 +79,8 @@ def get_bi_analytics():
         hazmat_count = int(df[df['IsHazmat'] == True].shape[0])
         hazmat_ratio = (hazmat_count / df.shape[0]) * 100 if df.shape[0] > 0 else 0
         customers = df.groupby('CUSTOMER')['CBM'].sum().nlargest(10)
-        return {
+        
+        result = {
             'metrics': {'total_cbm': round(total_cbm, 2), 'total_wgt': round(total_wgt, 2), 'avg_cbm': round(avg_cbm, 2), 'hazmat_ratio': round(hazmat_ratio, 1), 'invoice_issues': int(df['INCO'].isna().sum()), 'bl_issues': int(df['FileID'].isna().sum())},
             'charts': {
                 'customers': {'labels': customers.index.tolist(), 'data': customers.values.tolist()},
@@ -79,19 +90,24 @@ def get_bi_analytics():
             }
         }
     except Exception as e:
-        return fallback_bi
+        result = fallback_bi
+
+    _bi_cache['data'] = result
+    _bi_cache['expires_at'] = now + 600  # cache for 10 minutes
+    return result
 
 # --- Routes ---
 
 @admin.route('/dashboard')
 @admin_required
 def dashboard():
+    from sqlalchemy.orm import joinedload
     total_bookings = Booking.query.count()
     total_customers = User.query.filter_by(role='customer', status='active').count()
     total_companies = Company.query.filter_by(status='active').count()
     total_staff = User.query.filter(User.role != 'customer').count()
     total_rates = Rate.query.count()
-    recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(10).all()
+    recent_bookings = Booking.query.options(joinedload(Booking.customer).joinedload(User.company)).order_by(Booking.created_at.desc()).limit(10).all()
     all_customers = User.query.filter_by(role='customer', status='active').all()
     
     return render_template('admin/dashboard.html', 
@@ -106,11 +122,12 @@ def dashboard():
 @admin.route('/users')
 @admin_required
 def manage_users():
+    from sqlalchemy.orm import joinedload
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 25, type=int)
     q = request.args.get('q', '', type=str)
     
-    query = User.query.filter_by(role='customer')
+    query = User.query.options(joinedload(User.company)).filter_by(role='customer')
     if q:
         search = f"%{q}%"
         query = query.filter((User.name.ilike(search)) | (User.email.ilike(search)))
@@ -118,7 +135,7 @@ def manage_users():
     pagination = query.order_by(User.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
     if current_user.role == 'super_admin':
-        staff = User.query.filter(User.role != 'customer').all()
+        staff = User.query.options(joinedload(User.company)).filter(User.role != 'customer').all()
     else:
         staff = []
         
@@ -375,6 +392,13 @@ def settings():
             sys_settings.receiver_email = request.form.get('receiver_email') or None
 
         db.session.commit()
+        # Invalidate system settings cache
+        try:
+            from app import clear_settings_cache
+            clear_settings_cache()
+        except Exception as e:
+            current_app.logger.warning(f"Failed to clear settings cache: {e}")
+            
         flash('Settings updated successfully.', 'success')
         return redirect(url_for('admin.settings'))
         

@@ -111,8 +111,13 @@ def parse_location(loc_str):
         return loc_str.replace(match.group(0), '').strip(), match.group(1).strip()
     return loc_str, ""
 
-def post_booking_to_api(booking):
+def post_booking_to_api(booking_id):
     try:
+        booking = Booking.query.get(booking_id)
+        if not booking:
+            print(f"Booking {booking_id} not found in database for API post.")
+            return
+            
         por_name, por_code = parse_location(booking.place_of_receipt or booking.origin)
         pol_name, pol_code = parse_location(booking.origin)
         pod_name, pod_code = parse_location(booking.destination)
@@ -154,10 +159,12 @@ def post_booking_to_api(booking):
         
         if response.status_code == 200:
             booking.api_booking_ref = "SUCCESS"
+            db.session.commit()
+            print(f"Booking {booking_id} successfully posted to API.")
         else:
-            print(f"Failed to post booking to API: {response.status_code} - {response.text}")
+            print(f"Failed to post booking {booking_id} to API: {response.status_code} - {response.text}")
     except Exception as e:
-        print(f"Error posting booking {booking.id} to API: {e}")
+        print(f"Error posting booking {booking_id} to API: {e}")
 
 @customer.route('/dashboard')
 @login_required
@@ -165,24 +172,44 @@ def dashboard():
     if current_user.role == 'admin':
         return redirect(url_for('admin.dashboard'))
 
-    recent_shipments = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).limit(5).all()
+    return render_template('customer/dashboard.html', today=datetime.now())
+
+@customer.route('/api/dashboard-stats')
+@login_required
+def api_dashboard_stats():
     total_shipments = Booking.query.filter_by(user_id=current_user.id).count()
     in_transit = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status.contains('Transit')).count()
     delivered = Booking.query.filter_by(user_id=current_user.id, status='Delivered').count()
     pending = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status.contains('Pending')).count()
     booked = Booking.query.filter_by(user_id=current_user.id, status='Booked').count()
-    si_needed = Booking.query.filter_by(user_id=current_user.id, status='Booked', is_si_submitted=False).first()
+    
+    si_needed_booking = Booking.query.filter_by(user_id=current_user.id, status='Booked', is_si_submitted=False).first()
+    si_needed = {'id': si_needed_booking.id} if si_needed_booking else None
+    
+    recent_bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).limit(5).all()
+    recent_shipments = []
+    for b in recent_bookings:
+        recent_shipments.append({
+            'id': b.id,
+            'origin': b.origin,
+            'destination': b.destination,
+            'service_type': b.service_type,
+            'selected_nvocc': b.selected_nvocc,
+            'status': b.status,
+            'created_at': b.created_at.strftime('%d %b %Y')
+        })
+        
+    return jsonify({
+        'total_shipments': total_shipments,
+        'total_active': total_shipments - delivered,
+        'in_transit': in_transit,
+        'pending': pending,
+        'delivered': delivered,
+        'booked': booked,
+        'si_needed': si_needed,
+        'recent_shipments': recent_shipments
+    })
 
-    return render_template('customer/dashboard.html',
-                         recent_shipments=recent_shipments,
-                         total_active=total_shipments - delivered,
-                         total_shipments=total_shipments,
-                         in_transit=in_transit,
-                         delivered=delivered,
-                         pending=pending,
-                         booked=booked,
-                         si_needed=si_needed,
-                         today=datetime.now())
 
 @customer.route('/my_quotes')
 @login_required
@@ -190,7 +217,11 @@ def my_quotes():
     if current_user.role not in ['customer', 'agent']:
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
-        
+    return render_template('customer/my_quotes.html')
+
+@customer.route('/api/my-quotes')
+@login_required
+def api_my_quotes():
     from sqlalchemy import or_
     from datetime import timedelta, datetime
     
@@ -203,7 +234,7 @@ def my_quotes():
         except: pass
         
     quote_data = []
-    pagination = None
+    total_count = 0
     api_success = False
     
     # Try calling Atlas api/Quotations
@@ -227,7 +258,6 @@ def my_quotes():
         if resp.status_code == 200:
             data = resp.json()
             items = []
-            total_count = 0
             
             if isinstance(data, list):
                 items = data
@@ -236,14 +266,8 @@ def my_quotes():
                 items = data.get('items', data.get('quotations', data.get('quotes', [])))
                 total_count = data.get('pagination', {}).get('totalRecords', data.get('totalCount', data.get('total', len(items))))
                 
-            class MappedBooking:
-                def __init__(self, **kwargs):
-                    for k, v in kwargs.items():
-                        setattr(self, k, v)
-                        
             now = datetime.utcnow()
             for item in items:
-                # Unwrap if necessary
                 q_item = item.get('quotation', item)
                 header = q_item.get('header', q_item)
                 tariff = q_item.get('tariff', {}) or {}
@@ -288,22 +312,9 @@ def my_quotes():
                 if not total_cost and header.get('totalCost'):
                     total_cost = float(header.get('totalCost'))
                     
-                # Cross-reference status with local database
                 local_booking = Booking.query.filter_by(api_booking_ref=api_booking_ref).first()
                 status = local_booking.status if local_booking else "Saved Quote"
                 local_id = local_booking.id if local_booking else quote_id
-                
-                q = MappedBooking(
-                    id=local_id,
-                    origin=origin,
-                    destination=destination,
-                    total_cost=total_cost,
-                    selected_nvocc=header.get('nvoccName', 'API Quote'),
-                    service_type="LCL" if "LCL" in str(header.get('freightTransportType') or '').upper() else "FCL",
-                    api_booking_ref=api_booking_ref,
-                    created_at=created_at,
-                    status=status
-                )
                 
                 if status == 'Booked':
                     computed_status = 'Booked'
@@ -315,35 +326,18 @@ def my_quotes():
                     computed_status = 'Active'
                     
                 quote_data.append({
-                    'booking': q,
+                    'id': local_id,
+                    'origin': origin,
+                    'destination': destination,
+                    'total_cost': total_cost,
+                    'selected_nvocc': header.get('nvoccName', 'API Quote'),
+                    'service_type': "LCL" if "LCL" in str(header.get('freightTransportType') or '').upper() else "FCL",
+                    'api_booking_ref': api_booking_ref,
+                    'created_at': created_at.strftime('%d %b %Y'),
+                    'status': status,
                     'computed_status': computed_status,
                     'valid_until': valid_until
                 })
-                
-            class CustomPagination:
-                def __init__(self, items, page, per_page, total):
-                    self.items = items
-                    self.page = page
-                    self.per_page = per_page
-                    self.total = total
-                    self.pages = (total + per_page - 1) // per_page if per_page else 0
-                    self.has_prev = page > 1
-                    self.has_next = page < self.pages
-                    self.prev_num = page - 1
-                    self.next_num = page + 1
-
-                def iter_pages(self, left_edge=2, right_edge=2, left_current=2, right_current=4):
-                    last = 0
-                    for num in range(1, self.pages + 1):
-                        if (num <= left_edge or
-                                (num > self.page - left_current - 1 and num < self.page + right_current) or
-                                num > self.pages - right_edge):
-                            if last + 1 != num:
-                                yield None
-                            yield num
-                            last = num
-
-            pagination = CustomPagination(quote_data, page, per_page, total_count)
             api_success = True
             
     except Exception as e:
@@ -370,12 +364,29 @@ def my_quotes():
                 computed_status = 'Active'
                 
             quote_data.append({
-                'booking': q,
+                'id': q.id,
+                'origin': q.origin,
+                'destination': q.destination,
+                'total_cost': float(q.total_cost or 0.0),
+                'selected_nvocc': q.selected_nvocc or 'Local Quote',
+                'service_type': q.service_type,
+                'api_booking_ref': q.api_booking_ref or f"Local-{q.id}",
+                'created_at': q.created_at.strftime('%d %b %Y'),
+                'status': q.status,
                 'computed_status': computed_status,
                 'valid_until': valid_until.strftime('%Y-%m-%d')
             })
-            
-    return render_template('customer/my_quotes.html', quote_data=quote_data, pagination=pagination)
+        total_count = pagination.total
+
+    return jsonify({
+        'quotes': quote_data,
+        'page': page,
+        'per_page': per_page,
+        'total': total_count,
+        'pages': (total_count + per_page - 1) // per_page if per_page else 0,
+        'has_prev': page > 1,
+        'has_next': page < ((total_count + per_page - 1) // per_page if per_page else 0)
+    })
 
 @customer.route('/save-quote', methods=['POST'])
 @login_required
@@ -917,8 +928,25 @@ def rates():
         except Exception as e:
             flash(f"API Error: {str(e)}", "danger")
             return redirect(url_for('customer.rates'))
-    # Fetch Countries
+    # Render template immediately with blank/minimal arrays for instant frontend rendering,
+    # offloading the lookup loading to an asynchronous fetch.
+    freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
+    return render_template('customer/rates.html',
+                         countries=[],
+                         incoterms=[],
+                         package_types_json='[]',
+                         container_types_json='[]',
+                         vas_types_json='[]',
+                         weight_uom_json='[]',
+                         volume_uom_json='[]',
+                         freight_terms=freight_terms)
+
+@customer.route('/api/lookups')
+@login_required
+def api_lookups():
     from app.services.master_data import get_code_list
+    
+    # 1. Fetch Countries
     try:
         countries_api = get_code_list('countrycode')
         countries = [c.to_dict() for c in countries_api] if countries_api else []
@@ -926,11 +954,10 @@ def rates():
         print("Error fetching countries:", ex)
         countries = []
 
-    # Fetch other lookup fields
+    # 2. Fetch other lookup fields
     try:
-        # Fetch from new CodeLists API where supported
         incoterms_api = get_code_list('incoterm')
-        incoterms = incoterms_api if incoterms_api else []
+        incoterms = [i.to_dict() for i in incoterms_api] if incoterms_api else []
         
         package_api = get_code_list('packagecode')
         package_types = [pt.to_dict() for pt in package_api] if package_api else []
@@ -938,34 +965,30 @@ def rates():
         container_api = get_code_list('freighttransporttype')
         container_types = [ct.to_dict() for ct in container_api] if container_api else []
         
-        # Fetch Value Added Services
         vas_api = get_code_list('vastype')
         vas_types = [c.to_dict() for c in vas_api] if vas_api else []
 
-        # Hardcode basic UOMs and Terms since they are not in the CodeLists API, stripping internal DB dependencies
         weight_uom = [{'code': 'kg', 'name': 'Kilograms (kg)'}, {'code': 'lbs', 'name': 'Pounds (lbs)'}]
         volume_uom = [{'code': 'cbm', 'name': 'Cubic Meters (cbm)'}, {'code': 'cbf', 'name': 'Cubic Feet (cbf)'}]
-        freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
     except Exception as ex:
         print("Error fetching lookup lists:", ex)
         incoterms = []
         package_types = []
         container_types = []
-
         vas_types = []
         weight_uom = []
         volume_uom = []
-        freight_terms = []
 
-    return render_template('customer/rates.html',
-                         countries=countries,
-                         incoterms=incoterms,
-                         package_types_json=json.dumps(package_types),
-                         container_types_json=json.dumps(container_types),
-                         vas_types_json=json.dumps(vas_types),
-                         weight_uom_json=json.dumps(weight_uom),
-                         volume_uom_json=json.dumps(volume_uom),
-                         freight_terms=freight_terms)
+    return jsonify({
+        'countries': countries,
+        'incoterms': incoterms,
+        'package_types': package_types,
+        'container_types': container_types,
+        'vas_types': vas_types,
+        'weight_uom': weight_uom,
+        'volume_uom': volume_uom
+    })
+
 
 @customer.route('/api/get-ports/<direction>/<country_code>')
 @login_required
@@ -1426,10 +1449,14 @@ def confirm_booking():
     )
     db.session.add(initial_event)
     
-    # Fire off API request
-    post_booking_to_api(booking)
-    
     db.session.commit()
+    
+    # Fire off API request in background thread
+    try:
+        from app.utils import bg_executor, run_in_app_context
+        bg_executor.submit(run_in_app_context, current_app._get_current_object(), post_booking_to_api, booking.id)
+    except Exception as e:
+        current_app.logger.error(f"Failed to submit background API post: {e}")
     
     flash('Booking confirmed! You can track your shipment now.', 'success')
     return redirect(url_for('customer.my_shipments'))
@@ -1502,10 +1529,14 @@ def booking_request():
     )
     db.session.add(initial_event)
     
-    # Fire off API request
-    post_booking_to_api(booking)
-    
     db.session.commit()
+    
+    # Fire off API request in background thread
+    try:
+        from app.utils import bg_executor, run_in_app_context
+        bg_executor.submit(run_in_app_context, current_app._get_current_object(), post_booking_to_api, booking.id)
+    except Exception as e:
+        current_app.logger.error(f"Failed to submit background API post: {e}")
     
     flash('Booking request submitted! We will review it shortly.', 'success')
     return redirect(url_for('customer.my_shipments'))
@@ -1515,7 +1546,8 @@ def booking_request():
 def my_shipments():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    pagination = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    from sqlalchemy.orm import joinedload
+    pagination = Booking.query.options(joinedload(Booking.cargo_items)).filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return render_template('customer/shipments.html', shipments=pagination.items, pagination=pagination)
 
 @customer.route('/shipment/<int:booking_id>')

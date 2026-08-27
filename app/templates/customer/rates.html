@@ -1727,17 +1727,58 @@ html[data-color-scheme='dark'] .rates-view-content {
 
 <script>
 
-// Dynamic countries from API passed by Flask
-const apiCountries = {{ countries | tojson | safe }};
-    const packageTypes = {{ package_types_json | safe }};
-    if (!packageTypes.find(p => p.code === 'ZR')) {
-        packageTypes.push({code: 'ZR', name: 'IBC'});
-        packageTypes.sort((a, b) => a.name.localeCompare(b.name));
+// Dynamic lists loaded asynchronously
+let apiCountries = [];
+let apiIncoterms = [];
+let packageTypes = [];
+let containerTypes = [];
+let vasTypes = [];
+let weightUomOptions = [];
+let volumeUomOptions = [];
+
+function populateIncoterms() {
+    const incotermSelect = document.getElementById('incoterm');
+    if (!incotermSelect) return;
+    const currentValue = incotermSelect.value;
+    incotermSelect.innerHTML = '<option value="">Select incoterm</option>';
+    apiIncoterms.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.code;
+        option.textContent = item.name;
+        incotermSelect.appendChild(option);
+    });
+    if (currentValue && apiIncoterms.some(item => item.code === currentValue)) {
+        incotermSelect.value = currentValue;
     }
-const containerTypes = {{ container_types_json | safe }};
-const vasTypes = {{ vas_types_json | safe }};
-const weightUomOptions = {{ weight_uom_json | safe }};
-const volumeUomOptions = {{ volume_uom_json | safe }};
+}
+
+// Fetch lists asynchronously on load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/customer/api/lookups');
+        if (response.ok) {
+            const data = await response.json();
+            apiCountries = data.countries || [];
+            apiIncoterms = data.incoterms || [];
+            packageTypes = data.package_types || [];
+            if (!packageTypes.find(p => p.code === 'ZR')) {
+                packageTypes.push({code: 'ZR', name: 'IBC'});
+                packageTypes.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            containerTypes = data.container_types || [];
+            vasTypes = data.vas_types || [];
+            weightUomOptions = data.weight_uom || [];
+            volumeUomOptions = data.volume_uom || [];
+            
+            // Re-populate selects that depend on these lists
+            populateCountries('origin', document.getElementById('originType').value);
+            populateCountries('dest', document.getElementById('destType').value);
+            populateIncoterms();
+        }
+    } catch (e) {
+        console.error("Failed to load lookup APIs:", e);
+    }
+});
 
 // Cache for dynamically fetched ports
 window.fetchedPortsCache = { origin: {}, dest: {} };

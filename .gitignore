@@ -31,3 +31,4 @@ Thumbs.db
 # Project Specific
 uploads/
 scratch/
+*_cache.json

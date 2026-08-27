@@ -8,6 +8,52 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
 import logging
+import time
+
+# In-memory dictionary cache for SystemSetting
+_settings_cache = {
+    'data': None,
+    'expires_at': 0
+}
+
+def get_cached_system_settings():
+    now = time.time()
+    if _settings_cache['data'] is None or now > _settings_cache['expires_at']:
+        from app.models.models import SystemSetting
+        try:
+            settings = SystemSetting.query.first()
+            if settings:
+                _settings_cache['data'] = {
+                    'theme_color': settings.theme_color or 'blue',
+                    'logo_path': settings.logo_path or 'img/logo.png',
+                    'login_banner_path': settings.login_banner_path or 'img/login_hero.png',
+                    'default_layout': settings.default_layout or 'sidebar',
+                    'typography': settings.typography or 'Inter'
+                }
+            else:
+                _settings_cache['data'] = {
+                    'theme_color': 'blue',
+                    'logo_path': 'img/logo.png',
+                    'login_banner_path': 'img/login_hero.png',
+                    'default_layout': 'sidebar',
+                    'typography': 'Inter'
+                }
+        except Exception:
+            return {
+                'theme_color': 'blue',
+                'logo_path': 'img/logo.png',
+                'login_banner_path': 'img/login_hero.png',
+                'default_layout': 'sidebar',
+                'typography': 'Inter'
+            }
+        _settings_cache['expires_at'] = now + 300 # Cache for 5 minutes
+    return _settings_cache['data']
+
+def clear_settings_cache():
+    global _settings_cache
+    _settings_cache['data'] = None
+    _settings_cache['expires_at'] = 0
+
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -145,21 +191,15 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def inject_system_settings():
-        from app.models.models import SystemSetting
         from flask import url_for
-        try:
-            settings = SystemSetting.query.first()
-            theme = settings.theme_color if settings else 'blue'
-            logo = settings.logo_path if settings else 'img/logo.png'
-            banner = settings.login_banner_path if settings and hasattr(settings, 'login_banner_path') else 'img/login_hero.png'
-            layout = settings.default_layout if settings and settings.default_layout else 'sidebar'
-            typography = settings.typography if settings and hasattr(settings, 'typography') and settings.typography else 'Inter'
-        except Exception:
-            theme = 'blue'
-            logo = 'img/logo.png'
-            banner = 'img/login_hero.png'
-            layout = 'sidebar'
-            typography = 'Inter'
+        settings_data = get_cached_system_settings()
+        
+        theme = settings_data.get('theme_color', 'blue')
+        logo = settings_data.get('logo_path', 'img/logo.png')
+        banner = settings_data.get('login_banner_path', 'img/login_hero.png')
+        layout = settings_data.get('default_layout', 'sidebar')
+        typography = settings_data.get('typography', 'Inter')
+        
         logo_url = url_for('static', filename=logo)
         banner_url = url_for('static', filename=banner) if banner else url_for('static', filename='img/login_hero.png')
         return {
