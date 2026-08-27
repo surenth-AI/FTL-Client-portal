@@ -60,26 +60,24 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_88A86EE5D15E4EF18D79812693AAD45B }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B3A58AC24DF8447BB007F69E848FE828 }}
 
-      - name: Resolve resource group and clear deployment lock
+      - name: Resolve resource group
         run: |
           # Use webapp list to find resource group without needing --resource-group flag
           RG=$(az webapp list --query "[?name=='FTL-customer-test'].resourceGroup | [0]" -o tsv)
           echo "Resource group resolved: $RG"
           echo "RESOURCE_GROUP=$RG" >> $GITHUB_ENV
-          az webapp stop --name FTL-customer-test --resource-group "$RG"
-          echo "App stopped. Waiting for lock to release..."
-          sleep 15
 
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure Web App (Staging Slot)
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'FTL-customer-test'
-          slot-name: 'Production'
+          slot-name: 'staging'
           clean: true
 
-      - name: Start App Service after deployment
-        if: always()
+      - name: Swap Staging to Production
+        if: success()
         run: |
-          az webapp start --name FTL-customer-test --resource-group "$RESOURCE_GROUP"
-          echo "App started successfully."
+          echo "Swapping Staging slot to Production..."
+          az webapp deployment slot swap --name FTL-customer-test --resource-group "$RESOURCE_GROUP" --slot staging --target-slot production
+          echo "Swap completed. Zero-downtime deployment successful!"
