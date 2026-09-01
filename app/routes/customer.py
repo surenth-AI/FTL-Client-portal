@@ -528,6 +528,7 @@ def save_quote():
     flash('Quote successfully saved!', 'success')
     return redirect(url_for('customer.my_quotes'))
 
+@customer.route('/quote/<quote_id>')
 @customer.route('/quote/<int:quote_id>')
 @login_required
 def quote_detail(quote_id):
@@ -535,24 +536,44 @@ def quote_detail(quote_id):
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     
-    quote = Booking.query.filter_by(id=quote_id, user_id=current_user.id, status='Saved Quote').first_or_404()
+    ref = str(quote_id).strip()
+    quote = None
+    if ref.isdigit():
+        quote = Booking.query.filter_by(id=int(ref), user_id=current_user.id, status='Saved Quote').first()
+    if not quote:
+        quote = Booking.query.filter_by(api_booking_ref=ref, user_id=current_user.id, status='Saved Quote').first()
+    if not quote:
+        flash('Quote not found.', 'danger')
+        return redirect(url_for('customer.my_quotes'))
     
     breakdown = []
-    if quote.api_booking_ref:
+    quote_number = quote.api_booking_ref or ref
+    if quote_number:
         import requests
         headers = {'accept': 'application/json', 'x-api-key': '1'}
-        try:
-            api_id = quote.api_booking_ref.split('-')[-1] if '-' in quote.api_booking_ref else quote.api_booking_ref
-            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
-            if resp.status_code == 200:
-                resp_json = resp.json()
-                data = resp_json.get('quotation', resp_json)
-                tariff = data.get('tariff', data)
-                breakdown = tariff.get('lines', [])
-            else:
-                print(f"API returned {resp.status_code} for {api_id}: {resp.text}")
-        except Exception as e:
-            print("Failed to fetch quote breakdown:", e)
+        customer_id = None
+        if current_user.accounts:
+            try: customer_id = int(current_user.accounts[0].account_id)
+            except: pass
+        params = {'accountId': customer_id} if customer_id else {}
+        
+        candidates = [quote_number]
+        if quote_number.isdigit():
+            candidates.extend([f"QUO-2026-{quote_number}", f"26-TDR-{quote_number}"])
+            
+        for cand in candidates:
+            try:
+                resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{cand}", params=params, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    resp_json = resp.json()
+                    data = resp_json.get('quotation', resp_json)
+                    tariff = data.get('tariff', data)
+                    breakdown = tariff.get('lines', [])
+                    break
+                else:
+                    print(f"API returned {resp.status_code} for {cand}: {resp.text}")
+            except Exception as e:
+                print(f"Failed to fetch quote breakdown for {cand}:", e)
 
     # Fallback to cached API response if available
     if not breakdown:
@@ -568,10 +589,9 @@ def quote_detail(quote_id):
                     data = cached_data.get('quotation', cached_data)
                     header = data.get('header', data)
                     
-                    # Verify if the cached data is somewhat related, or just fallback safely
                     quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
                     
-                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
+                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or (quote.api_booking_ref and quote.api_booking_ref.endswith('-')):
                         tariff = data.get('tariff', data)
                         breakdown = tariff.get('lines', [])
         except Exception as e:
@@ -579,31 +599,50 @@ def quote_detail(quote_id):
 
     return render_template('customer/quote_detail.html', quote=quote, breakdown=breakdown)
 
+@customer.route('/api/quote/<path:quote_id>/breakdown')
 @customer.route('/api/quote/<int:quote_id>/breakdown')
 @login_required
 def api_quote_breakdown(quote_id):
     if current_user.role not in ['customer', 'agent']:
         return jsonify({'error': 'Unauthorized'}), 403
     
-    quote = Booking.query.filter_by(id=quote_id, user_id=current_user.id).first()
+    ref = str(quote_id).strip()
+    quote = None
+    if ref.isdigit():
+        quote = Booking.query.filter_by(id=int(ref), user_id=current_user.id).first()
     if not quote:
-        return jsonify({'error': 'Quote not found'}), 404
+        quote = Booking.query.filter_by(api_booking_ref=ref, user_id=current_user.id).first()
+        
+    quote_number = quote.api_booking_ref if (quote and quote.api_booking_ref) else ref
         
     breakdown = []
-    if quote.api_booking_ref:
+    if quote_number:
         import requests
         headers = {'accept': 'application/json', 'x-api-key': '1'}
-        try:
-            api_id = quote.api_booking_ref.split('-')[-1] if '-' in quote.api_booking_ref else quote.api_booking_ref
-            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=5)
-            if resp.status_code == 200:
-                resp_json = resp.json()
-                data = resp_json.get('quotation', resp_json)
-                tariff = data.get('tariff', data)
-                if isinstance(tariff, dict):
-                    breakdown = tariff.get('lines') or []
-        except Exception as e:
-            pass
+        customer_id = None
+        if current_user.accounts:
+            try: customer_id = int(current_user.accounts[0].account_id)
+            except: pass
+        params = {'accountId': customer_id} if customer_id else {}
+        
+        candidates = [quote_number]
+        if quote_number.isdigit():
+            candidates.extend([f"QUO-2026-{quote_number}", f"26-TDR-{quote_number}"])
+            
+        for cand in candidates:
+            try:
+                resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{cand}", params=params, headers=headers, timeout=5)
+                if resp.status_code == 200:
+                    resp_json = resp.json()
+                    data = resp_json.get('quotation', resp_json)
+                    tariff = data.get('tariff', data)
+                    if isinstance(tariff, dict):
+                        breakdown = tariff.get('lines') or []
+                    break
+                else:
+                    print(f"API returned {resp.status_code} for {cand}: {resp.text}")
+            except Exception as e:
+                print(f"Error fetching breakdown for {cand}: {e}")
 
     # Fallback to cached API response if available
     if not breakdown:
@@ -618,7 +657,11 @@ def api_quote_breakdown(quote_id):
                     data = cached_data.get('quotation', cached_data)
                     header = data.get('header', data)
                     quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
-                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
+                    if quote and (str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-')):
+                        tariff = data.get('tariff', data)
+                        if isinstance(tariff, dict):
+                            breakdown = tariff.get('lines') or []
+                    elif quote_number and (quote_number == quo_id or str(header.get('quotationId')) in quote_number):
                         tariff = data.get('tariff', data)
                         if isinstance(tariff, dict):
                             breakdown = tariff.get('lines') or []
@@ -627,29 +670,56 @@ def api_quote_breakdown(quote_id):
 
     return jsonify({'breakdown': breakdown or []})
 
+@customer.route('/quote/<quote_id>/download_pdf')
 @customer.route('/quote/<int:quote_id>/download_pdf')
+@customer.route('/download_pdf')
 @login_required
-def download_pdf(quote_id):
+def download_pdf(quote_id=None):
     if current_user.role not in ['customer', 'agent']:
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     
-    quote = Booking.query.filter_by(id=quote_id, user_id=current_user.id, status='Saved Quote').first_or_404()
+    if not quote_id:
+        quote_id = request.args.get('quote_id')
+        
+    ref = str(quote_id or '').strip()
+    quote = None
+    if ref.isdigit():
+        quote = Booking.query.filter_by(id=int(ref), user_id=current_user.id).first()
+    if not quote:
+        quote = Booking.query.filter_by(api_booking_ref=ref, user_id=current_user.id).first()
+    if not quote:
+        flash('Quote not found.', 'danger')
+        return redirect(url_for('customer.my_quotes'))
     
     breakdown = []
-    if quote.api_booking_ref:
+    quote_number = quote.api_booking_ref or ref
+    if quote_number:
         import requests
         headers = {'accept': 'application/json', 'x-api-key': '1'}
-        try:
-            api_id = quote.api_booking_ref.split('-')[-1] if '-' in quote.api_booking_ref else quote.api_booking_ref
-            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
-            if resp.status_code == 200:
-                resp_json = resp.json()
-                data = resp_json.get('quotation', resp_json)
-                tariff = data.get('tariff', data)
-                breakdown = tariff.get('lines', [])
-        except Exception as e:
-            print("Failed to fetch quote breakdown:", e)
+        customer_id = None
+        if current_user.accounts:
+            try: customer_id = int(current_user.accounts[0].account_id)
+            except: pass
+        params = {'accountId': customer_id} if customer_id else {}
+        
+        candidates = [quote_number]
+        if quote_number.isdigit():
+            candidates.extend([f"QUO-2026-{quote_number}", f"26-TDR-{quote_number}"])
+            
+        for cand in candidates:
+            try:
+                resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{cand}", params=params, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    resp_json = resp.json()
+                    data = resp_json.get('quotation', resp_json)
+                    tariff = data.get('tariff', data)
+                    breakdown = tariff.get('lines', [])
+                    break
+                else:
+                    print(f"API returned {resp.status_code} for {cand}: {resp.text}")
+            except Exception as e:
+                print(f"Failed to fetch quote breakdown for {cand}:", e)
 
     if not breakdown:
         import os
@@ -663,7 +733,7 @@ def download_pdf(quote_id):
                     data = cached_data.get('quotation', cached_data)
                     header = data.get('header', data)
                     quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
-                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or quote.api_booking_ref.endswith('-'):
+                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or (quote.api_booking_ref and quote.api_booking_ref.endswith('-')):
                         tariff = data.get('tariff', data)
                         breakdown = tariff.get('lines', [])
         except Exception as e:
@@ -1215,7 +1285,7 @@ def rate_results():
     if not query:
         return redirect(url_for('customer.new_booking'))
         
-    api_id = query.get('api_quotation_id')
+    quote_number = query.get('quote_id') or query.get('api_quotation_id')
     results = []
     
     # Try to use the cached API response from the file system
@@ -1231,14 +1301,14 @@ def rate_results():
     except Exception as e:
         print(f"Failed to load cached API data: {e}")
     
-    if api_id or cached_data:
+    if quote_number or cached_data:
         import requests
         data = None
         
-        if api_id:
+        if quote_number:
             headers = {'accept': 'application/json', 'x-api-key': '1'}
             try:
-                resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{api_id}", headers=headers, timeout=10)
+                resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{quote_number}", headers=headers, timeout=10)
                 if resp.status_code == 200:
                     data = resp.json().get('quotation', {})
             except Exception as e:

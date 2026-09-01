@@ -493,6 +493,8 @@
                             validText = `<div class="price-valid">📅 Valid until ${item.valid_until}</div>`;
                         }
                         
+                        const safeRef = refCode.replace(/[^a-zA-Z0-9_-]/g, '_');
+                        
                         let actionHtml = '';
                         if (c_status === 'Booked') {
                             actionHtml = `
@@ -507,7 +509,7 @@
                         } else {
                             actionHtml = `
                                 <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
-                                <a href="/customer/new-booking?quote_id=${q.id}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
+                                <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
                             `;
                         }
                         
@@ -569,16 +571,16 @@
                                     <div class="footer-links">
                                         <a class="terms-link" href="#">📄 Terms &amp; conditions ↗</a>
                                         <span style="color:var(--mq-border-color);">|</span>
-                                        <button onclick="toggleQuoteBreakdown(${q.id}, this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
+                                        <button onclick="toggleQuoteBreakdown('${refCode}', this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
                                         <span style="color:var(--mq-border-color);">|</span>
-                                        <a href="/customer/download_pdf?quote_id=${q.id}" class="download-link">📄 Download PDF</a>
+                                        <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="download-link">📄 Download PDF</a>
                                         <button class="download-link" onclick="alert('Email Quote feature coming soon!')">✉ Email Quote</button>
                                     </div>
                                 </div>
                                 
-                                <div id="breakdown-panel-${q.id}" class="breakdown-panel" style="background: var(--mq-bg-gray);">
+                                <div id="breakdown-panel-${safeRef}" class="breakdown-panel" style="background: var(--mq-bg-gray);">
                                     <div class="breakdown-inner">
-                                        <div id="breakdown-content-${q.id}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
+                                        <div id="breakdown-content-${safeRef}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
                                             <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading breakdown...
                                         </div>
                                     </div>
@@ -651,8 +653,10 @@
     });
 
     function toggleQuoteBreakdown(quoteId, btn) {
-        const panel = document.getElementById('breakdown-panel-' + quoteId);
-        const contentDiv = document.getElementById('breakdown-content-' + quoteId);
+        const safeRef = String(quoteId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const panel = document.getElementById('breakdown-panel-' + safeRef);
+        const contentDiv = document.getElementById('breakdown-content-' + safeRef);
+        if (!panel) return;
         const isOpen = panel.classList.contains('open');
 
         if (isOpen) {
@@ -665,7 +669,7 @@
             btn.innerHTML = '📊 Hide Breakdown <span class="chev">▴</span>';
 
             if (!panel.dataset.loaded) {
-                fetch(`/customer/api/quote/${quoteId}/breakdown`)
+                fetch(`/customer/api/quote/${encodeURIComponent(quoteId)}/breakdown`)
                     .then(res => res.json())
                     .then(data => {
                         if (data.breakdown && data.breakdown.length > 0) {
