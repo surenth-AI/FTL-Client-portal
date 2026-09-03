@@ -860,7 +860,7 @@
         <div class="offers-list" id="offersList">
             {% for res in results %}
             <div class="offer-card {% if loop.first %}best{% endif %}" data-price="{{ res.total_cost }}"
-                data-transit="{{ res.transit_days }}" data-closing="{{ res.next_closing or '2026-07-31' }}">
+                data-transit="{{ res.transit_days }}" data-closing="{{ res.next_closing }}">
                 <div class="offer-badge-row" style="justify-content: space-between; align-items: center; width: 100%;">
                     <div style="display: flex; gap: 0.4rem;">
                         {% if results|length == 1 %}
@@ -883,7 +883,9 @@
                         {% else %}
                         <span class="meta-pill direct" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px;">⚡ Direct routing</span>
                         {% endif %}
+                        {% if res.transit_days and res.transit_days > 0 %}
                         <span class="meta-pill time" style="padding: 0.2rem 0.55rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; background: #f8fafc;">🕐 {{ res.transit_days }} days</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="offer-main">
@@ -930,11 +932,13 @@
                     </div>
                     <div class="offer-actions">
                         <div class="next-closing">Next closing<br>
-                            <strong>{{ res.next_closing or '2026-07-31' }}</strong>
+                            <strong>{{ res.next_closing or '-' }}</strong>
+                            {% if res.schedules and res.schedules|length > 0 %}
                             <br><a href="#"
                                 onclick="openSchedulesModal('schedulesModal-{{ loop.index }}'); event.preventDefault();"
                                 style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; text-decoration:none;">View
                                 more</a>
+                            {% endif %}
                         </div>
                         <a href="{{ url_for('customer.new_booking') }}" class="btn btn-book w-100" style="text-decoration:none; display:inline-block; text-align:center; padding:0.6rem;">Book →</a>
                         <div class="quote-ref" id="quoteIdDisplay-card-{{ loop.index }}" onclick="copyRef(this)"></div>
@@ -1022,14 +1026,16 @@
                             }}</span>
                     </td>
                     <td>{% if loop.index % 2 == 0 %}1 Transshipment{% else %}Direct{% endif %}</td>
-                    <td>{{ res.transit_days }} days</td>
+                    <td>{{ res.transit_days ~ ' days' if res.transit_days and res.transit_days > 0 else '-' }}</td>
                     <td>Origin + Freight</td>
                     <td>
-                        {{ res.next_closing or '2026-07-31' }}
+                        {{ res.next_closing or '-' }}
+                        {% if res.schedules and res.schedules|length > 0 %}
                         <br><a href="#"
                             onclick="event.stopPropagation(); openSchedulesModal('schedulesModal-{{ loop.index }}'); event.preventDefault();"
                             style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; text-decoration:none;">View
                             more</a>
+                        {% endif %}
                     </td>
                     <td class="price-cell">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{
                         "%.2f"|format(res.total_cost) }}</td>

@@ -1727,14 +1727,27 @@ html[data-color-scheme='dark'] .rates-view-content {
 
 <script>
 
-// Dynamic lists loaded asynchronously
+// Dynamic lists loaded asynchronously with immediate robust fallbacks
 let apiCountries = [];
 let apiIncoterms = [];
-let packageTypes = [];
+let packageTypes = [
+    { code: 'PX', name: 'Pallet' },
+    { code: 'BX', name: 'Box' },
+    { code: 'CR', name: 'Crate' },
+    { code: 'DR', name: 'Drum' },
+    { code: 'BG', name: 'Bag' },
+    { code: 'ZR', name: 'IBC' }
+];
 let containerTypes = [];
 let vasTypes = [];
-let weightUomOptions = [];
-let volumeUomOptions = [];
+let weightUomOptions = [
+    { code: 'kg', name: 'Kilograms (kg)' },
+    { code: 'lbs', name: 'Pounds (lbs)' }
+];
+let volumeUomOptions = [
+    { code: 'cbm', name: 'Cubic Meters (cbm)' },
+    { code: 'cbf', name: 'Cubic Feet (cbf)' }
+];
 
 function populateIncoterms() {
     const incotermSelect = document.getElementById('incoterm');
@@ -1752,6 +1765,45 @@ function populateIncoterms() {
     }
 }
 
+function updateAllCargoPackageTypes() {
+    document.querySelectorAll('select[name="item_type[]"]').forEach(select => {
+        const currentValue = select.value;
+        let html = '<option value="">Select package type</option>';
+        packageTypes.forEach(pt => {
+            html += `<option value="${pt.code}">${pt.name}</option>`;
+        });
+        select.innerHTML = html;
+        if (currentValue && packageTypes.some(pt => pt.code === currentValue)) {
+            select.value = currentValue;
+        }
+    });
+}
+
+function updateAllCargoUOMs() {
+    document.querySelectorAll('[id$="-weight-uom"]').forEach(select => {
+        const currentValue = select.value;
+        let html = '';
+        weightUomOptions.forEach(u => {
+            html += `<option value="${u.code}">${u.code}</option>`;
+        });
+        select.innerHTML = html;
+        if (currentValue && weightUomOptions.some(u => u.code === currentValue)) {
+            select.value = currentValue;
+        }
+    });
+    document.querySelectorAll('[id$="-volume-uom"]').forEach(select => {
+        const currentValue = select.value;
+        let html = '';
+        volumeUomOptions.forEach(u => {
+            html += `<option value="${u.code}">${u.code}</option>`;
+        });
+        select.innerHTML = html;
+        if (currentValue && volumeUomOptions.some(u => u.code === currentValue)) {
+            select.value = currentValue;
+        }
+    });
+}
+
 // Fetch lists asynchronously on load
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -1760,20 +1812,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = await response.json();
             apiCountries = data.countries || [];
             apiIncoterms = data.incoterms || [];
-            packageTypes = data.package_types || [];
+            if (data.package_types && data.package_types.length > 0) {
+                packageTypes = data.package_types;
+            }
             if (!packageTypes.find(p => p.code === 'ZR')) {
                 packageTypes.push({code: 'ZR', name: 'IBC'});
-                packageTypes.sort((a, b) => a.name.localeCompare(b.name));
             }
+            packageTypes.sort((a, b) => a.name.localeCompare(b.name));
             containerTypes = data.container_types || [];
             vasTypes = data.vas_types || [];
-            weightUomOptions = data.weight_uom || [];
-            volumeUomOptions = data.volume_uom || [];
+            if (data.weight_uom && data.weight_uom.length > 0) {
+                weightUomOptions = data.weight_uom;
+            }
+            if (data.volume_uom && data.volume_uom.length > 0) {
+                volumeUomOptions = data.volume_uom;
+            }
             
             // Re-populate selects that depend on these lists
             populateCountries('origin', document.getElementById('originType').value);
             populateCountries('dest', document.getElementById('destType').value);
             populateIncoterms();
+            updateAllCargoPackageTypes();
+            updateAllCargoUOMs();
         }
     } catch (e) {
         console.error("Failed to load lookup APIs:", e);
@@ -2547,7 +2607,7 @@ async function filterLocations(locationType) {
                     <div class="form-group">
                         <label class="form-label">Total Pieces <span class="required">*</span></label>
                         <input type="number" class="form-input" placeholder="0" min="1" value="1" required 
-                               id="${itemId}-pieces" name="item_qty[]" name="item_qty[]" oninput="updateTotals('${itemId}')">
+                               id="${itemId}-pieces" name="item_qty[]" oninput="updateTotals('${itemId}')">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Package Type <span class="required">*</span></label>
@@ -2596,8 +2656,8 @@ async function filterLocations(locationType) {
                         <label class="form-label">Total Weight <span class="required">*</span></label>
                         <div class="input-uom-group">
                             <input type="number" class="form-input" step="0.01" required 
-                                   id="${itemId}-weight" name="item_weight[]" name="item_weight[]" oninput="updateTotals('${itemId}')"
-                                   placeholder="0.00">
+                                    id="${itemId}-weight" name="item_weight[]" oninput="updateTotals('${itemId}')"
+                                    placeholder="0.00">
                             <select class="uom-select" id="${itemId}-weight-uom">
                                 ${weightUomOptions.map(u => `<option value="${u.code}">${u.code}</option>`).join('')}
                             </select>
@@ -2607,8 +2667,8 @@ async function filterLocations(locationType) {
                         <label class="form-label">Total Volume <span class="required">*</span></label>
                         <div class="input-uom-group">
                             <input type="number" class="form-input" step="0.01" required 
-                                   id="${itemId}-volume" name="item_volume[]" name="item_volume[]" oninput="updateTotals('${itemId}')"
-                                   placeholder="0.00">
+                                    id="${itemId}-volume" name="item_volume[]" oninput="updateTotals('${itemId}')"
+                                    placeholder="0.00">
                             <select class="uom-select" id="${itemId}-volume-uom">
                                 ${volumeUomOptions.map(u => `<option value="${u.code}">${u.code}</option>`).join('')}
                             </select>

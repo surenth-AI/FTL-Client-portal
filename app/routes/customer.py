@@ -1030,7 +1030,14 @@ def api_lookups():
         incoterms = [i.to_dict() for i in incoterms_api] if incoterms_api else []
         
         package_api = get_code_list('packagecode')
-        package_types = [pt.to_dict() for pt in package_api] if package_api else []
+        package_types = [pt.to_dict() for pt in package_api] if package_api else [
+            {'code': 'PX', 'name': 'Pallet'},
+            {'code': 'BX', 'name': 'Box'},
+            {'code': 'CR', 'name': 'Crate'},
+            {'code': 'DR', 'name': 'Drum'},
+            {'code': 'BG', 'name': 'Bag'},
+            {'code': 'ZR', 'name': 'IBC'}
+        ]
         
         container_api = get_code_list('freighttransporttype')
         container_types = [ct.to_dict() for ct in container_api] if container_api else []
@@ -1043,11 +1050,18 @@ def api_lookups():
     except Exception as ex:
         print("Error fetching lookup lists:", ex)
         incoterms = []
-        package_types = []
+        package_types = [
+            {'code': 'PX', 'name': 'Pallet'},
+            {'code': 'BX', 'name': 'Box'},
+            {'code': 'CR', 'name': 'Crate'},
+            {'code': 'DR', 'name': 'Drum'},
+            {'code': 'BG', 'name': 'Bag'},
+            {'code': 'ZR', 'name': 'IBC'}
+        ]
         container_types = []
         vas_types = []
-        weight_uom = []
-        volume_uom = []
+        weight_uom = [{'code': 'kg', 'name': 'Kilograms (kg)'}, {'code': 'lbs', 'name': 'Pounds (lbs)'}]
+        volume_uom = [{'code': 'cbm', 'name': 'Cubic Meters (cbm)'}, {'code': 'cbf', 'name': 'Cubic Feet (cbf)'}]
 
     return jsonify({
         'countries': countries,
@@ -1324,20 +1338,30 @@ def rate_results():
                 sailings = data.get('sailings', [])
                 tariff = data.get('tariff', {})
                 
+                api_id = header.get('quotationId') or header.get('fmsQuotationId') or quote_number or ''
+                
                 sailing = sailings[0] if sailings else {}
                 pol = sailing.get('pol', {})
                 pod = sailing.get('pod', {})
                 
-                # Calculate transit days
+                # Calculate transit days from quote sailings
                 import datetime
                 transit_days = 0
-                if pol.get('etd') and pod.get('eta'):
-                    try:
-                        etd = datetime.datetime.strptime(pol['etd'][:10], '%Y-%m-%d')
-                        eta = datetime.datetime.strptime(pod['eta'][:10], '%Y-%m-%d')
-                        transit_days = (eta - etd).days
-                    except:
-                        pass
+                for s in sailings:
+                    s_pol = s.get('pol', {}) if isinstance(s.get('pol'), dict) else {}
+                    s_pod = s.get('pod', {}) if isinstance(s.get('pod'), dict) else {}
+                    s_etd = s_pol.get('etd') or s.get('etd') or s.get('estimatedTimeOfDeparture')
+                    s_eta = s_pod.get('eta') or s.get('eta') or s.get('estimatedTimeOfArrival')
+                    if s_etd and s_eta:
+                        try:
+                            etd = datetime.datetime.strptime(str(s_etd)[:10], '%Y-%m-%d')
+                            eta = datetime.datetime.strptime(str(s_eta)[:10], '%Y-%m-%d')
+                            diff = (eta - etd).days
+                            if diff > 0:
+                                transit_days = diff
+                                break
+                        except Exception:
+                            pass
                 
                 # Calculate total price
                 lines = tariff.get('lines', [])
@@ -1348,7 +1372,7 @@ def rate_results():
                 carrier_name = branch_name if is_lcl else (sailing.get('linerName') or 'Standard Carrier')
                 nvocc_name = carrier_name
                 
-                # Fetch Schedules for Next Closing & Modal
+                # Fetch Schedules for Next Closing & Modal & Transit Days
                 pol_locode = ""
                 m_pol = re.search(r'\(([^)]+)\)$', query.get('origin', '').strip())
                 if m_pol: pol_locode = m_pol.group(1).strip()
@@ -1366,43 +1390,101 @@ def rate_results():
                         if current_user.branches:
                             try: branch_id = int(current_user.branches[0].branch_id)
                             except: pass
-                        valid_from = header.get('validFrom')
+                        c_date = None
+                        if query.get('cargo_ready_date'):
+                            c_date = str(query.get('cargo_ready_date'))[:10]
+                        elif header.get('validFrom'):
+                            c_date = str(header.get('validFrom'))[:10]
+
                         sched_url = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol_locode}&portOfDischarge={pod_locode}&product=lcl&branchID={branch_id}"
-                        if valid_from:
-                            sched_url += f"&closingDate={valid_from[:10]}"
+                        if c_date:
+                            sched_url += f"&closingDate={c_date}"
                         sched_resp = requests.get(sched_url, headers={'accept': 'application/json', 'x-api-key': '1'}, timeout=5)
                         if sched_resp.status_code == 200:
                             schedules = sched_resp.json()
                             if not isinstance(schedules, list):
                                 schedules = []
+                        if not schedules and c_date:
+                            sched_url_broad = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol_locode}&portOfDischarge={pod_locode}&product=lcl&closingDate=2026-01-01&branchID={branch_id}"
+                            sched_resp_broad = requests.get(sched_url_broad, headers={'accept': 'application/json', 'x-api-key': '1'}, timeout=5)
+                            if sched_resp_broad.status_code == 200:
+                                schedules = sched_resp_broad.json()
+                                if not isinstance(schedules, list):
+                                    schedules = []
+                        if not schedules:
+                            sched_url_fb = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol_locode}&portOfDischarge={pod_locode}&product=lcl"
+                            sched_resp_fb = requests.get(sched_url_fb, headers={'accept': 'application/json', 'x-api-key': '1'}, timeout=5)
+                            if sched_resp_fb.status_code == 200:
+                                schedules = sched_resp_fb.json()
+                                if not isinstance(schedules, list):
+                                    schedules = []
                     except Exception as e:
                         print(f"Failed to fetch schedules: {e}")
 
-                # Sort schedules and get earliest ETD
-                def get_etd(s):
-                    return str(s.get('etd') or s.get('estimatedTimeOfDeparture') or '')
-
+                # Calculate transit days from sailing schedules API if not already found
                 if schedules:
-                    # Filter out schedules with no ETD
-                    schedules = [s for s in schedules if get_etd(s)]
-                    schedules.sort(key=get_etd)
-                    if schedules:
-                        first_etd = get_etd(schedules[0])
-                        try:
-                            next_closing = datetime.datetime.strptime(first_etd[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
-                        except:
-                            next_closing = first_etd[:10]
+                    for s in schedules:
+                        s_etd = s.get('etd') or s.get('estimatedTimeOfDeparture')
+                        s_eta = s.get('eta') or s.get('estimatedTimeOfArrival')
+                        if s_etd and s_eta:
+                            try:
+                                etd_dt = datetime.datetime.strptime(str(s_etd)[:10], '%Y-%m-%d')
+                                eta_dt = datetime.datetime.strptime(str(s_eta)[:10], '%Y-%m-%d')
+                                diff = (eta_dt - etd_dt).days
+                                if diff > 0:
+                                    transit_days = diff
+                                    break
+                            except Exception:
+                                pass
 
-                # Fallback to Quotation POL if Schedules API fails/is empty
+                # Fallback to local DB rate transit days if still 0
+                if transit_days <= 0:
+                    try:
+                        db_rate = Rate.query.filter(
+                            Rate.origin.ilike(f"%{pol_locode}%"),
+                            Rate.destination.ilike(f"%{pod_locode}%")
+                        ).first()
+                        if not db_rate:
+                            o_clean = query.get('origin', '').split('(')[0].strip()
+                            d_clean = query.get('destination', '').split('(')[0].strip()
+                            if o_clean and d_clean:
+                                db_rate = Rate.query.filter(
+                                    Rate.origin.ilike(f"%{o_clean}%"),
+                                    Rate.destination.ilike(f"%{d_clean}%")
+                                ).first()
+                        if db_rate and db_rate.transit_days and db_rate.transit_days > 0:
+                            transit_days = db_rate.transit_days
+                    except Exception:
+                        pass
+
+                # Only keep transit days if found from real schedules or DB rate
+                if transit_days <= 0:
+                    transit_days = None
+
+                # Calculate next closing date dynamically only from real schedules
+                if schedules:
+                    for s in schedules:
+                        c_val = s.get('closingLCL') or s.get('closing') or s.get('etd') or s.get('estimatedTimeOfDeparture')
+                        if c_val:
+                            try:
+                                next_closing = datetime.datetime.strptime(str(c_val)[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
+                                break
+                            except Exception:
+                                next_closing = str(c_val)[:10]
+                                break
+
+                # Fallback to Quotation POL if Schedules API is empty
                 if not next_closing and pol:
                     closing_val = pol.get('closingLcl') if is_lcl else pol.get('closing')
                     if not closing_val:
-                        closing_val = pol.get('closing')
+                        closing_val = pol.get('closing') or pol.get('etd')
                     if closing_val:
                         try:
-                            next_closing = datetime.datetime.strptime(closing_val[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
+                            next_closing = datetime.datetime.strptime(str(closing_val)[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
                         except:
-                            next_closing = closing_val[:10]
+                            next_closing = str(closing_val)[:10]
+
+                validity_end = header.get('validUntil', 'N/A')
                 
                 # Format to match the frontend expectations while passing real API data
                 results = [{
@@ -1410,13 +1492,13 @@ def rate_results():
                     'total_cost': total_cost,
                     'transit_days': transit_days,
                     'carrier': carrier_name,
-                    'frequency': 'API Specific',
+                    'frequency': 'Weekly',
                     'ui_tag': 'Official API Quote',
                     'next_closing': next_closing,
                     'schedules': schedules,
                     'rate': {
                         'nvocc_name': nvocc_name,
-                        'validity_end': header.get('validUntil', 'N/A'),
+                        'validity_end': validity_end,
                         'id': api_id
                     },
                     'breakdown': lines
