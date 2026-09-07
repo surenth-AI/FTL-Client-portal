@@ -28,7 +28,7 @@
             <button class="sort-chip" data-status="delivered" onclick="filterByStatus('delivered', this)">🟢 Delivered</button>
         </div>
         <div class="search-box">
-            <input type="text" id="shipmentSearchInput" placeholder="Search by reference, route or PO..." oninput="applySearchAndFilter()">
+            <input type="text" id="shipmentSearch" placeholder="Search by reference, carrier, route or PO..." oninput="applySearchAndFilter()">
         </div>
     </div>
 
@@ -77,6 +77,7 @@
                  data-status="{{ status_cat }}"
                  data-ref="{{ ref_code | lower }}"
                  data-route="{{ (shipment.origin ~ ' ' ~ shipment.destination) | lower }}"
+                 data-carrier="{{ (shipment.selected_nvocc or '') | lower }}"
                  data-created="{{ shipment.created_at.timestamp() }}"
                  data-etd="{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '' }}"
                  data-eta="{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '' }}"
@@ -204,9 +205,10 @@
             const status = card.getAttribute('data-status');
             const ref = card.getAttribute('data-ref') || '';
             const route = card.getAttribute('data-route') || '';
+            const carrier = card.getAttribute('data-carrier') || '';
 
             const matchStatus = (activeStatus === 'all' || status === activeStatus);
-            const matchQ = !q || ref.includes(q) || route.includes(q);
+            const matchQ = !q || ref.includes(q) || route.includes(q) || carrier.includes(q);
 
             if (matchStatus && matchQ) {
                 card.style.display = 'block';
