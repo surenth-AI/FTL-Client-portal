@@ -744,13 +744,20 @@
         });
 
         function renderDropdown(filterText) {
-            const txt = filterText.toLowerCase();
+            let txt = filterText.toLowerCase().trim();
+            
+            // Common spelling alias normalization
+            if (txt.includes('navshiva') || txt.includes('navasheva') || txt.includes('nhavasheva') || txt.includes('mumbai') || txt.includes('bombay')) {
+                txt = 'nhava';
+            }
+
             const portsList = getPortsFn();
             const filtered = portsList.filter(p => 
                 (p.name && p.name.toLowerCase().includes(txt)) || 
                 (p.code && p.code.toLowerCase().includes(txt)) || 
                 (p.country && p.country.toLowerCase().includes(txt))
             ).slice(0, 50); // Show top 50 matches
+
 
             if (filtered.length === 0) {
                 dropdown.style.display = 'none';
