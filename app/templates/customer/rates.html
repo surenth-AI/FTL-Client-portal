@@ -1616,7 +1616,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                             <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
                                 <div class="form-group">
                                     <label class="form-label">Incoterm <span class="required">*</span></label>
-                                    <select class="form-select" id="incoterm" name="freight_terms" onchange="updateChargeInclusions()">
+                                    <select class="form-select" id="incoterm" name="freight_terms" onchange="updateChargeInclusions()" required>
                                         <option value="">Select incoterm</option>
                                         {% for incoterm in incoterms %}
                                             <option value="{{ incoterm.code }}">{{ incoterm.name }}</option>
@@ -1832,8 +1832,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             populateCountries('origin', document.getElementById('originType').value);
             populateCountries('dest', document.getElementById('destType').value);
             populateIncoterms();
+            updateAvailableIncoterms();
             updateAllCargoPackageTypes();
             updateAllCargoUOMs();
+            renderVasServices();
         }
     } catch (e) {
         console.error("Failed to load lookup APIs:", e);
@@ -2423,88 +2425,100 @@ async function filterLocations(locationType) {
             console.log('Route value updated to:', document.getElementById('routeValue').textContent);
             console.log('Route value classes:', document.getElementById('routeValue').className);
 
-            // Render dynamic VAS types
+        function renderVasServices() {
             const vasGrid = document.getElementById('vasGrid');
-            if (vasGrid && vasTypes) {
-                vasGrid.innerHTML = vasTypes.map((vas, idx) => {
-                    const isInsurance = vas.name.toLowerCase().includes('insurance');
-                    const isPickup = vas.name.toLowerCase().includes('pickup');
-                    const isDelivery = vas.name.toLowerCase().includes('delivery');
-                    
-                    let checkboxId = `service-${idx}`;
-                    let extraHtml = '';
-                    let onChangeHtml = '';
-                    let cardIdHtml = '';
-                    
-                    if (isInsurance) {
-                        checkboxId = 'service2';
-                        cardIdHtml = 'id="serviceInsurance"';
-                        onChangeHtml = 'onchange="toggleInsuranceValue()"';
-                        extraHtml = `
-                            <div class="service-extra" id="insuranceValue" style="display: none;" onclick="event.stopPropagation()">
-                                <div class="form-grid" style="grid-template-columns: 2fr 1fr; margin-top: 1rem;">
-                                    <div class="form-group">
-                                        <label class="form-label" style="font-size: 0.8rem;">Value of Goods <span class="required">*</span></label>
-                                        <input type="number" class="form-input" placeholder="0.00" step="0.01" id="insuranceAmount" name="insurance_amount">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label" style="font-size: 0.8rem;">Currency</label>
-                                        <select class="form-select" id="insuranceCurrency" name="insurance_currency">
-                                            <option value="USD">USD</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="GBP">GBP</option>
-                                        </select>
-                                    </div>
+            if (!vasGrid) return;
+            
+            // If vasTypes is empty, use fallback defaults so user can select services
+            const listToRender = (vasTypes && vasTypes.length > 0) ? vasTypes : [
+                { code: 'INS', name: 'Cargo Insurance' },
+                { code: 'PICKUP', name: 'Door Pickup' },
+                { code: 'DELIVERY', name: 'Door Delivery' },
+                { code: 'CUSTOMS', name: 'Customs Clearance' }
+            ];
+
+            vasGrid.innerHTML = listToRender.map((vas, idx) => {
+                const isInsurance = vas.name.toLowerCase().includes('insurance');
+                const isPickup = vas.name.toLowerCase().includes('pickup');
+                const isDelivery = vas.name.toLowerCase().includes('delivery');
+                
+                let checkboxId = `service-${idx}`;
+                let extraHtml = '';
+                let onChangeHtml = '';
+                let cardIdHtml = '';
+                
+                if (isInsurance) {
+                    checkboxId = 'service2';
+                    cardIdHtml = 'id="serviceInsurance"';
+                    onChangeHtml = 'onchange="toggleInsuranceValue()"';
+                    extraHtml = `
+                        <div class="service-extra" id="insuranceValue" style="display: none;" onclick="event.stopPropagation()">
+                            <div class="form-grid" style="grid-template-columns: 2fr 1fr; margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size: 0.8rem;">Value of Goods <span class="required">*</span></label>
+                                    <input type="number" class="form-input" placeholder="0.00" step="0.01" id="insuranceAmount" name="insurance_amount">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size: 0.8rem;">Currency</label>
+                                    <select class="form-select" id="insuranceCurrency" name="insurance_currency">
+                                        <option value="USD">USD</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="GBP">GBP</option>
+                                    </select>
                                 </div>
                             </div>
-                        `;
-                    } else if (isPickup) {
-                        checkboxId = 'service3';
-                        cardIdHtml = 'id="servicePickup"';
-                        onChangeHtml = 'onchange="togglePickupDetails()"';
-                        extraHtml = `
-                            <div class="service-extra" id="pickupDetails" style="display: none;" onclick="event.stopPropagation()">
-                                <div class="form-group" style="margin-top: 1rem;">
-                                    <label class="form-label" style="font-size: 0.8rem;">Pickup Location <span class="required">*</span></label>
-                                    <div class="searchable-select">
-                                        <input type="text" class="form-input" id="pickupLocation" name="pickup_address"
-                                            placeholder="Search by city name or zip code"
-                                            onfocus="showServiceDropdown('pickup')"
-                                            oninput="filterServiceLocations('pickup')" autocomplete="off">
-                                        <div class="searchable-dropdown" id="pickupDropdown"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    } else if (isDelivery) {
-                        checkboxId = 'service4';
-                        cardIdHtml = 'id="serviceDelivery"';
-                        onChangeHtml = 'onchange="toggleDeliveryDetails()"';
-                        extraHtml = `
-                            <div class="service-extra" id="deliveryDetails" style="display: none;" onclick="event.stopPropagation()">
-                                <div class="form-group" style="margin-top: 1rem;">
-                                    <label class="form-label" style="font-size: 0.8rem;">Delivery Location <span class="required">*</span></label>
-                                    <div class="searchable-select">
-                                        <input type="text" class="form-input" id="deliveryLocation" name="place_of_delivery"
-                                            placeholder="Search by city name or zip code"
-                                            onfocus="showServiceDropdown('delivery')"
-                                            oninput="filterServiceLocations('delivery')" autocomplete="off">
-                                        <div class="searchable-dropdown" id="deliveryDropdown"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    return `
-                        <div class="service-card" onclick="toggleService(this)" ${cardIdHtml}>
-                            <input type="checkbox" name="vas_code[]" id="${checkboxId}" value="${vas.code}" ${onChangeHtml}>
-                            <div class="service-name">${vas.name}</div>
-                            ${extraHtml}
                         </div>
                     `;
-                }).join('');
-            }
+                } else if (isPickup) {
+                    checkboxId = 'service3';
+                    cardIdHtml = 'id="servicePickup"';
+                    onChangeHtml = 'onchange="togglePickupDetails()"';
+                    extraHtml = `
+                        <div class="service-extra" id="pickupDetails" style="display: none;" onclick="event.stopPropagation()">
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label class="form-label" style="font-size: 0.8rem;">Pickup Location <span class="required">*</span></label>
+                                <div class="searchable-select">
+                                    <input type="text" class="form-input" id="pickupLocation" name="pickup_address"
+                                        placeholder="Search by city name or zip code"
+                                        onfocus="showServiceDropdown('pickup')"
+                                        oninput="filterServiceLocations('pickup')" autocomplete="off">
+                                    <div class="searchable-dropdown" id="pickupDropdown"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (isDelivery) {
+                    checkboxId = 'service4';
+                    cardIdHtml = 'id="serviceDelivery"';
+                    onChangeHtml = 'onchange="toggleDeliveryDetails()"';
+                    extraHtml = `
+                        <div class="service-extra" id="deliveryDetails" style="display: none;" onclick="event.stopPropagation()">
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label class="form-label" style="font-size: 0.8rem;">Delivery Location <span class="required">*</span></label>
+                                <div class="searchable-select">
+                                    <input type="text" class="form-input" id="deliveryLocation" name="place_of_delivery"
+                                        placeholder="Search by city name or zip code"
+                                        onfocus="showServiceDropdown('delivery')"
+                                        oninput="filterServiceLocations('delivery')" autocomplete="off">
+                                    <div class="searchable-dropdown" id="deliveryDropdown"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="service-card" onclick="toggleService(this)" ${cardIdHtml}>
+                        <input type="checkbox" name="vas_code[]" id="${checkboxId}" value="${vas.code}" ${onChangeHtml}>
+                        <div class="service-name">${vas.name}</div>
+                        ${extraHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render dynamic VAS types in route details
+        renderVasServices();
             
             // Update available incoterms based on origin/destination types
             updateAvailableIncoterms();
@@ -2530,9 +2544,9 @@ async function filterLocations(locationType) {
             let allowed = [];
             if (trafficType === 'EX') {
                 if (destType === 'port') {
-                    allowed = ['CFR', 'DPU', 'FOB', 'DAP', 'EXW', 'FCA'];
+                    allowed = ['CFR', 'DPU', 'FOB', 'DAP'];
                 } else if (destType === 'door') {
-                    allowed = ['DAP', 'EXW', 'FCA'];
+                    allowed = ['DAP'];
                 }
             } else if (trafficType === 'IM') {
                 if (originType === 'port') {
@@ -2558,7 +2572,7 @@ async function filterLocations(locationType) {
                 }
             }
 
-            if (!currentSelectionValid && incotermSelect.value !== "") {
+            if (!currentSelectionValid) {
                 // Set to default based on rules
                 let def = '';
                 if (trafficType === 'EX' && destType === 'port') def = 'CFR';
@@ -2566,9 +2580,11 @@ async function filterLocations(locationType) {
                 else if (trafficType === 'IM' && originType === 'port') def = 'FOB';
                 else if (trafficType === 'IM' && originType === 'door') def = 'EXW';
                 
-                incotermSelect.value = def;
-                // Trigger change event to update freight terms and inclusions
-                incotermSelect.dispatchEvent(new Event('change'));
+                if (def && allowed.includes(def)) {
+                    incotermSelect.value = def;
+                    // Trigger change event to update freight terms and inclusions
+                    incotermSelect.dispatchEvent(new Event('change'));
+                }
             }
         }
 
@@ -2743,10 +2759,14 @@ async function filterLocations(locationType) {
             const weightUom = document.getElementById(`${cargoItemId}-weight-uom`);
             const volumeUom = document.getElementById(`${cargoItemId}-volume-uom`);
             if (weightUom) {
-                weightUom.value = unitSystem === 'metric' ? 'KG' : 'LB';
+                const targetValues = unitSystem === 'metric' ? ['kg', 'kgs'] : ['lb', 'lbs'];
+                const matchOpt = Array.from(weightUom.options).find(opt => targetValues.includes(opt.value.toLowerCase()));
+                if (matchOpt) weightUom.value = matchOpt.value;
             }
             if (volumeUom) {
-                volumeUom.value = unitSystem === 'metric' ? 'CBM' : 'CBF';
+                const targetValues = unitSystem === 'metric' ? ['cbm', 'm3'] : ['cbf', 'ft3'];
+                const matchOpt = Array.from(volumeUom.options).find(opt => targetValues.includes(opt.value.toLowerCase()));
+                if (matchOpt) volumeUom.value = matchOpt.value;
             }
 
             // Update main cargo field placeholders

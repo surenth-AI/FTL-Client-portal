@@ -142,8 +142,8 @@
             <tbody>
                 {% for item in breakdown %}
                 <tr>
-                    <td>{{ item.chargeCode }}</td>
-                    <td>{{ item.description or 'Standard Charge' }}</td>
+                    <td>{{ item.articleCode or item.chargeCode or 'N/A' }}</td>
+                    <td>{{ item.articleName or item.description or 'Standard Charge' }}</td>
                     <td class="text-right">${{ "{:,.2f}".format(item.amount) }}</td>
                     <td class="text-center">{{ item.currency or 'USD' }}</td>
                 </tr>

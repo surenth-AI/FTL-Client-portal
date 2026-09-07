@@ -925,9 +925,9 @@
                             {% endif %}
                         </div>
                         <div class="charges-row">
-                            <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
-                            <span class="charge-pill included"><span class="dot"></span>Freight &amp; Surcharges</span>
-                            <span class="charge-pill excluded"><span class="dot"></span>Destination Port Charges</span>
+                            <span class="charge-pill {% if res.has_origin_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Origin Port Charges</span>
+                            <span class="charge-pill {% if res.has_freight_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Freight &amp; Surcharges</span>
+                            <span class="charge-pill {% if res.has_destination_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Destination Port Charges</span>
                         </div>
                     </div>
                     <div class="offer-actions">
@@ -970,12 +970,11 @@
                                 {% if res.breakdown %}
                                 {% for line in res.breakdown %}
                                 <tr>
-                                    <td class="code-cell">{{ line.chargeCode or line.id or 'N/A' }}</td>
-                                    <td>{{ line.chargeName or line.description or 'Standard Charge' }}</td>
-                                    <td><span class="base-cell">{{ line.unitCode or 'ACT' }}</span></td>
-                                    <td class="num">{{ line.quantity|default(1) }}</td>
-                                    <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.amount) }}
-                                    </td>
+                                    <td class="code-cell">{{ line.articleCode or line.chargeCode or line.id or 'N/A' }}</td>
+                                    <td>{{ line.articleName or line.chargeName or line.description or 'Standard Charge' }}</td>
+                                    <td><span class="base-cell">{{ line.calcCodeBase or line.calcCode or line.unitCode or 'ACT' }}</span></td>
+                                    <td class="num">{{ line.appliedQty if line.appliedQty is defined and line.appliedQty is not none else (line.quantity|default(1)) }}</td>
+                                    <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.appliedRate if line.appliedRate is defined and line.appliedRate is not none else line.amount) }}</td>
                                     <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD</td>
                                     <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>
                                 </tr>
@@ -1027,7 +1026,13 @@
                     </td>
                     <td>{% if loop.index % 2 == 0 %}1 Transshipment{% else %}Direct{% endif %}</td>
                     <td>{{ res.transit_days ~ ' days' if res.transit_days and res.transit_days > 0 else '-' }}</td>
-                    <td>Origin + Freight</td>
+                    <td>
+                        {% set incl = [] %}
+                        {% if res.has_origin_charges %}{% set _ = incl.append('Origin') %}{% endif %}
+                        {% if res.has_freight_charges %}{% set _ = incl.append('Freight') %}{% endif %}
+                        {% if res.has_destination_charges %}{% set _ = incl.append('Destination') %}{% endif %}
+                        {{ incl|join(' + ') if incl else 'Freight' }}
+                    </td>
                     <td>
                         {{ res.next_closing or '-' }}
                         {% if res.schedules and res.schedules|length > 0 %}
@@ -1066,12 +1071,11 @@
                                         {% if res.breakdown %}
                                         {% for line in res.breakdown %}
                                         <tr>
-                                            <td class="code-cell">{{ line.chargeCode or line.id or 'N/A' }}</td>
-                                            <td>{{ line.chargeName or line.description or 'Standard Charge' }}</td>
-                                            <td><span class="base-cell">{{ line.unitCode or 'ACT' }}</span></td>
-                                            <td class="num">{{ line.quantity|default(1) }}</td>
-                                            <td class="num">{{ line.currency|default('USD') }} {{
-                                                "%.2f"|format(line.amount) }}</td>
+                                            <td class="code-cell">{{ line.articleCode or line.chargeCode or line.id or 'N/A' }}</td>
+                                            <td>{{ line.articleName or line.chargeName or line.description or 'Standard Charge' }}</td>
+                                            <td><span class="base-cell">{{ line.calcCodeBase or line.calcCode or line.unitCode or 'ACT' }}</span></td>
+                                            <td class="num">{{ line.appliedQty if line.appliedQty is defined and line.appliedQty is not none else (line.quantity|default(1)) }}</td>
+                                            <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.appliedRate if line.appliedRate is defined and line.appliedRate is not none else line.amount) }}</td>
                                             <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD
                                             </td>
                                             <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>

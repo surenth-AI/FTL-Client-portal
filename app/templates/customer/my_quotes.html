@@ -544,7 +544,7 @@
                                             <div class="carrier-logo">FTL</div>
                                             <div class="carrier-text">
                                                 <div class="carrier-name">${q.selected_nvocc}</div>
-                                                <div class="service-name">${q.service_type}</div>
+                                                <div class="service-name">${q.service_name || 'Direct Service'}</div>
                                             </div>
                                         </div>
                                         <div class="route-line">
@@ -675,12 +675,13 @@
                         if (data.breakdown && data.breakdown.length > 0) {
                             let rows = '';
                             data.breakdown.forEach(line => {
-                                const chargeCode = line.chargeCode || line.id || 'N/A';
-                                const description = line.chargeName || line.description || 'Standard Charge';
-                                const unitCode = line.unitCode || 'ACT';
-                                const qty = line.quantity || 1;
+                                const chargeCode = line.articleCode || line.chargeCode || line.id || 'N/A';
+                                const description = line.articleName || line.chargeName || line.description || 'Standard Charge';
+                                const unitCode = line.calcCodeBase || line.calcCode || line.unitCode || 'ACT';
+                                const qty = line.appliedQty !== undefined ? line.appliedQty : (line.quantity || 1);
                                 const curr = line.currency || 'USD';
-                                const amt = parseFloat(line.amount).toFixed(2);
+                                const rate = line.appliedRate !== undefined ? line.appliedRate : line.amount;
+                                const amt = parseFloat(rate).toFixed(2);
                                 
                                 rows += `<tr>
                                     <td><span class="code-cell">${chargeCode}</span></td>

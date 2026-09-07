@@ -332,6 +332,7 @@ def api_my_quotes():
                     'total_cost': total_cost,
                     'selected_nvocc': header.get('nvoccName', 'API Quote'),
                     'service_type': "LCL" if "LCL" in str(header.get('freightTransportType') or '').upper() else "FCL",
+                    'service_name': header.get('serviceName') or header.get('serviceLevel') or header.get('remarks') or 'Direct Service',
                     'api_booking_ref': api_booking_ref,
                     'created_at': created_at.strftime('%d %b %Y'),
                     'status': status,
@@ -370,6 +371,7 @@ def api_my_quotes():
                 'total_cost': float(q.total_cost or 0.0),
                 'selected_nvocc': q.selected_nvocc or 'Local Quote',
                 'service_type': q.service_type,
+                'service_name': getattr(q, 'service_name', None) or 'Direct Service',
                 'api_booking_ref': q.api_booking_ref or f"Local-{q.id}",
                 'created_at': q.created_at.strftime('%d %b %Y'),
                 'status': q.status,
@@ -823,6 +825,11 @@ def rates():
         }
         mapped_mov = mov_map.get(mov_val, "2")
 
+        incoterm_val = request.form.get("freight_terms", "").strip()
+        if not incoterm_val:
+            flash("Incoterm is required. Please select an Incoterm before submitting.", "danger")
+            return redirect(url_for('customer.rates'))
+
         vas_list = request.form.getlist('vas_code[]')
 
         payload = {
@@ -835,7 +842,7 @@ def rates():
             "freightTransportType": mapped_svc,
             "movementType": mapped_mov,
             "cargoClassification": "1",
-            "incoterm": request.form.get("freight_terms", ""),
+            "incoterm": incoterm_val,
             "validOn": valid_from,
             "currency": request.form.get("currency", "USD"),
             "paymentMethod": "NS", # API currently only supports 'NS' and throws 500 on prepaid/collect
@@ -1485,6 +1492,17 @@ def rate_results():
                             next_closing = str(closing_val)[:10]
 
                 validity_end = header.get('validUntil', 'N/A')
+                is_lcl = query.get('service_type', '') in ['Less than a container load', 'LCL']
+                branch_name = 'Fast Transit Line Antwerp'
+                carrier_name = 'LCL Direct Consolidation' if is_lcl else 'FCL Ocean Service'
+                if schedules and len(schedules) > 0 and schedules[0].get('vessel'):
+                    carrier_name = f"{schedules[0].get('vessel')} ({schedules[0].get('voyage') or 'Direct'})"
+                nvocc_name = branch_name
+                
+                # Check dynamic charge cost groups from API tariff lines
+                has_origin_charges = any(l.get('articleCostGroup') == 'LC' for l in lines)
+                has_freight_charges = any(l.get('articleCostGroup') in ['FC', 'AC'] or 'FREIGHT' in (l.get('articleName') or '').upper() for l in lines)
+                has_destination_charges = any(l.get('articleCostGroup') in ['DC', 'DL'] for l in lines)
                 
                 # Format to match the frontend expectations while passing real API data
                 results = [{
@@ -1496,6 +1514,9 @@ def rate_results():
                     'ui_tag': 'Official API Quote',
                     'next_closing': next_closing,
                     'schedules': schedules,
+                    'has_origin_charges': has_origin_charges,
+                    'has_freight_charges': has_freight_charges,
+                    'has_destination_charges': has_destination_charges,
                     'rate': {
                         'nvocc_name': nvocc_name,
                         'validity_end': validity_end,
