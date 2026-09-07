@@ -672,15 +672,15 @@
                 <table class="schedules-list-table" id="schedulesTable">
                     <thead>
                         <tr>
-                            <th>POL ▲▼</th>
-                            <th>POD ▲▼</th>
-                            <th>ETD ▲▼</th>
-                            <th>ETA ▲▼</th>
-                            <th>TRANSIT ▲▼</th>
-                            <th>VESSEL / VOYAGE ▲▼</th>
-                            <th>SERVICE ▲▼</th>
-                            <th>ROUTING ▲▼</th>
-                            <th>VIA ▲▼</th>
+                            <th style="cursor:pointer;" onclick="setSort('pol')">POL ▲▼</th>
+                            <th style="cursor:pointer;" onclick="setSort('pod')">POD ▲▼</th>
+                            <th style="cursor:pointer;" onclick="setSort('etd')">ETD ▲▼</th>
+                            <th style="cursor:pointer;" onclick="setSort('eta')">ETA ▲▼</th>
+                            <th style="cursor:pointer;" onclick="setSort('transit')">TRANSIT ▲▼</th>
+                            <th style="cursor:pointer;" onclick="setSort('vessel')">VESSEL / VOYAGE ▲▼</th>
+                            <th>SERVICE</th>
+                            <th>ROUTING</th>
+                            <th>VIA</th>
                             <th>ACTIONS</th>
                         </tr>
                     </thead>
@@ -859,17 +859,33 @@
         document.getElementById('listViewContainer').style.display = mode === 'list' ? 'block' : 'none';
     }
 
+    function setSort(key) {
+        const select = document.getElementById('sortSelect');
+        if (select) {
+            select.value = key;
+            sortAndRender();
+        }
+    }
+
     function sortAndRender() {
         const sortVal = document.getElementById('sortSelect').value;
 
         if (sortVal === 'etd') {
             currentSchedules.sort((a, b) => new Date(a.etd || 0) - new Date(b.etd || 0));
         } else if (sortVal === 'transit') {
-            currentSchedules.sort((a, b) => a.transitDays - b.transitDays);
+            currentSchedules.sort((a, b) => {
+                const tA = a.transitDays && a.transitDays > 0 ? a.transitDays : 9999;
+                const tB = b.transitDays && b.transitDays > 0 ? b.transitDays : 9999;
+                return tA - tB;
+            });
         } else if (sortVal === 'eta') {
             currentSchedules.sort((a, b) => new Date(a.eta || 0) - new Date(b.eta || 0));
         } else if (sortVal === 'vessel') {
             currentSchedules.sort((a, b) => (a.vessel || '').localeCompare(b.vessel || ''));
+        } else if (sortVal === 'pol') {
+            currentSchedules.sort((a, b) => (a.pol || '').localeCompare(b.pol || ''));
+        } else if (sortVal === 'pod') {
+            currentSchedules.sort((a, b) => (a.pod || '').localeCompare(b.pod || ''));
         }
 
         const originTxt = document.getElementById('originInput').value;
