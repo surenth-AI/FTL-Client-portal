@@ -102,10 +102,9 @@
                     <!-- Details block -->
                     <div class="offer-details">
                         <div class="carrier-row">
-                            <div class="carrier-logo">FTL</div>
                             <div class="carrier-text">
                                 <div class="carrier-name">{{ shipment.selected_nvocc or 'Fast Transit Line' }}</div>
-                                <div class="service-name">Direct Service</div>
+                                <div class="service-name">{{ 'Export Freight' if shipment.traffic_type == 'EX' else ('Import Freight' if shipment.traffic_type == 'IM' else (shipment.service_type or 'LCL Freight')) }}</div>
                             </div>
                         </div>
 
@@ -117,7 +116,11 @@
 
                         <div class="routing-meta" style="margin-top: 0.5rem;">
                             <span class="meta-pill service">📦 {{ shipment.service_type or 'LCL' }}</span>
-                            <span class="meta-pill direct">Direct Service</span>
+                            {% if shipment.freight_terms %}
+                            <span class="meta-pill direct">💳 {{ shipment.freight_terms }}</span>
+                            {% else %}
+                            <span class="meta-pill direct">⚡ Direct Routing</span>
+                            {% endif %}
                             {% if shipment.vessel_name %}
                             <span class="meta-pill vessel">🚢 {{ shipment.vessel_name }} {{ ('· Voy ' ~ shipment.voyage_number) if shipment.voyage_number else '' }}</span>
                             {% endif %}

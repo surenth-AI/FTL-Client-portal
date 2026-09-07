@@ -173,10 +173,9 @@
                                     
                                     <div class="offer-details">
                                         <div class="carrier-row">
-                                            <div class="carrier-logo">FTL</div>
                                             <div class="carrier-text">
                                                 <div class="carrier-name">${q.selected_nvocc}</div>
-                                                <div class="service-name">${q.service_name || 'Direct Service'}</div>
+                                                <div class="service-name">${q.service_name || (q.traffic_type === 'EX' ? 'Export Freight' : (q.traffic_type === 'IM' ? 'Import Freight' : 'LCL Freight'))}</div>
                                             </div>
                                         </div>
                                         <div class="route-line">
@@ -186,6 +185,7 @@
                                         </div>
                                         <div class="routing-meta" style="margin-top:0.5rem;">
                                             <span class="meta-pill service">📦 ${q.service_type}</span>
+                                            <span class="meta-pill direct">⚡ Direct Routing</span>
                                         </div>
                                         <div class="charges-row">
                                             <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
