@@ -598,8 +598,8 @@
             <div class="search-grid-layout">
                 <div class="search-field-group">
                     <label class="field-label">Origin</label>
-                    <input type="text" class="custom-search-input" id="originInput" placeholder="Select origin (e.g. Antwerp)" autocomplete="off" required>
-                    <input type="hidden" id="originLocode" value="BEANR">
+                    <input type="text" class="custom-search-input" id="originInput" placeholder="Type origin port or code..." autocomplete="off" required>
+                    <input type="hidden" id="originLocode" value="">
                     <div class="dropdown-locations-box" id="originDropdown"></div>
                 </div>
 
@@ -609,8 +609,8 @@
 
                 <div class="search-field-group">
                     <label class="field-label">Destination</label>
-                    <input type="text" class="custom-search-input" id="destInput" placeholder="Select destination (e.g. Singapore)" autocomplete="off" required>
-                    <input type="hidden" id="destLocode" value="SGSIN">
+                    <input type="text" class="custom-search-input" id="destInput" placeholder="Type destination port or code..." autocomplete="off" required>
+                    <input type="hidden" id="destLocode" value="">
                     <div class="dropdown-locations-box" id="destDropdown"></div>
                 </div>
 
@@ -701,12 +701,15 @@
     let allDestPorts = [];
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Default Cargo Available Date to 2026-08-14 matching active API schedules
-        document.getElementById('cargoDateInput').value = '2026-08-14';
+        // Default Cargo Available Date to TODAY
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('cargoDateInput').value = today;
 
-        // Default Origin & Destination matching active API ports (Antwerp -> Singapore)
-        document.getElementById('originInput').value = 'Antwerp (BEANR)';
-        document.getElementById('destInput').value = 'Singapore (SGSIN)';
+        // Leave Origin & Destination blank by default
+        document.getElementById('originInput').value = '';
+        document.getElementById('destInput').value = '';
+        document.getElementById('originLocode').value = '';
+        document.getElementById('destLocode').value = '';
 
         // Fetch live ports list from Realnexus API
         fetchLivePorts();
@@ -715,9 +718,20 @@
         setupPortDropdown('originInput', 'originLocode', 'originDropdown', () => allOriginPorts);
         setupPortDropdown('destInput', 'destLocode', 'destDropdown', () => allDestPorts);
 
-        // Execute initial search against live API
-        searchSchedules();
+        // Render initial state prompt
+        showInitialState();
     });
+
+    function showInitialState() {
+        document.getElementById('summaryCount').innerHTML = 'Select origin and destination ports to search upcoming sailing schedules.';
+        document.getElementById('cardViewContainer').innerHTML = `
+            <div class="empty-state-box">
+                <i class="bi bi-search empty-icon-large"></i>
+                <h4 style="font-weight:700;">Search Sailing Schedules</h4>
+                <p style="color:#64748b;">Select an Origin and Destination port above and click <strong>Search</strong> to view upcoming vessel departures.</p>
+            </div>
+        `;
+    }
 
     async function fetchLivePorts() {
         try {
@@ -797,11 +811,16 @@
     }
 
     async function searchSchedules() {
-        const originTxt = document.getElementById('originInput').value;
-        const destTxt = document.getElementById('destInput').value;
-        const oLocode = document.getElementById('originLocode').value || extractLocode(originTxt) || 'BEANR';
-        const dLocode = document.getElementById('destLocode').value || extractLocode(destTxt) || 'SGSIN';
+        const originTxt = document.getElementById('originInput').value.trim();
+        const destTxt = document.getElementById('destInput').value.trim();
+        const oLocode = document.getElementById('originLocode').value || extractLocode(originTxt);
+        const dLocode = document.getElementById('destLocode').value || extractLocode(destTxt);
         const cDate = document.getElementById('cargoDateInput').value;
+
+        if (!originTxt || !destTxt) {
+            alert('Please select both an Origin and Destination port before searching.');
+            return;
+        }
 
         const summaryEl = document.getElementById('summaryCount');
         summaryEl.innerHTML = `Searching upcoming sailings for <strong>${originTxt} → ${destTxt}</strong>...`;
