@@ -950,7 +950,7 @@
                             <div class="voyage-sub-code">Voyage ${s.voyage || ''}</div>
                             <div class="service-tags-row">
                                 <span class="service-tag-badge ${s.service === 'FCL' ? 'fcl' : 'lcl'}">${s.service || 'LCL'}</span>
-                                <span class="service-tag-badge">${isDirect ? 'Weekly service' : 'Transshipment'}</span>
+                                ${s.carrier ? `<span class="service-tag-badge">${s.carrier}</span>` : ''}
                             </div>
                         </div>
 
