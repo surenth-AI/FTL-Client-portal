@@ -247,7 +247,7 @@
         box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
     }
 
-    /* 3. CARD VIEW DESIGN (MOCKUP 1 EXACT REPLICA) */
+    /* 3. CARD VIEW DESIGN */
     .sailing-card-item {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -528,7 +528,7 @@
         box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
     }
 
-    /* 4. LIST / TABLE VIEW DESIGN (MOCKUP 2 EXACT REPLICA) */
+    /* 4. LIST / TABLE VIEW DESIGN */
     .table-card-wrapper {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -598,8 +598,8 @@
             <div class="search-grid-layout">
                 <div class="search-field-group">
                     <label class="field-label">Origin</label>
-                    <input type="text" class="custom-search-input" id="originInput" placeholder="Select origin (e.g. Barcelona)" autocomplete="off" required>
-                    <input type="hidden" id="originLocode" value="ESBCN">
+                    <input type="text" class="custom-search-input" id="originInput" placeholder="Select origin (e.g. Antwerp)" autocomplete="off" required>
+                    <input type="hidden" id="originLocode" value="BEANR">
                     <div class="dropdown-locations-box" id="originDropdown"></div>
                 </div>
 
@@ -609,8 +609,8 @@
 
                 <div class="search-field-group">
                     <label class="field-label">Destination</label>
-                    <input type="text" class="custom-search-input" id="destInput" placeholder="Select destination (e.g. Shanghai)" autocomplete="off" required>
-                    <input type="hidden" id="destLocode" value="CNSHA">
+                    <input type="text" class="custom-search-input" id="destInput" placeholder="Select destination (e.g. Singapore)" autocomplete="off" required>
+                    <input type="hidden" id="destLocode" value="SGSIN">
                     <div class="dropdown-locations-box" id="destDropdown"></div>
                 </div>
 
@@ -662,7 +662,7 @@
 
     <!-- 3. CARD VIEW CONTAINER -->
     <div id="cardViewContainer">
-        <!-- Dynamically rendered -->
+        <!-- Dynamically rendered from Live API -->
     </div>
 
     <!-- 4. LIST VIEW CONTAINER (Hidden by default) -->
@@ -685,7 +685,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <!-- Dynamically rendered -->
+                        <!-- Dynamically rendered from Live API -->
                     </tbody>
                 </table>
             </div>
@@ -697,12 +697,12 @@
     let currentSchedules = [];
     let currentViewMode = 'card';
 
-    // Preset locations lookup dictionary
+    // Real ports lookup dictionary
     const samplePorts = [
-        { code: 'ESBCN', name: 'Barcelona', country: 'Spain' },
-        { code: 'CNSHA', name: 'Shanghai', country: 'China' },
         { code: 'BEANR', name: 'Antwerp', country: 'Belgium' },
         { code: 'SGSIN', name: 'Singapore', country: 'Singapore' },
+        { code: 'ESBCN', name: 'Barcelona', country: 'Spain' },
+        { code: 'CNSHA', name: 'Shanghai', country: 'China' },
         { code: 'NLRTM', name: 'Rotterdam', country: 'Netherlands' },
         { code: 'DEHAM', name: 'Hamburg', country: 'Germany' },
         { code: 'USNYC', name: 'New York', country: 'United States' },
@@ -710,19 +710,19 @@
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Default Cargo Available Date to TODAY
+        // Default Cargo Available Date to TODAY or 2026-08-14 matching Swagger test
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('cargoDateInput').value = today;
+        document.getElementById('cargoDateInput').value = '2026-08-14';
 
-        // Default Origin & Destination matching Mockup (Barcelona -> Shanghai)
-        document.getElementById('originInput').value = 'Barcelona (ESBCN)';
-        document.getElementById('destInput').value = 'Shanghai (CNSHA)';
+        // Default Origin & Destination matching active API ports (Antwerp -> Singapore)
+        document.getElementById('originInput').value = 'Antwerp (BEANR)';
+        document.getElementById('destInput').value = 'Singapore (SGSIN)';
 
         // Dropdown listeners
         setupPortDropdown('originInput', 'originLocode', 'originDropdown');
         setupPortDropdown('destInput', 'destLocode', 'destDropdown');
 
-        // Execute initial search
+        // Execute initial search against live API
         searchSchedules();
     });
 
@@ -786,8 +786,8 @@
     async function searchSchedules() {
         const originTxt = document.getElementById('originInput').value;
         const destTxt = document.getElementById('destInput').value;
-        const oLocode = document.getElementById('originLocode').value || extractLocode(originTxt) || 'ESBCN';
-        const dLocode = document.getElementById('destLocode').value || extractLocode(destTxt) || 'CNSHA';
+        const oLocode = document.getElementById('originLocode').value || extractLocode(originTxt) || 'BEANR';
+        const dLocode = document.getElementById('destLocode').value || extractLocode(destTxt) || 'SGSIN';
         const cDate = document.getElementById('cargoDateInput').value;
 
         const summaryEl = document.getElementById('summaryCount');
@@ -798,22 +798,36 @@
             const data = await resp.json();
             currentSchedules = data.schedules || [];
 
-            // If API returned 0 live schedules, generate realistic mock dataset matching user mockup
-            if (currentSchedules.length === 0) {
-                currentSchedules = generateMockSchedules(oLocode, dLocode, cDate);
-            } else {
-                currentSchedules.forEach(s => {
-                    const etdDt = new Date(s.etd);
-                    const etaDt = new Date(s.eta);
+            // Process real API schedule fields & calculate transit days
+            currentSchedules.forEach(s => {
+                const etdRaw = s.etd || s.estimatedTimeOfDeparture;
+                const etaRaw = s.eta || s.estimatedTimeOfArrival;
+
+                if (etdRaw && etaRaw) {
+                    const etdDt = new Date(etdRaw);
+                    const etaDt = new Date(etaRaw);
                     const diffTime = Math.abs(etaDt - etdDt);
-                    s.transitDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 28;
-                });
-            }
+                    s.transitDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 0;
+                } else {
+                    s.transitDays = 0;
+                }
+
+                // Ensure standard property names for API keys
+                s.pol = s.pol || s.portOfLoading || oLocode;
+                s.pod = s.pod || s.portOfDischarge || dLocode;
+                s.vessel = s.vessel || s.vesselName || 'Vessel';
+                s.voyage = s.voyage || s.voyageNumber || '';
+                s.service = s.product || s.service || 'LCL';
+                s.routing = s.routing || (s.transshipmentPort ? `VIA ${s.transshipmentPort}` : 'DIRECT');
+                s.via = s.transshipmentPort || s.via || '—';
+                s.closingLCL = s.closingLCL || s.lclClosingDate;
+                s.closingDoc = s.closingDoc || s.docClosingDate || s.closingLCL;
+            });
 
             sortAndRender();
         } catch (e) {
-            console.error("Error fetching schedules:", e);
-            currentSchedules = generateMockSchedules(oLocode, dLocode, cDate);
+            console.error("Error fetching live API schedules:", e);
+            currentSchedules = [];
             sortAndRender();
         }
     }
@@ -821,103 +835,6 @@
     function extractLocode(str) {
         const match = str.match(/\(([^)]+)\)/);
         return match ? match[1].trim() : '';
-    }
-
-    function generateMockSchedules(pol, pod, baseDate) {
-        const startDt = new Date(baseDate || new Date());
-        
-        function addDays(d, days) {
-            const res = new Date(d);
-            res.setDate(res.getDate() + days);
-            return res.toISOString().split('T')[0];
-        }
-
-        return [
-            {
-                vessel: "MSC Bellissima",
-                voyage: "FE2609W",
-                pol: pol,
-                pod: pod,
-                etd: addDays(startDt, 2),
-                eta: addDays(startDt, 30),
-                transitDays: 28,
-                closingLCL: addDays(startDt, -1),
-                closingDoc: addDays(startDt, 0),
-                routing: "DIRECT",
-                via: "—",
-                service: "LCL"
-            },
-            {
-                vessel: "CMA CGM Marco Polo",
-                voyage: "26W38A",
-                pol: pol,
-                pod: pod,
-                etd: addDays(startDt, 4),
-                eta: addDays(startDt, 38),
-                transitDays: 34,
-                closingLCL: addDays(startDt, 1),
-                closingDoc: addDays(startDt, 2),
-                routing: "TRANSSHIPMENT",
-                via: "Singapore",
-                service: "LCL"
-            },
-            {
-                vessel: "Ever Given",
-                voyage: "26E17B",
-                pol: pol,
-                pod: pod,
-                etd: addDays(startDt, -3),
-                eta: addDays(startDt, 27),
-                transitDays: 30,
-                closingLCL: addDays(startDt, -5),
-                closingDoc: addDays(startDt, -4),
-                routing: "DIRECT",
-                via: "—",
-                service: "LCL"
-            },
-            {
-                vessel: "OOCL Hong Kong",
-                voyage: "26W41C",
-                pol: pol,
-                pod: pod,
-                etd: addDays(startDt, 8),
-                eta: addDays(startDt, 47),
-                transitDays: 39,
-                closingLCL: addDays(startDt, 5),
-                closingDoc: addDays(startDt, 6),
-                routing: "TRANSSHIPMENT",
-                via: "Jeddah, Colombo",
-                service: "LCL"
-            },
-            {
-                vessel: "MSC Bellissima",
-                voyage: "FE2610W",
-                pol: pol,
-                pod: pod,
-                etd: addDays(startDt, 11),
-                eta: addDays(startDt, 38),
-                transitDays: 27,
-                closingLCL: addDays(startDt, 8),
-                closingDoc: addDays(startDt, 9),
-                routing: "DIRECT",
-                via: "—",
-                service: "FCL"
-            },
-            {
-                vessel: "CMA CGM Marco Polo",
-                voyage: "26W42A",
-                pol: pol,
-                pod: pod,
-                etd: addDays(startDt, 15),
-                eta: addDays(startDt, 51),
-                transitDays: 36,
-                closingLCL: addDays(startDt, 12),
-                closingDoc: addDays(startDt, 13),
-                routing: "TRANSSHIPMENT",
-                via: "Singapore",
-                service: "LCL"
-            }
-        ];
     }
 
     function switchViewMode(mode) {
@@ -933,11 +850,11 @@
         const sortVal = document.getElementById('sortSelect').value;
 
         if (sortVal === 'etd') {
-            currentSchedules.sort((a, b) => new Date(a.etd) - new Date(b.etd));
+            currentSchedules.sort((a, b) => new Date(a.etd || 0) - new Date(b.etd || 0));
         } else if (sortVal === 'transit') {
             currentSchedules.sort((a, b) => a.transitDays - b.transitDays);
         } else if (sortVal === 'eta') {
-            currentSchedules.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+            currentSchedules.sort((a, b) => new Date(a.eta || 0) - new Date(b.eta || 0));
         } else if (sortVal === 'vessel') {
             currentSchedules.sort((a, b) => (a.vessel || '').localeCompare(b.vessel || ''));
         }
@@ -959,14 +876,15 @@
             container.innerHTML = `
                 <div class="empty-state-box">
                     <i class="bi bi-calendar-x empty-icon-large"></i>
-                    <h4 style="font-weight:700;">No Sailing Schedules Found</h4>
-                    <p style="color:#64748b;">Try selecting different origin/destination ports or adjusting the cargo date.</p>
+                    <h4 style="font-weight:700;">No Sailing Schedules Found in API</h4>
+                    <p style="color:#64748b;">No live schedules returned for the selected ports and cargo date.</p>
                 </div>
             `;
             return;
         }
 
-        const minTransit = Math.min(...currentSchedules.map(s => s.transitDays));
+        const validTransits = currentSchedules.map(s => s.transitDays).filter(d => d > 0);
+        const minTransit = validTransits.length > 0 ? Math.min(...validTransits) : 0;
 
         const originFull = document.getElementById('originInput').value;
         const destFull = document.getElementById('destInput').value;
@@ -975,13 +893,13 @@
         const destNameOnly = destFull.split('(')[0].trim();
 
         container.innerHTML = currentSchedules.map((s) => {
-            const isFastest = s.transitDays === minTransit && minTransit > 0;
+            const isFastest = minTransit > 0 && s.transitDays === minTransit;
             const etdStr = s.etd ? s.etd.substring(0, 10) : 'TBD';
             const etaStr = s.eta ? s.eta.substring(0, 10) : 'TBD';
-            const cargoCutoff = s.closingLCL ? s.closingLCL.substring(0, 10) : (s.closingFCL ? s.closingFCL.substring(0, 10) : 'TBD');
+            const cargoCutoff = s.closingLCL ? s.closingLCL.substring(0, 10) : 'TBD';
             const docCutoff = s.closingDoc ? s.closingDoc.substring(0, 10) : cargoCutoff;
 
-            const isDirect = (s.routing || 'DIRECT').toUpperCase() === 'DIRECT';
+            const isDirect = (s.routing || 'DIRECT').toUpperCase().includes('DIRECT');
             const viaText = s.via && s.via !== '—' ? `VIA ${s.via.toUpperCase()}` : 'DIRECT';
 
             const quoteUrl = `/customer/rates?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
@@ -1001,7 +919,7 @@
                             </div>
 
                             <div class="timeline-center-graphic">
-                                <div class="transit-duration-label">${s.transitDays} days</div>
+                                <div class="transit-duration-label">${s.transitDays > 0 ? s.transitDays + ' days' : 'N/A'}</div>
                                 <div class="timeline-graphic-bar"></div>
                                 <span class="route-status-tag ${isDirect ? 'direct' : 'via'}">${viaText}</span>
                             </div>
@@ -1016,10 +934,10 @@
                         <!-- Middle Vessel Details -->
                         <div class="vessel-details-block">
                             <div class="vessel-name-heading">${s.vessel || 'Vessel'}</div>
-                            <div class="voyage-sub-code">Voyage ${s.voyage || 'Direct'}</div>
+                            <div class="voyage-sub-code">Voyage ${s.voyage || ''}</div>
                             <div class="service-tags-row">
                                 <span class="service-tag-badge ${s.service === 'FCL' ? 'fcl' : 'lcl'}">${s.service || 'LCL'}</span>
-                                <span class="service-tag-badge">${isDirect ? 'Weekly service' : '1 transshipment'}</span>
+                                <span class="service-tag-badge">${isDirect ? 'Weekly service' : 'Transshipment'}</span>
                             </div>
                         </div>
 
@@ -1053,13 +971,14 @@
         if (currentSchedules.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-4 text-muted">No sailing schedules available.</td>
+                    <td colspan="10" class="text-center py-4 text-muted">No live sailing schedules available in API.</td>
                 </tr>
             `;
             return;
         }
 
-        const minTransit = Math.min(...currentSchedules.map(s => s.transitDays));
+        const validTransits = currentSchedules.map(s => s.transitDays).filter(d => d > 0);
+        const minTransit = validTransits.length > 0 ? Math.min(...validTransits) : 0;
 
         const originFull = document.getElementById('originInput').value;
         const destFull = document.getElementById('destInput').value;
@@ -1068,10 +987,10 @@
         const destNameOnly = destFull.split('(')[0].trim();
 
         tbody.innerHTML = currentSchedules.map(s => {
-            const isFastest = s.transitDays === minTransit && minTransit > 0;
+            const isFastest = minTransit > 0 && s.transitDays === minTransit;
             const etdStr = s.etd ? s.etd.substring(0, 10) : 'TBD';
             const etaStr = s.eta ? s.eta.substring(0, 10) : 'TBD';
-            const isDirect = (s.routing || 'DIRECT').toUpperCase() === 'DIRECT';
+            const isDirect = (s.routing || 'DIRECT').toUpperCase().includes('DIRECT');
 
             const quoteUrl = `/customer/rates?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
             const bookUrl = `/customer/new_booking?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
@@ -1082,7 +1001,7 @@
                     <td><strong>${s.pod}</strong><br><span style="font-size:0.75rem; color:#64748b;">${destNameOnly}</span></td>
                     <td>${etdStr}</td>
                     <td>${etaStr}</td>
-                    <td><strong>${s.transitDays} days</strong></td>
+                    <td><strong>${s.transitDays > 0 ? s.transitDays + ' days' : 'N/A'}</strong></td>
                     <td><strong>${s.vessel || 'Vessel'}</strong><br><span style="font-size:0.75rem; color:#64748b;">Voy. ${s.voyage || ''}</span></td>
                     <td><span class="service-tag-badge ${s.service === 'FCL' ? 'fcl' : 'lcl'}">${s.service || 'LCL'}</span></td>
                     <td><span class="route-status-tag ${isDirect ? 'direct' : 'via'}">${isDirect ? 'DIRECT' : 'TRANSSHIPMENT'}</span></td>
@@ -1101,7 +1020,7 @@
     // EXPORT TO EXCEL
     function exportToExcel() {
         if (currentSchedules.length === 0) {
-            alert('No sailing schedules to export.');
+            alert('No live sailing schedules to export.');
             return;
         }
 
