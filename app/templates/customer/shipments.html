@@ -70,7 +70,7 @@
                 {% set status_sub = 'Created ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
             {% endif %}
 
-            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else ('BR-2026-' ~ "%05d"|format(shipment.id)) %}
+            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else '—' %}
             {% set format_cost = "%.2f"|format(shipment.total_cost if shipment.total_cost else 0.0) %}
 
             <div class="offer-card shipment-card-item"
@@ -104,7 +104,7 @@
                     <div class="offer-details">
                         <div class="carrier-row">
                             <div class="carrier-text">
-                                <div class="carrier-name">{{ shipment.selected_nvocc or 'Fast Transit Line' }}</div>
+                                <div class="carrier-name">{{ shipment.selected_nvocc if shipment.selected_nvocc else '—' }}</div>
                                 <div class="service-name">{{ 'Export Freight' if shipment.traffic_type == 'EX' else ('Import Freight' if shipment.traffic_type == 'IM' else (shipment.service_type or 'LCL Freight')) }}</div>
                             </div>
                         </div>
@@ -116,11 +116,11 @@
                         </div>
 
                         <div class="routing-meta" style="margin-top: 0.5rem;">
-                            <span class="meta-pill service">📦 {{ shipment.service_type or 'LCL' }}</span>
+                            {% if shipment.service_type %}
+                            <span class="meta-pill service">📦 {{ shipment.service_type }}</span>
+                            {% endif %}
                             {% if shipment.freight_terms %}
                             <span class="meta-pill direct">💳 {{ shipment.freight_terms }}</span>
-                            {% else %}
-                            <span class="meta-pill direct">⚡ Direct Routing</span>
                             {% endif %}
                             {% if shipment.vessel_name %}
                             <span class="meta-pill vessel">🚢 {{ shipment.vessel_name }} {{ ('· Voy ' ~ shipment.voyage_number) if shipment.voyage_number else '' }}</span>

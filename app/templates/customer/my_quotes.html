@@ -101,7 +101,7 @@
                     offersList.innerHTML = currentQuotes.map(item => {
                         const q = item;
                         const c_status = item.computed_status;
-                        const refCode = q.api_booking_ref || `FTL-QR-${q.id}`;
+                        const refCode = q.api_booking_ref || '—';
                         
                         let statusBadge = '';
                         if (c_status === 'Active') {
@@ -174,7 +174,7 @@
                                     <div class="offer-details">
                                         <div class="carrier-row">
                                             <div class="carrier-text">
-                                                <div class="carrier-name">${q.selected_nvocc}</div>
+                                                <div class="carrier-name">${q.selected_nvocc || '—'}</div>
                                                 <div class="service-name">${q.service_name || (q.traffic_type === 'EX' ? 'Export Freight' : (q.traffic_type === 'IM' ? 'Import Freight' : 'LCL Freight'))}</div>
                                             </div>
                                         </div>
@@ -184,8 +184,8 @@
                                             <span class="route-stop">${q.destination}</span>
                                         </div>
                                         <div class="routing-meta" style="margin-top:0.5rem;">
-                                            <span class="meta-pill service">📦 ${q.service_type}</span>
-                                            <span class="meta-pill direct">⚡ Direct Routing</span>
+                                            ${q.service_type ? `<span class="meta-pill service">📦 ${q.service_type}</span>` : ''}
+                                            ${q.freight_terms ? `<span class="meta-pill direct">💳 ${q.freight_terms}</span>` : ''}
                                         </div>
                                         <div class="charges-row">
                                             <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
