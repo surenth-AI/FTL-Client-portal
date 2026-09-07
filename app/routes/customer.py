@@ -1958,3 +1958,59 @@ def submit_si(booking_id):
                          pkg_types=pkg_types,
                          cont_types=cont_types)
 
+
+@customer_bp.route('/schedules')
+@login_required
+def schedules():
+    return render_template('customer/schedules.html')
+
+
+@customer_bp.route('/api/schedules-search')
+@login_required
+def api_schedules_search():
+    pol = request.args.get('pol', '').strip()
+    pod = request.args.get('pod', '').strip()
+    c_date = request.args.get('closingDate', '').strip()
+    
+    branch_id = 23
+    if current_user.branches:
+        try:
+            branch_id = int(current_user.branches[0].branch_id)
+        except Exception:
+            pass
+
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    
+    if not pol or not pod:
+        return jsonify({'schedules': [], 'message': 'POL and POD are required.'})
+
+    sched_url = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol}&portOfDischarge={pod}&product=lcl&branchID={branch_id}"
+    if c_date:
+        sched_url += f"&closingDate={c_date}"
+        
+    schedules = []
+    try:
+        resp = requests.get(sched_url, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, list):
+                schedules = data
+        
+        # Fallback to broader search if specific date yielded no results
+        if not schedules and c_date:
+            sched_url_broad = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol}&portOfDischarge={pod}&product=lcl&closingDate=2026-01-01&branchID={branch_id}"
+            resp_broad = requests.get(sched_url_broad, headers=headers, timeout=5)
+            if resp_broad.status_code == 200 and isinstance(resp_broad.json(), list):
+                schedules = resp_broad.json()
+
+        if not schedules:
+            sched_url_fb = f"http://realnexus.comit.cloud:5000/api/Schedules?portOfLoading={pol}&portOfDischarge={pod}&product=lcl"
+            resp_fb = requests.get(sched_url_fb, headers=headers, timeout=5)
+            if resp_fb.status_code == 200 and isinstance(resp_fb.json(), list):
+                schedules = resp_fb.json()
+    except Exception as e:
+        print(f"Error searching schedules: {e}")
+
+    return jsonify({'schedules': schedules})
+
+

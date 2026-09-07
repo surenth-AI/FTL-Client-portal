@@ -1,0 +1,999 @@
+{% extends "base.html" %}
+
+{% block title %}Sailing Schedule{% endblock %}
+
+{% block head_extra %}
+<!-- SheetJS for Excel Export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+    .schedules-page {
+        padding: 1.5rem 0 3rem 0;
+    }
+
+    .page-header-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.25rem;
+    }
+
+    .page-header-subtitle {
+        color: #64748b;
+        font-size: 0.925rem;
+        margin-bottom: 1.75rem;
+    }
+
+    /* Search Box */
+    .search-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
+    }
+
+    .search-grid {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr 1fr auto;
+        gap: 1rem;
+        align-items: flex-end;
+    }
+
+    @media (max-width: 992px) {
+        .search-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .field-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .search-input-wrap {
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        height: 46px;
+        padding: 0.6rem 1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #1e293b;
+        background: #fff;
+        transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+        border-color: #2563eb;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .btn-swap {
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 2px;
+    }
+
+    .btn-swap:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .btn-search {
+        height: 46px;
+        padding: 0 1.75rem;
+        background: #2563eb;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-search:hover {
+        background: #1d4ed8;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    /* Results Header & Controls */
+    .results-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .results-count {
+        font-size: 0.95rem;
+        color: #475569;
+        font-weight: 500;
+    }
+
+    .results-count strong {
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .view-switcher {
+        display: flex;
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 3px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .view-btn {
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s ease;
+    }
+
+    .view-btn.active {
+        background: #ffffff;
+        color: #0f172a;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .sort-select {
+        height: 38px;
+        padding: 0 0.8rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: #334155;
+        background: #fff;
+    }
+
+    .btn-export-excel {
+        height: 38px;
+        padding: 0 1rem;
+        background: #059669;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-export-excel:hover {
+        background: #047857;
+        box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+    }
+
+    /* CARD VIEW STYLES */
+    .sailing-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .sailing-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.06);
+    }
+
+    .sailing-card.fastest-card {
+        border: 1.5px solid #10b981;
+    }
+
+    .badge-fastest {
+        position: absolute;
+        top: 1rem;
+        left: 1.5rem;
+        background: #ecfdf5;
+        color: #059669;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        border: 1px solid #a7f3d0;
+    }
+
+    .sailing-card-grid {
+        display: grid;
+        grid-template-columns: 2.2fr 1.8fr 1.2fr;
+        gap: 1.5rem;
+        align-items: center;
+    }
+
+    @media (max-width: 992px) {
+        .sailing-card-grid {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+    }
+
+    /* Route & Timeline */
+    .route-timeline-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        margin-top: 0.75rem;
+    }
+
+    .port-block {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .port-code {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .port-name {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+
+    .port-date {
+        font-size: 0.85rem;
+        color: #334155;
+        margin-top: 0.25rem;
+    }
+
+    .port-date strong {
+        color: #0f172a;
+    }
+
+    .timeline-middle {
+        flex: 1;
+        margin: 0 1.25rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .timeline-line {
+        height: 2px;
+        background: #cbd5e1;
+        position: relative;
+        margin: 0.5rem 0;
+    }
+
+    .timeline-line::before, .timeline-line::after {
+        content: '';
+        position: absolute;
+        top: -4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #2563eb;
+    }
+
+    .timeline-line::before { left: 0; }
+    .timeline-line::after { right: 0; }
+
+    .transit-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #475569;
+        margin-bottom: 0.2rem;
+    }
+
+    .routing-badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+
+    .routing-direct {
+        background: #f0fdf4;
+        color: #166534;
+    }
+
+    .routing-transshipment {
+        background: #fffbeb;
+        color: #b45309;
+    }
+
+    /* Vessel Details Column */
+    .vessel-info-col {
+        border-left: 1px solid #f1f5f9;
+        border-right: 1px solid #f1f5f9;
+        padding: 0 1.25rem;
+    }
+
+    @media (max-width: 992px) {
+        .vessel-info-col {
+            border: none;
+            padding: 0;
+        }
+    }
+
+    .vessel-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .voyage-no {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-bottom: 0.5rem;
+    }
+
+    .meta-pills {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+
+    .pill-tag {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.15rem 0.45rem;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .pill-tag.lcl { background: #eff6ff; color: #1d4ed8; }
+    .pill-tag.fcl { background: #f0fdf4; color: #15803d; }
+
+    /* Cutoff Column & Action Buttons */
+    .cutoff-action-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.75rem;
+    }
+
+    @media (max-width: 992px) {
+        .cutoff-action-col {
+            align-items: flex-start;
+        }
+    }
+
+    .cutoff-grid {
+        text-align: right;
+        font-size: 0.775rem;
+    }
+
+    @media (max-width: 992px) {
+        .cutoff-grid {
+            text-align: left;
+        }
+    }
+
+    .cutoff-item {
+        margin-bottom: 0.2rem;
+    }
+
+    .cutoff-label {
+        color: #94a3b8;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.675rem;
+    }
+
+    .cutoff-val {
+        font-weight: 700;
+        color: #dc2626;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 0.5rem;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .btn-card-quote {
+        padding: 0.45rem 1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #334155;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-card-quote:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+
+    .btn-card-book {
+        padding: 0.45rem 1.1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #ffffff;
+        background: #059669;
+        border: 1px solid #059669;
+        border-radius: 6px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-card-book:hover {
+        background: #047857;
+        box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+    }
+
+    /* LIST VIEW TABLE STYLES */
+    .table-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04);
+    }
+
+    .schedules-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .schedules-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.725rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+    }
+
+    .schedules-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+        vertical-align: middle;
+    }
+
+    .schedules-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .schedules-table tr.highlight-fastest {
+        background: #f0fdf4;
+    }
+
+    .schedules-table tr:hover {
+        background: #f8fafc;
+    }
+
+    .dropdown-locations {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 100;
+        display: none;
+    }
+
+    .dropdown-item-custom {
+        padding: 0.6rem 1rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+
+    .dropdown-item-custom:hover {
+        background: #f1f5f9;
+        color: #2563eb;
+    }
+
+    /* Empty state */
+    .empty-state-box {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        background: #ffffff;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+    }
+
+    .empty-icon {
+        font-size: 2.5rem;
+        color: #94a3b8;
+        margin-bottom: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid schedules-page">
+    <div class="page-header">
+        <h1 class="page-header-title">Sailing Schedule</h1>
+        <p class="page-header-subtitle">Search upcoming vessel departures across our global network</p>
+    </div>
+
+    <!-- SEARCH FORM CARD -->
+    <div class="search-card">
+        <form id="schedulesForm" onsubmit="event.preventDefault(); searchSchedules();">
+            <div class="search-grid">
+                <div class="search-input-wrap">
+                    <label class="field-label">Origin</label>
+                    <input type="text" class="search-input" id="originInput" placeholder="Select origin (e.g. Antwerp)" autocomplete="off" required>
+                    <input type="hidden" id="originLocode" value="BEANR">
+                    <div class="dropdown-locations" id="originDropdown"></div>
+                </div>
+
+                <button type="button" class="btn-swap" onclick="swapLocations()" title="Swap Origin and Destination">
+                    <i class="bi bi-arrow-left-right"></i>
+                </button>
+
+                <div class="search-input-wrap">
+                    <label class="field-label">Destination</label>
+                    <input type="text" class="search-input" id="destInput" placeholder="Select destination (e.g. Singapore)" autocomplete="off" required>
+                    <input type="hidden" id="destLocode" value="SGSIN">
+                    <div class="dropdown-locations" id="destDropdown"></div>
+                </div>
+
+                <div class="search-input-wrap">
+                    <label class="field-label">Cargo Available Date</label>
+                    <input type="date" class="search-input" id="cargoDateInput" required>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn-search">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- RESULTS TOOLBAR -->
+    <div class="results-toolbar">
+        <div class="results-count" id="resultsCount">
+            Searching upcoming sailings...
+        </div>
+
+        <div class="toolbar-actions">
+            <!-- View Mode Switcher -->
+            <div class="view-switcher">
+                <button type="button" class="view-btn active" id="btnCardView" onclick="setViewMode('card')">
+                    <i class="bi bi-grid-fill"></i> Cards
+                </button>
+                <button type="button" class="view-btn" id="btnListView" onclick="setViewMode('list')">
+                    <i class="bi bi-list-ul"></i> List
+                </button>
+            </div>
+
+            <!-- Sorting -->
+            <select class="sort-select" id="sortSelect" onchange="sortAndRender()">
+                <option value="etd">Sort by: Earliest ETD</option>
+                <option value="transit">Sort by: Shortest Transit</option>
+                <option value="eta">Sort by: Earliest ETA</option>
+                <option value="vessel">Sort by: Vessel Name</option>
+            </select>
+
+            <!-- Excel Export Button -->
+            <button type="button" class="btn-export-excel" onclick="exportToExcel()">
+                <i class="bi bi-file-earmark-excel"></i> Export to Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- CARD VIEW CONTAINER -->
+    <div id="cardViewContainer">
+        <!-- Rendered dynamically via JS -->
+    </div>
+
+    <!-- LIST VIEW CONTAINER (Hidden by default) -->
+    <div id="listViewContainer" style="display: none;">
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="schedules-table" id="schedulesTable">
+                    <thead>
+                        <tr>
+                            <th>POL</th>
+                            <th>POD</th>
+                            <th>ETD</th>
+                            <th>ETA</th>
+                            <th>Transit</th>
+                            <th>Vessel / Voyage</th>
+                            <th>Service</th>
+                            <th>Routing</th>
+                            <th>Via</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rendered dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSchedules = [];
+    let currentViewMode = 'card';
+
+    // Preset ports for quick selection
+    const samplePorts = [
+        { code: 'BEANR', name: 'Antwerp', country: 'Belgium' },
+        { code: 'SGSIN', name: 'Singapore', country: 'Singapore' },
+        { code: 'ESBCN', name: 'Barcelona', country: 'Spain' },
+        { code: 'CNSHA', name: 'Shanghai', country: 'China' },
+        { code: 'NLRTM', name: 'Rotterdam', country: 'Netherlands' },
+        { code: 'DEHAM', name: 'Hamburg', country: 'Germany' },
+        { code: 'USNYC', name: 'New York', country: 'United States' },
+        { code: 'USLAX', name: 'Los Angeles', country: 'United States' }
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Set default date to TODAY (YYYY-MM-DD)
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('cargoDateInput').value = today;
+
+        // Default Origin and Destination
+        document.getElementById('originInput').value = 'Antwerp (BEANR)';
+        document.getElementById('destInput').value = 'Singapore (SGSIN)';
+
+        // Setup dropdown listeners
+        setupPortDropdown('originInput', 'originLocode', 'originDropdown');
+        setupPortDropdown('destInput', 'destLocode', 'destDropdown');
+
+        // Initial Search
+        searchSchedules();
+    });
+
+    function setupPortDropdown(inputId, locodeId, dropdownId) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+
+        input.addEventListener('focus', () => renderDropdown(input.value));
+        input.addEventListener('input', () => renderDropdown(input.value));
+
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        function renderDropdown(filterText) {
+            const txt = filterText.toLowerCase();
+            const filtered = samplePorts.filter(p => 
+                p.name.toLowerCase().includes(txt) || 
+                p.code.toLowerCase().includes(txt) || 
+                p.country.toLowerCase().includes(txt)
+            );
+
+            if (filtered.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            dropdown.innerHTML = filtered.map(p => `
+                <div class="dropdown-item-custom" onclick="selectPort('${inputId}', '${locodeId}', '${dropdownId}', '${p.name} (${p.code})', '${p.code}')">
+                    <strong>${p.name}</strong> (${p.code}), ${p.country}
+                </div>
+            `).join('');
+            dropdown.style.display = 'block';
+        }
+    }
+
+    function selectPort(inputId, locodeId, dropdownId, textVal, locodeVal) {
+        document.getElementById(inputId).value = textVal;
+        document.getElementById(locodeId).value = locodeVal;
+        document.getElementById(dropdownId).style.display = 'none';
+    }
+
+    function swapLocations() {
+        const oInput = document.getElementById('originInput');
+        const oLocode = document.getElementById('originLocode');
+        const dInput = document.getElementById('destInput');
+        const dLocode = document.getElementById('destLocode');
+
+        const tempTxt = oInput.value;
+        const tempLocode = oLocode.value;
+
+        oInput.value = dInput.value;
+        oLocode.value = dLocode.value;
+
+        dInput.value = tempTxt;
+        dLocode.value = tempLocode;
+    }
+
+    async function searchSchedules() {
+        const originTxt = document.getElementById('originInput').value;
+        const destTxt = document.getElementById('destInput').value;
+        const oLocode = document.getElementById('originLocode').value || extractLocode(originTxt) || 'BEANR';
+        const dLocode = document.getElementById('destLocode').value || extractLocode(destTxt) || 'SGSIN';
+        const cDate = document.getElementById('cargoDateInput').value;
+
+        const countEl = document.getElementById('resultsCount');
+        countEl.innerHTML = `Searching upcoming sailings for <strong>${originTxt} → ${destTxt}</strong>...`;
+
+        try {
+            const resp = await fetch(`/customer/api/schedules-search?pol=${encodeURIComponent(oLocode)}&pod=${encodeURIComponent(dLocode)}&closingDate=${encodeURIComponent(cDate)}`);
+            const data = await resp.json();
+            currentSchedules = data.schedules || [];
+
+            // Compute transit days & formatting for each schedule
+            currentSchedules.forEach(s => {
+                const etdDt = new Date(s.etd);
+                const etaDt = new Date(s.eta);
+                const diffTime = Math.abs(etaDt - etdDt);
+                s.transitDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 0;
+            });
+
+            sortAndRender();
+        } catch (e) {
+            console.error("Error fetching schedules:", e);
+            countEl.innerHTML = `<span style="color: red;">Failed to load schedules. Please try again.</span>`;
+        }
+    }
+
+    function extractLocode(str) {
+        const match = str.match(/\(([^)]+)\)/);
+        return match ? match[1].trim() : '';
+    }
+
+    function setViewMode(mode) {
+        currentViewMode = mode;
+        document.getElementById('btnCardView').classList.toggle('active', mode === 'card');
+        document.getElementById('btnListView').classList.toggle('active', mode === 'list');
+
+        document.getElementById('cardViewContainer').style.display = mode === 'card' ? 'block' : 'none';
+        document.getElementById('listViewContainer').style.display = mode === 'list' ? 'block' : 'none';
+    }
+
+    function sortAndRender() {
+        const sortVal = document.getElementById('sortSelect').value;
+
+        if (sortVal === 'etd') {
+            currentSchedules.sort((a, b) => new Date(a.etd) - new Date(b.etd));
+        } else if (sortVal === 'transit') {
+            currentSchedules.sort((a, b) => a.transitDays - b.transitDays);
+        } else if (sortVal === 'eta') {
+            currentSchedules.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+        } else if (sortVal === 'vessel') {
+            currentSchedules.sort((a, b) => (a.vessel || '').localeCompare(b.vessel || ''));
+        }
+
+        const originTxt = document.getElementById('originInput').value;
+        const destTxt = document.getElementById('destInput').value;
+        const countEl = document.getElementById('resultsCount');
+
+        countEl.innerHTML = `<strong>${currentSchedules.length} sailings found</strong> · ${originTxt} → ${destTxt}`;
+
+        renderCardView();
+        renderListView();
+    }
+
+    function renderCardView() {
+        const container = document.getElementById('cardViewContainer');
+
+        if (currentSchedules.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state-box">
+                    <i class="bi bi-calendar-x empty-icon"></i>
+                    <h4>No Sailing Schedules Found</h4>
+                    <p class="text-muted">Try selecting different origin/destination ports or adjusting the cargo available date.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Find fastest transit
+        const minTransit = Math.min(...currentSchedules.map(s => s.transitDays));
+
+        container.innerHTML = currentSchedules.map((s, idx) => {
+            const isFastest = s.transitDays === minTransit && minTransit > 0;
+            const etdStr = s.etd ? s.etd.substring(0, 10) : 'TBD';
+            const etaStr = s.eta ? s.eta.substring(0, 10) : 'TBD';
+            const cargoCutoff = s.closingLCL ? s.closingLCL.substring(0, 10) : (s.closingFCL ? s.closingFCL.substring(0, 10) : 'TBD');
+            const docCutoff = s.closingDoc ? s.closingDoc.substring(0, 10) : cargoCutoff;
+
+            const originTxt = document.getElementById('originInput').value.split('(')[0].strip?.() || 'Origin';
+            const destTxt = document.getElementById('destInput').value.split('(')[0].strip?.() || 'Destination';
+
+            const quoteUrl = `/customer/rates?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
+            const bookUrl = `/customer/new_booking?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
+
+            return `
+                <div class="sailing-card ${isFastest ? 'fastest-card' : ''}">
+                    ${isFastest ? `<div class="badge-fastest"><i class="bi bi-lightning-charge-fill"></i> Fastest</div>` : ''}
+
+                    <div class="sailing-card-grid" style="${isFastest ? 'margin-top: 0.5rem;' : ''}">
+                        <!-- Timeline -->
+                        <div>
+                            <div class="route-timeline-wrap">
+                                <div class="port-block">
+                                    <span class="port-code">${s.pol}</span>
+                                    <span class="port-name">${originTxt}</span>
+                                    <span class="port-date">ETD <strong>${etdStr}</strong></span>
+                                </div>
+
+                                <div class="timeline-middle">
+                                    <div class="transit-badge">${s.transitDays} days</div>
+                                    <div class="timeline-line"></div>
+                                    <span class="routing-badge routing-direct">DIRECT</span>
+                                </div>
+
+                                <div class="port-block" style="text-align: right;">
+                                    <span class="port-code">${s.pod}</span>
+                                    <span class="port-name">${destTxt}</span>
+                                    <span class="port-date">ETA <strong>${etaStr}</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vessel Info -->
+                        <div class="vessel-info-col">
+                            <div class="vessel-name">${s.vessel || 'Standard Vessel'}</div>
+                            <div class="voyage-no">Voyage ${s.voyage || 'Direct'}</div>
+                            <div class="meta-pills">
+                                <span class="pill-tag lcl">LCL</span>
+                                <span class="pill-tag">Weekly service</span>
+                            </div>
+                        </div>
+
+                        <!-- Cutoff & Actions -->
+                        <div class="cutoff-action-col">
+                            <div class="cutoff-grid">
+                                <div class="cutoff-item">
+                                    <span class="cutoff-label">CARGO CUT-OFF</span>
+                                    <div class="cutoff-val">${cargoCutoff}</div>
+                                </div>
+                                <div class="cutoff-item">
+                                    <span class="cutoff-label">DOC CUT-OFF</span>
+                                    <div style="color: #64748b; font-weight: 600;">${docCutoff}</div>
+                                </div>
+                            </div>
+
+                            <div class="card-actions">
+                                <a href="${quoteUrl}" class="btn-card-quote">Get a Quote</a>
+                                <a href="${bookUrl}" class="btn-card-book">Book →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderListView() {
+        const tbody = document.getElementById('tableBody');
+
+        if (currentSchedules.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center py-4 text-muted">No sailing schedules available.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        const minTransit = Math.min(...currentSchedules.map(s => s.transitDays));
+
+        tbody.innerHTML = currentSchedules.map(s => {
+            const isFastest = s.transitDays === minTransit && minTransit > 0;
+            const etdStr = s.etd ? s.etd.substring(0, 10) : 'TBD';
+            const etaStr = s.eta ? s.eta.substring(0, 10) : 'TBD';
+
+            const quoteUrl = `/customer/rates?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
+            const bookUrl = `/customer/new_booking?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
+
+            return `
+                <tr class="${isFastest ? 'highlight-fastest' : ''}">
+                    <td><strong>${s.pol}</strong></td>
+                    <td><strong>${s.pod}</strong></td>
+                    <td>${etdStr}</td>
+                    <td>${etaStr}</td>
+                    <td><strong>${s.transitDays} days</strong></td>
+                    <td>${s.vessel || 'Vessel'} Voy. ${s.voyage || ''}</td>
+                    <td><span class="pill-tag lcl">LCL</span></td>
+                    <td><span class="routing-badge routing-direct">DIRECT</span></td>
+                    <td>—</td>
+                    <td>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <a href="${quoteUrl}" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size:0.75rem;">Quote</a>
+                            <a href="${bookUrl}" class="btn btn-sm btn-success py-1 px-2" style="font-size:0.75rem;">Book</a>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // EXPORT TO EXCEL
+    function exportToExcel() {
+        if (currentSchedules.length === 0) {
+            alert('No sailing schedules to export.');
+            return;
+        }
+
+        const excelData = currentSchedules.map(s => ({
+            'POL': s.pol,
+            'POD': s.pod,
+            'ETD Date': s.etd ? s.etd.substring(0, 10) : '',
+            'ETA Date': s.eta ? s.eta.substring(0, 10) : '',
+            'Transit Days': s.transitDays,
+            'Vessel Name': s.vessel || '',
+            'Voyage Number': s.voyage || '',
+            'Cargo Cut-off': s.closingLCL ? s.closingLCL.substring(0, 10) : '',
+            'Doc Cut-off': s.closingDoc ? s.closingDoc.substring(0, 10) : '',
+            'Routing': 'DIRECT'
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Schedules");
+
+        const oVal = document.getElementById('originLocode').value || 'ORIGIN';
+        const dVal = document.getElementById('destLocode').value || 'DEST';
+        const fileName = `sailing_schedules_${oVal}_${dVal}.xlsx`;
+
+        XLSX.writeFile(workbook, fileName);
+    }
+</script>
+{% endblock %}
