@@ -1959,13 +1959,13 @@ def submit_si(booking_id):
                          cont_types=cont_types)
 
 
-@customer_bp.route('/schedules')
+@customer.route('/schedules')
 @login_required
 def schedules():
     return render_template('customer/schedules.html')
 
 
-@customer_bp.route('/api/schedules-search')
+@customer.route('/api/schedules-search')
 @login_required
 def api_schedules_search():
     pol = request.args.get('pol', '').strip()
