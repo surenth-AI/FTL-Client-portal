@@ -5,44 +5,44 @@
 
 {% block content %}
 <style>
-    /* STRICT ADOPTION OF SYSTEM-WIDE DESIGN SYSTEM (MY QUOTES & RATE RESULTS EXACT MATCH) */
-    .ms-container {
-        --primary-blue: #2563eb;
-        --primary-blue-dark: #1d4ed8;
-        --primary-green: #059669;
-        --primary-green-dark: #047857;
-        --green-bg: #ecfdf5;
-        --text-primary: #0f172a;
-        --text-secondary: #64748b;
-        --text-muted: #94a3b8;
-        --border-color: #e2e8f0;
-        --bg-gray: #f8fafc;
-        --bg-white: #ffffff;
-        --success-green: #10b981;
-        --error-red: #ef4444;
-        --amber: #f59e0b;
-        --amber-bg: #fffbeb;
-        --hover-bg: #f1f5f9;
+    /* SHARED EXACT CSS MATRIX FROM MY QUOTES (MY_QUOTES.HTML) */
+    .mq-container {
+        --mq-primary-blue: #2563eb;
+        --mq-primary-blue-dark: #1d4ed8;
+        --mq-primary-green: #059669;
+        --mq-primary-green-dark: #047857;
+        --mq-green-bg: #ecfdf5;
+        --mq-text-primary: #0f172a;
+        --mq-text-secondary: #64748b;
+        --mq-text-muted: #94a3b8;
+        --mq-border-color: #e2e8f0;
+        --mq-bg-gray: #f8fafc;
+        --mq-bg-white: #ffffff;
+        --mq-success-green: #10b981;
+        --mq-error-red: #ef4444;
+        --mq-amber: #f59e0b;
+        --mq-amber-bg: #fffbeb;
+        --mq-hover-bg: #f1f5f9;
 
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        color: var(--text-primary);
+        color: var(--mq-text-primary);
         line-height: 1.4;
         font-size: 13px;
         width: 100%;
         padding: 0.75rem 1.5rem 3rem;
     }
 
-    html[data-color-scheme='dark'] .ms-container {
-        --bg-gray: #0f172a;
-        --bg-white: #1e293b;
-        --text-primary: #f8fafc;
-        --text-secondary: #94a3b8;
-        --border-color: #334155;
-        --hover-bg: #334155;
-        --green-bg: rgba(5, 150, 105, 0.2);
+    html[data-color-scheme='dark'] .mq-container {
+        --mq-bg-gray: #0f172a;
+        --mq-bg-white: #1e293b;
+        --mq-text-primary: #f8fafc;
+        --mq-text-secondary: #94a3b8;
+        --mq-border-color: #334155;
+        --mq-hover-bg: #334155;
+        --mq-green-bg: rgba(5, 150, 105, 0.2);
     }
 
-    /* Page Header */
+    /* Page header */
     .page-header-row {
         display: flex;
         align-items: flex-start;
@@ -51,167 +51,58 @@
         flex-wrap: wrap;
         margin-bottom: 0.875rem;
     }
+    .mq-title { font-size: 1.25rem; font-weight: 700; color: var(--mq-text-primary); margin-bottom: 0.15rem; }
+    .mq-subtitle { font-size: 0.8rem; color: var(--mq-text-secondary); }
 
-    .ms-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 0.15rem;
-    }
+    .mq-btn { padding: 0.6rem 1rem; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap; text-decoration: none; }
+    .mq-btn-book { background: var(--mq-primary-green); color: white; }
+    .mq-btn-book:hover { background: var(--mq-primary-green-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); color: white;}
+    .mq-btn-outline { background: var(--mq-bg-white); color: var(--mq-text-secondary); border: 1px solid var(--mq-border-color); }
+    .mq-btn-outline:hover { border-color: var(--mq-primary-blue); color: var(--mq-primary-blue); }
+    .mq-btn-view-booking { background: var(--mq-primary-blue); color: white; }
+    .mq-btn-view-booking:hover { background: var(--mq-primary-blue-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); color: white;}
 
-    .ms-subtitle {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-    }
-
-    .ms-btn {
-        padding: 0.5rem 0.9rem;
-        border: none;
-        border-radius: 7px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        font-family: inherit;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.4rem;
-        white-space: nowrap;
-        text-decoration: none;
-    }
-
-    .ms-btn-new {
-        background: var(--primary-green);
-        color: white;
-    }
-
-    .ms-btn-new:hover {
-        background: var(--primary-green-dark);
-        color: white;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-    }
-
-    .ms-btn-outline {
-        background: var(--bg-white);
-        color: var(--primary-blue);
-        border: 1px solid var(--primary-blue);
-    }
-
-    .ms-btn-outline:hover {
-        background: var(--primary-blue);
-        color: white;
-    }
-
-    .ms-btn-action-green {
-        background: var(--primary-green);
-        color: white;
-    }
-
-    .ms-btn-action-green:hover {
-        background: var(--primary-green-dark);
-        color: white;
-    }
-
-    /* Toolbar Panel */
-    .toolbar-panel {
-        background: var(--bg-white);
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.875rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.65rem;
-    }
-
-    .toolbar-row {
+    /* Toolbar */
+    .toolbar {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
+        justify-content: space-between;
+        gap: 0.75rem;
         flex-wrap: wrap;
+        background: var(--mq-bg-white);
+        border: 1px solid var(--mq-border-color);
+        border-radius: 10px;
+        padding: 0.7rem 0.9rem;
+        margin-bottom: 0.625rem;
     }
-
-    .toolbar-row:not(:last-child) {
-        padding-bottom: 0.65rem;
-        border-bottom: 1px dashed var(--border-color);
-    }
-
-    .sort-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        min-width: 60px;
-    }
-
+    .sort-group { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .sort-label { font-size: 0.75rem; font-weight: 600; color: var(--mq-text-secondary); }
     .sort-chip {
-        padding: 0.35rem 0.75rem;
+        padding: 0.4rem 0.75rem;
         border-radius: 20px;
-        border: 1px solid var(--border-color);
-        background: var(--bg-white);
+        border: 1px solid var(--mq-border-color);
+        background: var(--mq-bg-white);
         font-size: 0.78rem;
         font-weight: 500;
-        color: var(--text-secondary);
+        color: var(--mq-text-secondary);
         cursor: pointer;
         transition: all 0.15s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
     }
+    .sort-chip:hover { border-color: var(--mq-primary-green); color: var(--mq-primary-green-dark); }
+    .sort-chip.active { background: var(--mq-text-primary); border-color: var(--mq-text-primary); color: white; }
 
-    .sort-chip:hover {
-        border-color: var(--primary-green);
-        color: var(--primary-green-dark);
-    }
-
-    .sort-chip.active {
-        background: var(--text-primary);
-        border-color: var(--text-primary);
-        color: white;
-        font-weight: 600;
-    }
-
-    .sort-chip.active .dot-indicator {
-        background: white !important;
-    }
-
-    .dot-indicator {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
-    .dot-amber { background: var(--amber); }
-    .dot-blue { background: var(--primary-blue); }
-    .dot-purple { background: #7c3aed; }
-    .dot-green { background: var(--success-green); }
-
-    /* Search Box */
-    .search-box {
-        position: relative;
-        min-width: 240px;
-        margin-left: auto;
-    }
-
+    .search-box { position: relative; min-width: 240px; }
     .search-box input {
         width: 100%;
-        padding: 0.45rem 0.75rem 0.45rem 2rem;
-        border: 1px solid var(--border-color);
+        padding: 0.5rem 0.75rem 0.5rem 2rem;
+        border: 1px solid var(--mq-border-color);
         border-radius: 7px;
         font-size: 0.82rem;
         font-family: inherit;
-        background: var(--bg-gray);
-        color: var(--text-primary);
+        background: var(--mq-bg-gray);
+        color: var(--mq-text-primary);
     }
-
-    .search-box input:focus {
-        outline: none;
-        border-color: var(--primary-blue);
-        background: var(--bg-white);
-    }
-
+    .search-box input:focus { outline: none; border-color: var(--mq-primary-blue); background: var(--mq-bg-white); }
     .search-box::before {
         content: '🔍';
         position: absolute;
@@ -222,71 +113,42 @@
         opacity: 0.6;
     }
 
-    .results-count {
-        font-size: 0.78rem;
-        color: var(--text-secondary);
-    }
+    .results-count { font-size: 0.78rem; color: var(--mq-text-secondary); }
 
-    /* Shipment / Booking List */
-    .shipments-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.875rem;
-    }
+    /* Offer / quote / booking card */
+    .offers-list { display: flex; flex-direction: column; gap: 0.875rem; }
 
-    .shipment-card {
-        background: var(--bg-white);
-        border: 1px solid var(--border-color);
+    .offer-card {
+        background: var(--mq-bg-white);
+        border: 1px solid var(--mq-border-color);
         border-radius: 12px;
         overflow: hidden;
-        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
     }
+    .offer-card:hover { box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
 
-    .shipment-card:hover {
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
-    }
-
-    /* Card Top Bar */
-    .card-badge-row {
+    .offer-badge-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
-        padding: 0.75rem 1.25rem 0;
+        padding: 0.6rem 1.25rem 0;
         flex-wrap: wrap;
     }
-
     .ref-eyebrow {
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
         font-size: 0.74rem;
         font-weight: 600;
-        color: var(--text-secondary);
-        background: var(--bg-gray);
+        color: var(--mq-text-secondary);
+        background: var(--mq-bg-gray);
         padding: 0.25rem 0.6rem;
         border-radius: 6px;
+        font-variant-numeric: tabular-nums;
+        transition: background 0.15s ease;
     }
-
-    .ref-eyebrow .ref-code {
-        font-weight: 700;
-        color: var(--text-primary);
-    }
-
-    .badge-converted-quote {
-        font-size: 0.72rem;
-        font-weight: 600;
-        color: var(--primary-blue);
-        background: #eff6ff;
-        padding: 0.2rem 0.55rem;
-        border-radius: 5px;
-        border: 1px solid #bfdbfe;
-        text-decoration: none;
-    }
-
-    .badge-converted-quote:hover {
-        background: #dbeafe;
-    }
+    .ref-eyebrow .ref-code { font-weight: 700; color: var(--mq-text-primary); }
 
     .status-pill {
         display: inline-flex;
@@ -299,76 +161,51 @@
         padding: 0.22rem 0.6rem;
         border-radius: 5px;
     }
-
-    .status-pill.pending { background: var(--amber-bg); color: #92400e; }
-    .status-pill.confirmed { background: #eff6ff; color: var(--primary-blue-dark); }
+    .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .status-pill.active { background: var(--mq-green-bg); color: var(--mq-primary-green-dark); }
+    .status-pill.active .dot { background: var(--mq-success-green); }
+    .status-pill.pending { background: var(--mq-amber-bg); color: #92400e; }
+    .status-pill.pending .dot { background: var(--mq-amber); }
+    .status-pill.confirmed { background: #eff6ff; color: var(--mq-primary-blue-dark); }
+    .status-pill.confirmed .dot { background: var(--mq-primary-blue); }
     .status-pill.transit { background: #f3e8ff; color: #6d28d9; }
-    .status-pill.delivered { background: var(--green-bg); color: var(--primary-green-dark); }
+    .status-pill.transit .dot { background: #7c3aed; }
+    .status-pill.delivered { background: var(--mq-green-bg); color: var(--mq-primary-green-dark); }
+    .status-pill.delivered .dot { background: var(--mq-success-green); }
 
-    .status-sub-date {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-        text-align: right;
-        margin-top: 0.1rem;
-    }
-
-    /* Card Main Grid */
-    .card-main-grid {
+    .offer-main {
         display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 1.25rem;
+        grid-template-columns: 180px 1fr 220px;
+        gap: 1rem;
         padding: 0.75rem 1.25rem 1rem;
         align-items: center;
     }
 
-    @media (max-width: 992px) {
-        .card-main-grid {
-            grid-template-columns: 1fr;
-        }
-    }
+    .offer-price-block { display: flex; flex-direction: column; gap: 0.4rem; }
+    .price-label { font-size: 0.72rem; color: var(--mq-text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+    .price-amount { font-size: 1.5rem; font-weight: 800; color: var(--mq-primary-green-dark); line-height: 1.1; }
+    .price-amount .currency { font-size: 0.85rem; font-weight: 600; color: var(--mq-text-secondary); margin-right: 0.2rem; }
+    .price-valid { font-size: 0.72rem; color: var(--mq-text-muted); }
 
-    .carrier-row {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        margin-bottom: 0.4rem;
-        flex-wrap: wrap;
-    }
-
-    .ftl-carrier-badge {
-        width: 32px;
-        height: 26px;
-        border-radius: 6px;
+    .offer-details { min-width: 0; }
+    .carrier-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .carrier-logo {
+        width: 30px; height: 30px;
+        border-radius: 7px;
         background: #1e3a8a;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 800;
-        font-size: 0.7rem;
-        color: #ffffff;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.7rem; color: #ffffff;
         flex-shrink: 0;
+        border: 1px solid var(--mq-border-color);
     }
+    .carrier-name { font-weight: 700; font-size: 0.95rem; color: var(--mq-text-primary); }
+    .carrier-text { display: flex; flex-direction: column; gap: 0.05rem; }
+    .service-name { font-size: 0.74rem; color: var(--mq-text-secondary); font-weight: 500; }
+    .route-line { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--mq-text-secondary); }
+    .route-stop { color: var(--mq-text-primary); font-weight: 500; }
+    .route-arrow { color: var(--mq-text-muted); }
 
-    .route-line {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.95rem;
-        color: var(--text-secondary);
-    }
-
-    .route-stop {
-        color: var(--text-primary);
-        font-weight: 700;
-    }
-
-    .routing-meta {
-        display: flex;
-        gap: 0.45rem;
-        flex-wrap: wrap;
-        margin-bottom: 0.55rem;
-    }
-
+    .routing-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .meta-pill {
         display: inline-flex;
         align-items: center;
@@ -378,293 +215,198 @@
         padding: 0.22rem 0.55rem;
         border-radius: 14px;
     }
-
+    .meta-pill.direct { background: var(--mq-green-bg); color: var(--mq-primary-green-dark); }
     .meta-pill.service { background: #eef2ff; color: #4338ca; }
-    .meta-pill.direct { background: var(--green-bg); color: var(--primary-green-dark); }
-    .meta-pill.vessel { background: var(--bg-gray); color: var(--text-secondary); border: 1px solid var(--border-color); }
+    .meta-pill.vessel { background: var(--mq-bg-gray); color: var(--mq-text-secondary); border: 1px solid var(--mq-border-color); }
 
-    .dates-row {
-        display: flex;
-        align-items: center;
-        gap: 1.25rem;
-        flex-wrap: wrap;
-        font-size: 0.78rem;
-        color: var(--text-secondary);
-    }
+    .offer-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+    .saved-on { font-size: 0.72rem; color: var(--mq-text-secondary); text-align: right; }
+    .saved-on strong { color: var(--mq-text-primary); }
 
-    .date-item strong {
-        color: var(--text-primary);
-        font-weight: 600;
-    }
-
-    /* Actions Right Column */
-    .card-actions-col {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.45rem;
-        flex-shrink: 0;
-    }
-
-    @media (max-width: 992px) {
-        .card-actions-col {
-            align-items: flex-start;
-        }
-    }
-
-    .tracking-subtext {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-    }
-
-    /* Empty State */
-    .empty-state-panel {
-        background: var(--bg-white);
-        border: 1px solid var(--border-color);
+    .empty-state {
+        background: var(--mq-bg-white);
+        border: 1px dashed var(--mq-border-color);
         border-radius: 12px;
-        padding: 3.5rem 1.5rem;
+        padding: 2.5rem 1.5rem;
         text-align: center;
+        display: none;
     }
+    .empty-state.show { display: block; }
+    .empty-state .icon { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .empty-state .title { font-size: 0.95rem; font-weight: 700; color: var(--mq-text-primary); margin-bottom: 0.3rem; }
+    .empty-state .desc { font-size: 0.82rem; color: var(--mq-text-secondary); margin-bottom: 1rem; }
 
-    .empty-icon {
-        font-size: 2.5rem;
-        color: var(--text-muted);
-        margin-bottom: 0.75rem;
+    @media (max-width: 900px) {
+        .offer-main { grid-template-columns: 1fr; }
+        .offer-actions { align-items: flex-start; }
+        .saved-on { text-align: left; }
+        .page-header-row { flex-direction: column; }
+        .toolbar { flex-direction: column; align-items: stretch; }
+        .search-box { min-width: 0; }
     }
 </style>
 
-<div class="ms-container">
+<div class="mq-container">
+
     <!-- PAGE HEADER ROW -->
     <div class="page-header-row">
         <div>
-            <h1 class="ms-title">My Bookings</h1>
-            <div class="ms-subtitle">Every booking request you've submitted, from quote conversions or new shipments</div>
+            <h1 class="mq-title">My Bookings</h1>
+            <p class="mq-subtitle">Every booking request you've submitted, from quote conversions or new shipments</p>
         </div>
-        <div>
-            <a href="{{ url_for('customer.new_booking') }}" class="ms-btn ms-btn-new">
-                <i class="bi bi-plus-lg"></i> New Booking
-            </a>
+        <a href="{{ url_for('customer.new_booking') }}" class="mq-btn mq-btn-book">+ New Booking</a>
+    </div>
+
+    <!-- FILTER TOOLBAR -->
+    <div class="toolbar">
+        <div class="sort-group" id="filterStatusGroup">
+            <span class="sort-label">Filter</span>
+            <button class="sort-chip active" data-status="all" onclick="filterByStatus('all', this)">All</button>
+            <button class="sort-chip" data-status="pending" onclick="filterByStatus('pending', this)">🟡 Pending Review</button>
+            <button class="sort-chip" data-status="confirmed" onclick="filterByStatus('confirmed', this)">🔵 Confirmed</button>
+            <button class="sort-chip" data-status="transit" onclick="filterByStatus('transit', this)">🟣 In Transit</button>
+            <button class="sort-chip" data-status="delivered" onclick="filterByStatus('delivered', this)">🟢 Delivered</button>
+        </div>
+        <div class="search-box">
+            <input type="text" id="shipmentSearchInput" placeholder="Search by reference, route or PO..." oninput="applySearchAndFilter()">
         </div>
     </div>
 
-    <!-- TOOLBAR PANEL (STATUS, SORT & SEARCH) -->
-    <div class="toolbar-panel">
-        <!-- Status Row -->
-        <div class="toolbar-row">
-            <span class="sort-label">Status</span>
-            <div class="toolbar-row" style="margin:0; padding:0; border:none;" id="statusGroup">
-                <button class="sort-chip active" data-status="all" onclick="filterStatus('all', this)">
-                    All (<span id="cntAll">{{ shipments|length }}</span>)
-                </button>
-                <button class="sort-chip" data-status="pending" onclick="filterStatus('pending', this)">
-                    <span class="dot-indicator dot-amber"></span> Pending Review (<span id="cntPending">0</span>)
-                </button>
-                <button class="sort-chip" data-status="confirmed" onclick="filterStatus('confirmed', this)">
-                    <span class="dot-indicator dot-blue"></span> Confirmed (<span id="cntConfirmed">0</span>)
-                </button>
-                <button class="sort-chip" data-status="transit" onclick="filterStatus('transit', this)">
-                    <span class="dot-indicator dot-purple"></span> In Transit (<span id="cntTransit">0</span>)
-                </button>
-                <button class="sort-chip" data-status="delivered" onclick="filterStatus('delivered', this)">
-                    <span class="dot-indicator dot-green"></span> Delivered (<span id="cntDelivered">0</span>)
-                </button>
-            </div>
-        </div>
-
-        <!-- Sort & Search Row -->
-        <div class="toolbar-row" style="margin:0; padding:0; border:none;">
+    <!-- SORT TOOLBAR -->
+    <div class="toolbar">
+        <div class="sort-group" id="sortGroup">
             <span class="sort-label">Sort by</span>
-            <div class="toolbar-row" style="margin:0; padding:0; border:none;" id="sortGroup">
-                <button class="sort-chip active" data-sort="recent" onclick="sortShipments('recent', this)">Most recent</button>
-                <button class="sort-chip" data-sort="etd" onclick="sortShipments('etd', this)">Departure date</button>
-                <button class="sort-chip" data-sort="eta" onclick="sortShipments('eta', this)">Arrival date</button>
-                <button class="sort-chip" data-sort="closing" onclick="sortShipments('closing', this)">Closing date</button>
-            </div>
-
-            <div class="search-box">
-                <input type="text" id="shipmentSearch" placeholder="Search by reference, route or PO..." oninput="filterAndSearch()">
-            </div>
-
-            <div class="results-count" id="countDisplay">
-                Showing {{ shipments|length }} of {{ shipments|length }} bookings
-            </div>
+            <button class="sort-chip active" data-sort="recent" onclick="sortBy('recent', this)">🕐 Most recently created</button>
+            <button class="sort-chip" data-sort="etd" onclick="sortBy('etd', this)">📅 Departure date</button>
+            <button class="sort-chip" data-sort="eta" onclick="sortBy('eta', this)">📅 Arrival date</button>
+            <button class="sort-chip" data-sort="price" onclick="sortBy('price', this)">💲 Total cost</button>
         </div>
+        <div class="results-count" id="resultsCount">Showing {{ shipments|length }} bookings</div>
     </div>
 
-    <!-- SHIPMENT CARDS LIST -->
-    <div class="shipments-list" id="shipmentsContainer">
+    <!-- SHIPMENT CARDS LIST (EXACT MY QUOTES CARD LAYOUT) -->
+    <div class="offers-list" id="shipmentsContainer">
         {% for shipment in shipments %}
             {% set s_status = shipment.status | lower %}
             {% if 'pending' in s_status %}
                 {% set status_cat = 'pending' %}
-                {% set status_label = 'PENDING REVIEW' %}
-                {% set status_class = 'pending' %}
-                {% set dot_class = 'dot-amber' %}
-                {% set status_subtext = 'Submitted ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set track_sub = 'Awaiting office confirmation' %}
+                {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>Pending Review</span>' %}
+                {% set status_sub = 'Submitted ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
             {% elif 'confirm' in s_status or 'booked' in s_status %}
                 {% set status_cat = 'confirmed' %}
-                {% set status_label = 'CONFIRMED' %}
-                {% set status_class = 'confirmed' %}
-                {% set dot_class = 'dot-blue' %}
-                {% set status_subtext = 'Confirmed ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set track_sub = 'Sailing in progress' %}
+                {% set status_badge = '<span class="status-pill confirmed"><span class="dot"></span>Confirmed</span>' %}
+                {% set status_sub = 'Confirmed ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
             {% elif 'transit' in s_status or 'dispatched' in s_status %}
                 {% set status_cat = 'transit' %}
-                {% set status_label = 'IN TRANSIT' %}
-                {% set status_class = 'transit' %}
-                {% set dot_class = 'dot-purple' %}
-                {% set status_subtext = 'In Transit since ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set track_sub = 'On vessel execution' %}
+                {% set status_badge = '<span class="status-pill transit"><span class="dot"></span>In Transit</span>' %}
+                {% set status_sub = 'In Transit since ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
             {% elif 'deliver' in s_status or 'arrived' in s_status %}
                 {% set status_cat = 'delivered' %}
-                {% set status_label = 'DELIVERED' %}
-                {% set status_class = 'delivered' %}
-                {% set dot_class = 'dot-green' %}
-                {% set status_subtext = 'Delivered ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set track_sub = 'Cargo released' %}
+                {% set status_badge = '<span class="status-pill delivered"><span class="dot"></span>Delivered</span>' %}
+                {% set status_sub = 'Delivered ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
             {% else %}
                 {% set status_cat = 'pending' %}
-                {% set status_label = shipment.status | upper %}
-                {% set status_class = 'pending' %}
-                {% set dot_class = 'dot-amber' %}
-                {% set status_subtext = 'Created ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set track_sub = 'Processing' %}
+                {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ shipment.status ~ '</span>' %}
+                {% set status_sub = 'Created ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
             {% endif %}
 
             {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else ('BR-2026-' ~ "%05d"|format(shipment.id)) %}
-            {% set etd_val = shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '2026-07-10' %}
-            {% set eta_val = shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '2026-07-22' %}
-            {% set cargo_ready_val = shipment.created_at.strftime('%Y-%m-%d') %}
-            {% set po_val = shipment.customer_ref if shipment.customer_ref else ('PO-' ~ (shipment.id + 44210)) %}
+            {% set format_cost = "%.2f"|format(shipment.total_cost if shipment.total_cost else 0.0) %}
 
-            <div class="shipment-card shipment-card-item"
-                 data-cat="{{ status_cat }}"
+            <div class="offer-card shipment-card-item"
+                 data-status="{{ status_cat }}"
                  data-ref="{{ ref_code | lower }}"
                  data-route="{{ (shipment.origin ~ ' ' ~ shipment.destination) | lower }}"
-                 data-po="{{ po_val | lower }}"
                  data-created="{{ shipment.created_at.timestamp() }}"
-                 data-etd="{{ etd_val }}"
-                 data-eta="{{ eta_val }}">
+                 data-etd="{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '' }}"
+                 data-eta="{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '' }}"
+                 data-price="{{ shipment.total_cost or 0 }}">
 
-                <!-- Card Badge Bar -->
-                <div class="card-badge-row">
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span class="ref-eyebrow">
-                            <span class="ref-code">{{ ref_code }}</span>
-                        </span>
-                        <a href="{{ url_for('customer.my_quotes') }}" class="badge-converted-quote">
-                            📌 From FTL-QR-{{ shipment.id + 548200 }}
-                        </a>
+                <!-- Badge row -->
+                <div class="offer-badge-row">
+                    <div class="ref-eyebrow">
+                        📌 Ref: <span class="ref-code">{{ ref_code }}</span>
                     </div>
-
-                    <div>
-                        <span class="status-pill {{ status_class }}">
-                            <span class="dot {{ dot_class }}"></span> {{ status_label }}
-                        </span>
-                        <div class="status-sub-date">{{ status_subtext }}</div>
-                    </div>
+                    {{ status_badge | safe }}
                 </div>
 
-                <!-- Main Card Grid -->
-                <div class="card-main-grid">
-                    <div>
-                        <!-- Carrier & Route -->
+                <!-- Main Offer Grid -->
+                <div class="offer-main">
+                    <!-- Price block -->
+                    <div class="offer-price-block">
+                        <div class="price-label">Total Amount</div>
+                        <div class="price-amount"><span class="currency">USD</span>${{ format_cost }}</div>
+                        <div class="price-valid">📅 Created {{ shipment.created_at.strftime('%b %d, %Y') }}</div>
+                    </div>
+
+                    <!-- Details block -->
+                    <div class="offer-details">
                         <div class="carrier-row">
-                            <span class="ftl-carrier-badge">FTL</span>
-                            <div class="route-line">
-                                <span class="route-stop">{{ shipment.origin }}</span>
-                                <span class="route-arrow">→</span>
-                                <span class="route-stop">{{ shipment.destination }}</span>
+                            <div class="carrier-logo">FTL</div>
+                            <div class="carrier-text">
+                                <div class="carrier-name">{{ shipment.selected_nvocc or 'Fast Transit Line' }}</div>
+                                <div class="service-name">Direct Service</div>
                             </div>
                         </div>
 
-                        <!-- Routing Meta Tags -->
-                        <div class="routing-meta">
+                        <div class="route-line">
+                            <span class="route-stop">{{ shipment.origin }}</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-stop">{{ shipment.destination }}</span>
+                        </div>
+
+                        <div class="routing-meta" style="margin-top: 0.5rem;">
                             <span class="meta-pill service">📦 {{ shipment.service_type or 'LCL' }}</span>
                             <span class="meta-pill direct">Direct Service</span>
-                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name or 'MSC Anna' }} · Voy {{ shipment.voyage_number or '224W' }} · {{ shipment.volume or '1' }} CBM</span>
-                        </div>
-
-                        <!-- Key Milestone Dates -->
-                        <div class="dates-row">
-                            <span class="date-item">ETD <strong>{{ etd_val }}</strong></span>
-                            <span class="date-item">ETA <strong>{{ eta_val }}</strong></span>
-                            <span class="date-item">Cargo ready <strong>{{ cargo_ready_val }}</strong></span>
-                            <span class="date-item">PO <strong>{{ po_val }}</strong></span>
+                            {% if shipment.vessel_name %}
+                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name }} {{ ('· Voy ' ~ shipment.voyage_number) if shipment.voyage_number else '' }}</span>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <!-- Right Column Actions -->
-                    <div class="card-actions-col">
+                    <!-- Actions block -->
+                    <div class="offer-actions">
+                        <div class="saved-on">{{ status_sub }}</div>
                         {% if shipment.status == 'Booked' and not shipment.is_si_submitted %}
-                            <a href="{{ url_for('customer.submit_si', booking_id=shipment.id) }}" class="ms-btn ms-btn-action-green">
-                                Submit SI →
-                            </a>
+                            <a href="{{ url_for('customer.submit_si', booking_id=shipment.id) }}" class="mq-btn mq-btn-book w-100" style="margin-bottom:0.3rem;">Submit SI →</a>
                         {% endif %}
-
-                        <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="ms-btn ms-btn-outline">
-                            View Booking →
-                        </a>
-                        <div class="tracking-subtext">{{ track_sub }}</div>
+                        <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="mq-btn mq-btn-view-booking w-100">View Booking →</a>
                     </div>
                 </div>
-            </div>
-        {% else %}
-            <div class="empty-state-panel">
-                <i class="bi bi-inboxes empty-icon"></i>
-                <h4 style="font-weight:700; margin-bottom:0.3rem;">No Bookings Found</h4>
-                <p style="color:var(--text-secondary); max-width:420px; margin:0 auto 1.25rem; font-size:0.8rem;">You have no active or historical bookings registered in your account yet.</p>
-                <a href="{{ url_for('customer.new_booking') }}" class="ms-btn ms-btn-new">
-                    <i class="bi bi-plus-lg"></i> Create New Booking
-                </a>
             </div>
         {% endfor %}
     </div>
 
-    <!-- PAGINATION -->
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+        <div class="icon">🔍</div>
+        <div class="title">No bookings match your filters</div>
+        <div class="desc">Try selecting a different status filter or clear your search query.</div>
+        <button class="mq-btn mq-btn-outline" onclick="resetFilters()">Clear filters</button>
+    </div>
+
+    <!-- Pagination -->
     {% if pagination and pagination.pages > 1 %}
     <div class="mt-4">
         {{ render_pagination(pagination, 'customer.my_shipments') }}
     </div>
     {% endif %}
+
 </div>
 
 <script>
     let activeStatus = 'all';
     let activeSort = 'recent';
 
-    document.addEventListener('DOMContentLoaded', () => {
-        updateCategoryCounts();
-    });
-
-    function updateCategoryCounts() {
-        const cards = document.querySelectorAll('.shipment-card-item');
-        let counts = { all: cards.length, pending: 0, confirmed: 0, transit: 0, delivered: 0 };
-
-        cards.forEach(card => {
-            const cat = card.getAttribute('data-cat');
-            if (counts[cat] !== undefined) {
-                counts[cat]++;
-            }
-        });
-
-        document.getElementById('cntAll').innerText = counts.all;
-        document.getElementById('cntPending').innerText = counts.pending;
-        document.getElementById('cntConfirmed').innerText = counts.confirmed;
-        document.getElementById('cntTransit').innerText = counts.transit;
-        document.getElementById('cntDelivered').innerText = counts.delivered;
-    }
-
-    function filterStatus(status, el) {
+    function filterByStatus(status, el) {
         activeStatus = status;
-        document.querySelectorAll('#statusGroup .sort-chip').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('#filterStatusGroup .sort-chip').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
-        filterAndSearch();
+        applySearchAndFilter();
     }
 
-    function sortShipments(sortKey, el) {
-        activeSort = sortKey;
+    function sortBy(key, el) {
+        activeSort = key;
         document.querySelectorAll('#sortGroup .sort-chip').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
 
@@ -672,37 +414,38 @@
         const cards = Array.from(container.querySelectorAll('.shipment-card-item'));
 
         cards.sort((a, b) => {
-            if (sortKey === 'recent') {
+            if (key === 'recent') {
                 return parseFloat(b.getAttribute('data-created')) - parseFloat(a.getAttribute('data-created'));
-            } else if (sortKey === 'etd') {
+            } else if (key === 'etd') {
                 return (a.getAttribute('data-etd') || '').localeCompare(b.getAttribute('data-etd') || '');
-            } else if (sortKey === 'eta') {
+            } else if (key === 'eta') {
                 return (a.getAttribute('data-eta') || '').localeCompare(b.getAttribute('data-eta') || '');
-            } else if (sortKey === 'closing') {
-                return (a.getAttribute('data-created') || '').localeCompare(b.getAttribute('data-created') || '');
+            } else if (key === 'price') {
+                return parseFloat(b.getAttribute('data-price') || 0) - parseFloat(a.getAttribute('data-price') || 0);
             }
             return 0;
         });
 
         cards.forEach(c => container.appendChild(c));
-        filterAndSearch();
+        applySearchAndFilter();
     }
 
-    function filterAndSearch() {
+    function applySearchAndFilter() {
         const q = (document.getElementById('shipmentSearch').value || '').toLowerCase().trim();
         const cards = document.querySelectorAll('.shipment-card-item');
+        const emptyState = document.getElementById('emptyState');
+        const resultsCount = document.getElementById('resultsCount');
         let count = 0;
 
         cards.forEach(card => {
-            const cat = card.getAttribute('data-cat');
+            const status = card.getAttribute('data-status');
             const ref = card.getAttribute('data-ref') || '';
             const route = card.getAttribute('data-route') || '';
-            const po = card.getAttribute('data-po') || '';
 
-            const matchCat = (activeStatus === 'all' || cat === activeStatus);
-            const matchQ = !q || ref.includes(q) || route.includes(q) || po.includes(q);
+            const matchStatus = (activeStatus === 'all' || status === activeStatus);
+            const matchQ = !q || ref.includes(q) || route.includes(q);
 
-            if (matchCat && matchQ) {
+            if (matchStatus && matchQ) {
                 card.style.display = 'block';
                 count++;
             } else {
@@ -710,7 +453,19 @@
             }
         });
 
-        document.getElementById('countDisplay').innerText = `Showing ${count} of ${cards.length} bookings`;
+        if (count === 0 && cards.length > 0) {
+            emptyState.classList.add('show');
+        } else {
+            emptyState.classList.remove('show');
+        }
+
+        resultsCount.textContent = `Showing ${count} bookings`;
+    }
+
+    function resetFilters() {
+        document.getElementById('shipmentSearch').value = '';
+        const allBtn = document.querySelector('#filterStatusGroup [data-status="all"]');
+        if (allBtn) filterByStatus('all', allBtn);
     }
 </script>
 {% endblock %}
