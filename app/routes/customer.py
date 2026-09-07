@@ -2014,3 +2014,35 @@ def api_schedules_search():
     return jsonify({'schedules': schedules})
 
 
+@customer.route('/api/ports-list')
+@login_required
+def api_ports_list():
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    origins = []
+    destinations = []
+
+    try:
+        op_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/OriginPorts', headers=headers, timeout=5)
+        if op_resp.status_code == 200:
+            for p in op_resp.json():
+                code = p.get('code') or p.get('unlocode') or p.get('locode')
+                name = p.get('name') or p.get('portName') or code
+                country = p.get('country') or p.get('countryName') or ''
+                if code and name:
+                    origins.append({'code': code, 'name': name, 'country': country})
+
+        dp_resp = requests.get('http://realnexus.comit.cloud:5000/api/Ports/DestinationPorts', headers=headers, timeout=5)
+        if dp_resp.status_code == 200:
+            for p in dp_resp.json():
+                code = p.get('code') or p.get('unlocode') or p.get('locode')
+                name = p.get('name') or p.get('portName') or code
+                country = p.get('country') or p.get('countryName') or ''
+                if code and name:
+                    destinations.append({'code': code, 'name': name, 'country': country})
+    except Exception as e:
+        print(f"Error fetching live ports list: {e}")
+
+    return jsonify({'origins': origins, 'destinations': destinations})
+
+
+

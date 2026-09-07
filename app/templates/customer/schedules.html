@@ -697,36 +697,40 @@
     let currentSchedules = [];
     let currentViewMode = 'card';
 
-    // Real ports lookup dictionary
-    const samplePorts = [
-        { code: 'BEANR', name: 'Antwerp', country: 'Belgium' },
-        { code: 'SGSIN', name: 'Singapore', country: 'Singapore' },
-        { code: 'ESBCN', name: 'Barcelona', country: 'Spain' },
-        { code: 'CNSHA', name: 'Shanghai', country: 'China' },
-        { code: 'NLRTM', name: 'Rotterdam', country: 'Netherlands' },
-        { code: 'DEHAM', name: 'Hamburg', country: 'Germany' },
-        { code: 'USNYC', name: 'New York', country: 'United States' },
-        { code: 'USLAX', name: 'Los Angeles', country: 'United States' }
-    ];
+    let allOriginPorts = [];
+    let allDestPorts = [];
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Default Cargo Available Date to TODAY or 2026-08-14 matching Swagger test
-        const today = new Date().toISOString().split('T')[0];
+        // Default Cargo Available Date to 2026-08-14 matching active API schedules
         document.getElementById('cargoDateInput').value = '2026-08-14';
 
         // Default Origin & Destination matching active API ports (Antwerp -> Singapore)
         document.getElementById('originInput').value = 'Antwerp (BEANR)';
         document.getElementById('destInput').value = 'Singapore (SGSIN)';
 
+        // Fetch live ports list from Realnexus API
+        fetchLivePorts();
+
         // Dropdown listeners
-        setupPortDropdown('originInput', 'originLocode', 'originDropdown');
-        setupPortDropdown('destInput', 'destLocode', 'destDropdown');
+        setupPortDropdown('originInput', 'originLocode', 'originDropdown', () => allOriginPorts);
+        setupPortDropdown('destInput', 'destLocode', 'destDropdown', () => allDestPorts);
 
         // Execute initial search against live API
         searchSchedules();
     });
 
-    function setupPortDropdown(inputId, locodeId, dropdownId) {
+    async function fetchLivePorts() {
+        try {
+            const resp = await fetch('/customer/api/ports-list');
+            const data = await resp.json();
+            allOriginPorts = data.origins || [];
+            allDestPorts = data.destinations || [];
+        } catch (e) {
+            console.error("Error fetching live ports list:", e);
+        }
+    }
+
+    function setupPortDropdown(inputId, locodeId, dropdownId, getPortsFn) {
         const input = document.getElementById(inputId);
         const dropdown = document.getElementById(dropdownId);
 
@@ -741,11 +745,12 @@
 
         function renderDropdown(filterText) {
             const txt = filterText.toLowerCase();
-            const filtered = samplePorts.filter(p => 
-                p.name.toLowerCase().includes(txt) || 
-                p.code.toLowerCase().includes(txt) || 
-                p.country.toLowerCase().includes(txt)
-            );
+            const portsList = getPortsFn();
+            const filtered = portsList.filter(p => 
+                (p.name && p.name.toLowerCase().includes(txt)) || 
+                (p.code && p.code.toLowerCase().includes(txt)) || 
+                (p.country && p.country.toLowerCase().includes(txt))
+            ).slice(0, 50); // Show top 50 matches
 
             if (filtered.length === 0) {
                 dropdown.style.display = 'none';
@@ -754,12 +759,13 @@
 
             dropdown.innerHTML = filtered.map(p => `
                 <div class="dropdown-location-item" onclick="selectPort('${inputId}', '${locodeId}', '${dropdownId}', '${p.name} (${p.code})', '${p.code}')">
-                    <strong>${p.name}</strong> (${p.code}), ${p.country}
+                    <strong>${p.name}</strong> (${p.code})${p.country ? ', ' + p.country : ''}
                 </div>
             `).join('');
             dropdown.style.display = 'block';
         }
     }
+
 
     function selectPort(inputId, locodeId, dropdownId, textVal, locodeVal) {
         document.getElementById(inputId).value = textVal;
