@@ -833,8 +833,8 @@
                 s.service = s.product || s.service || 'LCL';
                 s.routing = s.routing || (s.transshipmentPort ? `VIA ${s.transshipmentPort}` : 'DIRECT');
                 s.via = s.transshipmentPort || s.via || '—';
-                s.closingLCL = s.closingLCL || s.lclClosingDate;
-                s.closingDoc = s.closingDoc || s.docClosingDate || s.closingLCL;
+                s.closingLCL = s.closingLCL || s.lclClosingDate || null;
+                s.closingDoc = s.closingDoc || s.docClosingDate || null;
             });
 
             sortAndRender();
