@@ -909,8 +909,8 @@
             const isFastest = minTransit > 0 && s.transitDays === minTransit;
             const etdStr = s.etd ? s.etd.substring(0, 10) : 'TBD';
             const etaStr = s.eta ? s.eta.substring(0, 10) : 'TBD';
-            const cargoCutoff = s.closingLCL ? s.closingLCL.substring(0, 10) : 'TBD';
-            const docCutoff = s.closingDoc ? s.closingDoc.substring(0, 10) : cargoCutoff;
+            const cargoCutoff = s.closingLCL ? s.closingLCL.substring(0, 10) : (s.closingFCL ? s.closingFCL.substring(0, 10) : 'N/A');
+            const docCutoff = s.closingDoc ? s.closingDoc.substring(0, 10) : 'N/A';
 
             const isDirect = (s.routing || 'DIRECT').toUpperCase().includes('DIRECT');
             const viaText = s.via && s.via !== '—' ? `VIA ${s.via.toUpperCase()}` : 'DIRECT';
