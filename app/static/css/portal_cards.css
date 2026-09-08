@@ -79,13 +79,13 @@ html[data-color-scheme='dark'] .offerlist-container {
     text-decoration: none;
 }
 .mq-btn-book {
-    background: var(--mq-primary-green);
+    background: var(--primary-color, #2563eb) !important;
     color: white !important;
 }
 .mq-btn-book:hover {
-    background: var(--mq-primary-green-dark);
+    background: var(--primary-hover, #1d4ed8) !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color, #2563eb) 30%, transparent);
     color: white !important;
 }
 .mq-btn-outline {
@@ -94,17 +94,17 @@ html[data-color-scheme='dark'] .offerlist-container {
     border: 1px solid var(--mq-border-color);
 }
 .mq-btn-outline:hover {
-    border-color: var(--mq-primary-blue);
-    color: var(--mq-primary-blue);
+    border-color: var(--primary-color, #2563eb);
+    color: var(--primary-color, #2563eb);
 }
 .mq-btn-view-booking {
-    background: var(--mq-primary-blue);
+    background: var(--primary-color, #2563eb) !important;
     color: white !important;
 }
 .mq-btn-view-booking:hover {
-    background: var(--mq-primary-blue-dark);
+    background: var(--primary-hover, #1d4ed8) !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color, #2563eb) 25%, transparent);
     color: white !important;
 }
 
@@ -144,13 +144,13 @@ html[data-color-scheme='dark'] .offerlist-container {
     transition: all 0.15s ease;
 }
 .sort-chip:hover {
-    border-color: var(--mq-primary-green);
-    color: var(--mq-primary-green-dark);
+    border-color: var(--primary-color, #2563eb);
+    color: var(--primary-color, #2563eb);
 }
 .sort-chip.active {
-    background: var(--mq-text-primary);
-    border-color: var(--mq-text-primary);
-    color: white;
+    background: var(--primary-color, #2563eb) !important;
+    border-color: var(--primary-color, #2563eb) !important;
+    color: white !important;
 }
 
 .search-box {
@@ -570,8 +570,8 @@ html[data-color-scheme='dark'] .offerlist-container {
 .breakdown-toggle {
     font-size: 0.78rem;
     font-weight: 600;
-    color: var(--mq-primary-green-dark);
-    background: var(--mq-green-bg);
+    color: var(--primary-color, #2563eb) !important;
+    background: color-mix(in srgb, var(--primary-color, #2563eb) 12%, transparent) !important;
     border: none;
     border-radius: 6px;
     padding: 0.4rem 0.75rem;
@@ -582,7 +582,7 @@ html[data-color-scheme='dark'] .offerlist-container {
     transition: background 0.15s ease;
 }
 .breakdown-toggle:hover {
-    background: #d1fae5;
+    background: color-mix(in srgb, var(--primary-color, #2563eb) 22%, transparent) !important;
 }
 .breakdown-toggle .chev {
     transition: transform 0.2s ease;
