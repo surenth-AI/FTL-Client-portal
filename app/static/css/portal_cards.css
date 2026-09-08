@@ -5,17 +5,17 @@
 
 .mq-container,
 .offerlist-container {
-    --mq-primary-blue: #2563eb;
-    --mq-primary-blue-dark: #1d4ed8;
+    --mq-primary-blue: var(--primary-color, #2563eb);
+    --mq-primary-blue-dark: var(--primary-hover, #1d4ed8);
     --mq-primary-green: #059669;
     --mq-primary-green-dark: #047857;
     --mq-green-bg: #ecfdf5;
-    --mq-text-primary: #0f172a;
-    --mq-text-secondary: #64748b;
-    --mq-text-muted: #94a3b8;
-    --mq-border-color: #e2e8f0;
-    --mq-bg-gray: #f8fafc;
-    --mq-bg-white: #ffffff;
+    --mq-text-primary: var(--text-primary, #0f172a);
+    --mq-text-secondary: var(--text-secondary, #64748b);
+    --mq-text-muted: var(--text-muted, #94a3b8);
+    --mq-border-color: var(--glass-border, #e2e8f0);
+    --mq-bg-gray: var(--bg-surface, #f8fafc);
+    --mq-bg-white: var(--glass-bg, #ffffff);
     --mq-success-green: #10b981;
     --mq-error-red: #ef4444;
     --mq-amber: #f59e0b;
