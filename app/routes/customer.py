@@ -492,6 +492,17 @@ def api_my_quotes():
             c_packages = ", ".join(pkg_parts)
             c_desc = q.cargo_items[0].description if q.cargo_items else ""
 
+            # Charge inclusion determination for local quote record
+            fb_traffic = (getattr(q, 'traffic_type', None) or 'EX').upper()
+            if fb_traffic == 'IM':
+                fb_origin = False
+                fb_freight = True
+                fb_dest = True
+            else:
+                fb_origin = True
+                fb_freight = True
+                fb_dest = False
+
             quote_data.append({
                 'id': q.id,
                 'origin': q.origin,
@@ -509,7 +520,10 @@ def api_my_quotes():
                 'volume': f"{c_vol:.2f}" if c_vol > 0 else "",
                 'weight': f"{c_weight:.2f}" if c_weight > 0 else "",
                 'packages': c_packages,
-                'commodity': c_desc
+                'commodity': c_desc,
+                'has_origin_charges': fb_origin,
+                'has_freight_surcharges': fb_freight,
+                'has_dest_charges': fb_dest
             })
         total_count = pagination.total
 
