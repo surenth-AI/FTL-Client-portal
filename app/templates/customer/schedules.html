@@ -441,8 +441,8 @@
     /* Vessel Section (Middle) */
     .vessel-details-block {
         flex: 1.5;
-        border-left: 1px solid #f1f5f9;
-        border-right: 1px solid #f1f5f9;
+        border-left: 1px solid #cbd5e1;
+        border-right: 1px solid #cbd5e1;
         padding: 0 1.25rem;
     }
 
@@ -485,16 +485,16 @@
     .service-tag-badge.fcl { background: #f0fdf4; color: #15803d; }
 
     /* Cutoff & Actions Section (Right) */
-    .cutoff-actions-block {
+    .cutoff-dates-block {
         flex: 1.3;
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 0.85rem;
+        justify-content: center;
     }
 
     @media (max-width: 992px) {
-        .cutoff-actions-block {
+        .cutoff-dates-block {
             align-items: flex-start;
         }
     }
@@ -518,6 +518,41 @@
         color: #94a3b8;
         font-weight: 700;
         font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-right: 0.25rem;
+    }
+
+    .cutoff-value-date {
+        font-weight: 700;
+        color: #dc2626;
+        display: inline-block;
+    }
+
+    .cutoff-value-doc {
+        font-weight: 700;
+        color: #475569;
+        display: inline-block;
+    }
+
+    .schedule-card-divider {
+        border: none;
+        border-top: 1px solid #e2e8f0;
+        margin: 1rem 0 0.85rem 0;
+        width: 100%;
+    }
+
+    html[data-color-scheme='dark'] .schedule-card-divider,
+    html[data-color-scheme='dark'] .vessel-details-block {
+        border-color: #334155 !important;
+    }
+
+    .card-actions-bottom-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.6rem;
+    }
         text-transform: uppercase;
         letter-spacing: 0.04em;
         margin-right: 0.25rem;
@@ -1040,8 +1075,8 @@
                             </div>
                         </div>
 
-                        <!-- Right Cutoffs & Actions -->
-                        <div class="cutoff-actions-block">
+                        <!-- Right Cutoffs -->
+                        <div class="cutoff-dates-block">
                             <div class="cutoff-dates-group">
                                 <div class="cutoff-row-item">
                                     <span class="cutoff-label-text">CARGO CUT-OFF</span>
@@ -1052,12 +1087,16 @@
                                     <span class="cutoff-value-doc">${docCutoff}</span>
                                 </div>
                             </div>
-
-                            <div class="action-buttons-flex">
-                                <a href="${quoteUrl}" class="btn-quote-outline">Get a Quote</a>
-                                <a href="${bookUrl}" class="btn-book-solid">Book →</a>
-                            </div>
                         </div>
+                    </div>
+
+                    <!-- Horizontal Separator Line (EXACT MATCH TO MOCKUP) -->
+                    <hr class="schedule-card-divider">
+
+                    <!-- Bottom Action Buttons Row -->
+                    <div class="card-actions-bottom-row">
+                        <a href="${quoteUrl}" class="btn-quote-outline">Get a Quote</a>
+                        <a href="${bookUrl}" class="btn-book-solid">Book →</a>
                     </div>
                 </div>
             `;
