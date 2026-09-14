@@ -412,8 +412,32 @@ def api_my_quotes():
                         n_pkg = cm.get('nrPackages') or 1
                         pkg_parts.append(f"{n_pkg} x {p_label}")
                     c_packages = ", ".join(pkg_parts)
-                if not c_desc and commodities:
-                    c_desc = commodities[0].get('commodityDescription', '')
+                # Charge determination logic based on FC, LC, and trafficType
+                t_type_mq = (header.get('trafficType') or item.get('trafficType') or 'EX').upper()
+                has_fc_mq = any(
+                    (l.get('articleCostGroup') or '').upper() == 'FC'
+                    or 'FREIGHT' in (l.get('articleName') or '').upper()
+                    or 'OCEAN' in (l.get('articleName') or '').upper()
+                    for l in lines
+                )
+                # Freight Charge (FC) represents ocean freight; if present, Freight & Surcharges shown as included
+                has_freight_surcharges = has_fc_mq if lines else True
+
+                has_lc_mq = any(
+                    (l.get('articleCostGroup') or '').upper() in ['LC', 'OLC', 'DC', 'DLC']
+                    or l.get('isLocalCharge') is True
+                    for l in lines
+                )
+
+                if t_type_mq == 'EX':
+                    has_origin_charges = has_lc_mq if lines else True
+                    has_dest_charges = any((l.get('articleCostGroup') or '').upper() in ['DC', 'DLC'] for l in lines)
+                elif t_type_mq == 'IM':
+                    has_origin_charges = any((l.get('articleCostGroup') or '').upper() in ['OLC'] for l in lines)
+                    has_dest_charges = has_lc_mq if lines else True
+                else:
+                    has_origin_charges = has_lc_mq if lines else True
+                    has_dest_charges = False
 
                 quote_data.append({
                     'id': local_id,
@@ -432,7 +456,10 @@ def api_my_quotes():
                     'volume': f"{c_vol:.2f}" if c_vol > 0 else "",
                     'weight': f"{c_weight:,.2f}" if c_weight > 0 else "",
                     'packages': c_packages,
-                    'commodity': c_desc
+                    'commodity': c_desc,
+                    'has_origin_charges': has_origin_charges,
+                    'has_freight_surcharges': has_freight_surcharges,
+                    'has_dest_charges': has_dest_charges
                 })
             api_success = True
             
@@ -1133,6 +1160,35 @@ def rates():
 
                 if customs_requested and not has_customs_charge:
                     flash("Quotation Unavailable: You requested Customs Clearance, but the ERP tariff database for this lane does not have a configured Customs Clearance charge. Incomplete offers with missing charges cannot be generated.", "danger")
+                    return redirect(url_for('customer.rates'))
+
+                # --- Charge Validation Checks (FC & LC) ---
+                # 1. Freight Charge (FC): Represents ocean freight. Must be present.
+                has_fc = any(
+                    (line.get('articleCostGroup') or '').upper() == 'FC'
+                    or 'FREIGHT' in (line.get('articleName') or '').upper()
+                    or 'OCEAN' in (line.get('articleName') or '').upper()
+                    for line in tariff_lines
+                )
+                if not has_fc:
+                    flash("Quotation Unavailable: Missing Freight Charge (FC). A quotation cannot be generated without an ocean freight charge.", "danger")
+                    return redirect(url_for('customer.rates'))
+
+                # 2. Local Charge (LC) Checks based on Traffic Type
+                t_type = (traffic_type or 'EX').upper()
+                has_lc_lines = any(
+                    (line.get('articleCostGroup') or '').upper() in ['LC', 'OLC', 'DC', 'DLC']
+                    or line.get('isLocalCharge') is True
+                    for line in tariff_lines
+                )
+                if not has_lc_lines and tariff_lines:
+                    has_lc_lines = any((line.get('articleCostGroup') or '').upper() not in ['FC', 'AC'] for line in tariff_lines)
+
+                if t_type == 'EX' and not has_lc_lines:
+                    flash("Quotation Unavailable: Missing Origin Port Charges (LC). Export quotations cannot be generated without local origin port charges.", "danger")
+                    return redirect(url_for('customer.rates'))
+                elif t_type == 'IM' and not has_lc_lines:
+                    flash("Quotation Unavailable: Missing Destination Port Charges (LC). Import quotations cannot be generated without local destination port charges.", "danger")
                     return redirect(url_for('customer.rates'))
 
                 # The new API endpoint wraps the response in a "quotation" object containing "header"

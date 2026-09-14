@@ -198,10 +198,11 @@
                                             ${q.commodity ? `<span class="meta-pill" style="background: var(--hover-bg); color: var(--text-dark); border: 1px solid var(--border-color);">🏷️ ${q.commodity}</span>` : ''}
                                             ${q.freight_terms ? `<span class="meta-pill direct">💳 ${q.freight_terms}</span>` : ''}
                                         </div>
+                                        {% set _dummy = "" %}
                                         <div class="charges-row">
-                                            <span class="charge-pill included"><span class="dot"></span>Origin Port Charges</span>
-                                            <span class="charge-pill included"><span class="dot"></span>Freight &amp; Surcharges</span>
-                                            <span class="charge-pill excluded"><span class="dot"></span>Destination Port Charges</span>
+                                            <span class="charge-pill ${q.has_origin_charges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Origin Port Charges</span>
+                                            <span class="charge-pill ${q.has_freight_surcharges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Freight &amp; Surcharges</span>
+                                            <span class="charge-pill ${q.has_dest_charges ? 'included' : 'excluded'}"><span class="dot"></span>Destination Port Charges</span>
                                         </div>
                                     </div>
                                     
