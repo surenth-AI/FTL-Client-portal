@@ -1498,8 +1498,8 @@ def rate_results():
                 branch_name = header.get('branchName') or header.get('nvoccName') or header.get('carrierName')
                 if not branch_name and current_user.branches:
                     for b in current_user.branches:
-                        if str(b.branch_id) == str(header.get('branchId')):
-                            branch_name = b.branch_name
+                        if str(getattr(b, 'branch_id', '')) == str(header.get('branchId')):
+                            branch_name = getattr(b, 'branch_name', None) or f"Branch #{b.branch_id}"
                             break
                 if not branch_name:
                     branch_name = f"Branch #{header.get('branchId')}" if header.get('branchId') else '—'
