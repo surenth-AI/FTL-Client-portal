@@ -905,7 +905,7 @@
                     </div>
                     <div class="offer-details">
                         <div class="carrier-row">
-                            <div class="carrier-logo">{{ res.rate.nvocc_name[:3] | upper if res.rate.nvocc_name else 'API' }}</div>
+                            <div class="carrier-logo">{{ res.rate.nvocc_name[:3] | upper if res.rate.nvocc_name and res.rate.nvocc_name != '—' else '🚢' }}</div>
                             <div class="carrier-text">
                                 <div class="carrier-name">{{ res.rate.nvocc_name }}</div>
                                 <div class="service-name">{{ res.carrier or 'Standard Carrier' }}</div>

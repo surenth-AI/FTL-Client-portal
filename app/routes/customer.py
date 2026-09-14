@@ -1502,8 +1502,7 @@ def rate_results():
                             branch_name = b.branch_name
                             break
                 if not branch_name:
-                    por = query.get('origin', '').split('(')[0].strip()
-                    branch_name = f"Fast Transit Line ({por})" if por else f"Branch #{header.get('branchId', '')}"
+                    branch_name = f"Branch #{header.get('branchId')}" if header.get('branchId') else '—'
                 
                 carrier_name = 'LCL Direct Consolidation' if is_lcl else 'FCL Ocean Service'
                 if schedules and len(schedules) > 0 and schedules[0].get('vessel'):
