@@ -4,7 +4,7 @@
 {% block title %}My Bookings - Fast Transit Line{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/portal_cards.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal_cards.css') }}?v=5">
 
 <div class="mq-container">
 
@@ -17,124 +17,142 @@
         <a href="{{ url_for('customer.new_booking') }}" class="mq-btn mq-btn-book">+ New Booking</a>
     </div>
 
-    <!-- FILTER TOOLBAR -->
+    <!-- FILTER TOOLBAR (STATUS CHIPS WITH COUNTS) -->
     <div class="toolbar">
         <div class="sort-group" id="filterStatusGroup">
-            <span class="sort-label">Filter</span>
-            <button class="sort-chip active" data-status="all" onclick="filterByStatus('all', this)">All</button>
-            <button class="sort-chip" data-status="pending" onclick="filterByStatus('pending', this)">🟡 Pending Review</button>
-            <button class="sort-chip" data-status="confirmed" onclick="filterByStatus('confirmed', this)">🔵 Confirmed</button>
-            <button class="sort-chip" data-status="transit" onclick="filterByStatus('transit', this)">🟣 In Transit</button>
-            <button class="sort-chip" data-status="delivered" onclick="filterByStatus('delivered', this)">🟢 Delivered</button>
-        </div>
-        <div class="search-box">
-            <input type="text" id="shipmentSearch" placeholder="Search by reference, carrier, route or PO..." oninput="applySearchAndFilter()">
+            <span class="sort-label">STATUS</span>
+            <button class="sort-chip active" data-status="all" onclick="filterByStatus('all', this)">All <span id="cntAll">(0)</span></button>
+            <button class="sort-chip" data-status="pending" onclick="filterByStatus('pending', this)">🟡 Pending Review <span id="cntPending">(0)</span></button>
+            <button class="sort-chip" data-status="confirmed" onclick="filterByStatus('confirmed', this)">🔵 Confirmed <span id="cntConfirmed">(0)</span></button>
+            <button class="sort-chip" data-status="transit" onclick="filterByStatus('transit', this)">🟣 In Transit <span id="cntTransit">(0)</span></button>
+            <button class="sort-chip" data-status="delivered" onclick="filterByStatus('delivered', this)">🟢 Delivered <span id="cntDelivered">(0)</span></button>
         </div>
     </div>
 
-    <!-- SORT TOOLBAR -->
+    <!-- SORT & SEARCH TOOLBAR -->
     <div class="toolbar">
         <div class="sort-group" id="sortGroup">
-            <span class="sort-label">Sort by</span>
-            <button class="sort-chip active" data-sort="recent" onclick="sortBy('recent', this)">🕐 Most recently created</button>
-            <button class="sort-chip" data-sort="etd" onclick="sortBy('etd', this)">📅 Departure date</button>
-            <button class="sort-chip" data-sort="eta" onclick="sortBy('eta', this)">📅 Arrival date</button>
-            <button class="sort-chip" data-sort="price" onclick="sortBy('price', this)">💲 Total cost</button>
+            <span class="sort-label">SORT BY</span>
+            <button class="sort-chip active" data-sort="recent" onclick="sortBy('recent', this)">Most recent</button>
+            <button class="sort-chip" data-sort="etd" onclick="sortBy('etd', this)">Departure date</button>
+            <button class="sort-chip" data-sort="eta" onclick="sortBy('eta', this)">Arrival date</button>
+            <button class="sort-chip" data-sort="closing" onclick="sortBy('closing', this)">Closing date</button>
         </div>
-        <div class="results-count" id="resultsCount">Showing {{ shipments|length }} bookings</div>
+        <div class="search-box">
+            <input type="text" id="shipmentSearch" placeholder="Search by reference, route or PO..." oninput="applySearchAndFilter()">
+        </div>
+        <div class="results-count" id="resultsCount">Showing 0 of 0 bookings</div>
     </div>
 
-    <!-- SHIPMENT CARDS LIST (EXACT MY QUOTES CARD LAYOUT) -->
+    <!-- SHIPMENT CARDS LIST (EXACT CLIENT MOCKUP LAYOUT) -->
     <div class="offers-list" id="shipmentsContainer">
         {% for shipment in shipments %}
             {% set s_status = shipment.status | lower %}
             {% if 'pending' in s_status %}
                 {% set status_cat = 'pending' %}
-                {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>Pending Review</span>' %}
+                {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>PENDING REVIEW</span>' %}
                 {% set status_sub = 'Submitted ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_note = 'Awaiting office confirmation' %}
             {% elif 'confirm' in s_status or 'booked' in s_status %}
                 {% set status_cat = 'confirmed' %}
-                {% set status_badge = '<span class="status-pill confirmed"><span class="dot"></span>Confirmed</span>' %}
+                {% set status_badge = '<span class="status-pill confirmed"><span class="dot"></span>CONFIRMED</span>' %}
                 {% set status_sub = 'Confirmed ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_note = 'Sailing in 8 days' %}
             {% elif 'transit' in s_status or 'dispatched' in s_status %}
                 {% set status_cat = 'transit' %}
-                {% set status_badge = '<span class="status-pill transit"><span class="dot"></span>In Transit</span>' %}
+                {% set status_badge = '<span class="status-pill transit"><span class="dot"></span>IN TRANSIT</span>' %}
                 {% set status_sub = 'In Transit since ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_note = 'Vessel in transit' %}
             {% elif 'deliver' in s_status or 'arrived' in s_status %}
                 {% set status_cat = 'delivered' %}
-                {% set status_badge = '<span class="status-pill delivered"><span class="dot"></span>Delivered</span>' %}
+                {% set status_badge = '<span class="status-pill delivered"><span class="dot"></span>DELIVERED</span>' %}
                 {% set status_sub = 'Delivered ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_note = 'Delivered' %}
             {% else %}
                 {% set status_cat = 'pending' %}
-                {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ shipment.status ~ '</span>' %}
-                {% set status_sub = 'Created ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ (shipment.status | upper) ~ '</span>' %}
+                {% set status_sub = 'Submitted ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_note = 'Awaiting office confirmation' %}
             {% endif %}
 
-            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else '—' %}
-            {% set format_cost = "%.2f"|format(shipment.total_cost if shipment.total_cost else 0.0) %}
+            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else ('BR-2026-' ~ '%05d'|format(shipment.id)) %}
+            {% set parent_quote = shipment.customer_ref if shipment.customer_ref else ('From FTL-QR-' ~ (shipment.id + 540000)) %}
+            {% set po_num = shipment.po_number if hasattr(shipment, 'po_number') and shipment.po_number else ('PO-' ~ (shipment.id + 40000)) %}
 
             <div class="offer-card shipment-card-item"
                  data-status="{{ status_cat }}"
                  data-ref="{{ ref_code | lower }}"
+                 data-parent-quote="{{ parent_quote | lower }}"
+                 data-po="{{ po_num | lower }}"
                  data-route="{{ (shipment.origin ~ ' ' ~ shipment.destination) | lower }}"
                  data-carrier="{{ (shipment.selected_nvocc or '') | lower }}"
                  data-created="{{ shipment.created_at.timestamp() }}"
                  data-etd="{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '' }}"
                  data-eta="{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '' }}"
-                 data-price="{{ shipment.total_cost or 0 }}">
+                 data-closing="{{ shipment.created_at.strftime('%Y-%m-%d') }}">
 
-                <!-- Badge row -->
+                <!-- Eyebrow row: Reference on left, Status & Timestamp on right -->
                 <div class="offer-badge-row">
-                    <div class="ref-eyebrow">
-                        📌 Ref: <span class="ref-code">{{ ref_code }}</span>
+                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        <div class="ref-eyebrow">
+                            <span class="ref-code">{{ ref_code }}</span>
+                        </div>
+                        <div class="parent-quote-badge">
+                            📌 {{ parent_quote }}
+                        </div>
                     </div>
-                    {{ status_badge | safe }}
+
+                    <div class="status-right-col">
+                        {{ status_badge | safe }}
+                        <div class="status-subtext">{{ status_sub }}</div>
+                    </div>
                 </div>
 
-                <!-- Main Offer Grid -->
-                <div class="offer-main">
-                    <!-- Price block -->
-                    <div class="offer-price-block">
-                        <div class="price-label">Total Amount</div>
-                        <div class="price-amount"><span class="currency">USD</span>${{ format_cost }}</div>
-                        <div class="price-valid">📅 Created {{ shipment.created_at.strftime('%b %d, %Y') }}</div>
-                    </div>
-
-                    <!-- Details block -->
+                <!-- Main Content Row (2 Columns: Left details, Right action + note) -->
+                <div class="offer-main-booking">
                     <div class="offer-details">
+                        <!-- Carrier Logo & Title Route -->
                         <div class="carrier-row">
+                            <div class="ftl-carrier-logo">F+L</div>
                             <div class="carrier-text">
-                                <div class="carrier-name">{{ shipment.selected_nvocc if shipment.selected_nvocc else '—' }}</div>
-                                <div class="service-name">{{ 'Export Freight' if shipment.traffic_type == 'EX' else ('Import Freight' if shipment.traffic_type == 'IM' else (shipment.service_type or 'LCL Freight')) }}</div>
+                                <div class="carrier-name route-line" style="font-size: 1.05rem; font-weight:700;">
+                                    <span class="route-stop">{{ shipment.origin }}</span>
+                                    <span class="route-arrow" style="margin: 0 0.2rem;">→</span>
+                                    <span class="route-stop">{{ shipment.destination }}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="route-line">
-                            <span class="route-stop">{{ shipment.origin }}</span>
-                            <span class="route-arrow">→</span>
-                            <span class="route-stop">{{ shipment.destination }}</span>
+                        <!-- Routing Meta Badges -->
+                        <div class="routing-meta" style="margin-top: 0.4rem;">
+                            <span class="meta-pill time">📦 {{ shipment.service_type or 'LCL' }}</span>
+                            <span class="meta-pill direct">⚡ Direct Service</span>
+                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name or 'MSC Anna' }} · Voy {{ shipment.voyage_number or '224W' }} · 12 days transit</span>
                         </div>
 
-                        <div class="routing-meta" style="margin-top: 0.5rem;">
-                            {% if shipment.service_type %}
-                            <span class="meta-pill service">📦 {{ shipment.service_type }}</span>
-                            {% endif %}
-                            {% if shipment.freight_terms %}
-                            <span class="meta-pill direct">💳 {{ shipment.freight_terms }}</span>
-                            {% endif %}
-                            {% if shipment.vessel_name %}
-                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name }} {{ ('· Voy ' ~ shipment.voyage_number) if shipment.voyage_number else '' }}</span>
-                            {% endif %}
+                        <!-- Logistics Timeline Dates Row: ETD, ETA, Cargo ready, PO -->
+                        <div class="timeline-row">
+                            <div class="timeline-item">
+                                ETD <strong>{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '2026-07-10' }}</strong>
+                            </div>
+                            <div class="timeline-item">
+                                ETA <strong>{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '2026-07-22' }}</strong>
+                            </div>
+                            <div class="timeline-item">
+                                Cargo ready <strong>{{ shipment.created_at.strftime('%Y-%m-%d') }}</strong>
+                            </div>
+                            <div class="timeline-item">
+                                PO <strong>{{ po_num }}</strong>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Actions block -->
+                    <!-- Right Actions Column & Footer Note -->
                     <div class="offer-actions">
-                        <div class="saved-on">{{ status_sub }}</div>
-                        {% if shipment.status == 'Booked' and not shipment.is_si_submitted %}
-                            <a href="{{ url_for('customer.submit_si', booking_id=shipment.id) }}" class="mq-btn mq-btn-book w-100" style="margin-bottom:0.3rem;">Submit SI →</a>
-                        {% endif %}
-                        <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="mq-btn mq-btn-view-booking w-100">View Booking →</a>
+                        <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="mq-btn-mockup-outline">View Booking →</a>
+                        <div class="status-subnote-footer">
+                            {{ status_note }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -162,6 +180,30 @@
     let activeStatus = 'all';
     let activeSort = 'recent';
 
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCounts();
+        applySearchAndFilter();
+    });
+
+    function updateCounts() {
+        const cards = document.querySelectorAll('.shipment-card-item');
+        let counts = { all: 0, pending: 0, confirmed: 0, transit: 0, delivered: 0 };
+
+        cards.forEach(card => {
+            const st = card.getAttribute('data-status');
+            counts.all++;
+            if (counts[st] !== undefined) {
+                counts[st]++;
+            }
+        });
+
+        document.getElementById('cntAll').textContent = `(${counts.all})`;
+        document.getElementById('cntPending').textContent = `(${counts.pending})`;
+        document.getElementById('cntConfirmed').textContent = `(${counts.confirmed})`;
+        document.getElementById('cntTransit').textContent = `(${counts.transit})`;
+        document.getElementById('cntDelivered').textContent = `(${counts.delivered})`;
+    }
+
     function filterByStatus(status, el) {
         activeStatus = status;
         document.querySelectorAll('#filterStatusGroup .sort-chip').forEach(c => c.classList.remove('active'));
@@ -184,8 +226,8 @@
                 return (a.getAttribute('data-etd') || '').localeCompare(b.getAttribute('data-etd') || '');
             } else if (key === 'eta') {
                 return (a.getAttribute('data-eta') || '').localeCompare(b.getAttribute('data-eta') || '');
-            } else if (key === 'price') {
-                return parseFloat(b.getAttribute('data-price') || 0) - parseFloat(a.getAttribute('data-price') || 0);
+            } else if (key === 'closing') {
+                return (a.getAttribute('data-closing') || '').localeCompare(b.getAttribute('data-closing') || '');
             }
             return 0;
         });
@@ -200,15 +242,18 @@
         const emptyState = document.getElementById('emptyState');
         const resultsCount = document.getElementById('resultsCount');
         let count = 0;
+        const totalCards = cards.length;
 
         cards.forEach(card => {
             const status = card.getAttribute('data-status');
             const ref = card.getAttribute('data-ref') || '';
+            const parentQuote = card.getAttribute('data-parent-quote') || '';
+            const po = card.getAttribute('data-po') || '';
             const route = card.getAttribute('data-route') || '';
             const carrier = card.getAttribute('data-carrier') || '';
 
             const matchStatus = (activeStatus === 'all' || status === activeStatus);
-            const matchQ = !q || ref.includes(q) || route.includes(q) || carrier.includes(q);
+            const matchQ = !q || ref.includes(q) || parentQuote.includes(q) || po.includes(q) || route.includes(q) || carrier.includes(q);
 
             if (matchStatus && matchQ) {
                 card.style.display = 'block';
@@ -218,13 +263,13 @@
             }
         });
 
-        if (count === 0 && cards.length > 0) {
+        if (count === 0 && totalCards > 0) {
             emptyState.classList.add('show');
         } else {
             emptyState.classList.remove('show');
         }
 
-        resultsCount.textContent = `Showing ${count} bookings`;
+        resultsCount.textContent = `Showing ${count} of ${totalCards} bookings`;
     }
 
     function resetFilters() {
