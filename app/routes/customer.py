@@ -308,9 +308,29 @@ def api_my_quotes():
                     valid_until_dt = created_at + timedelta(days=30)
                     valid_until = valid_until_dt.strftime('%Y-%m-%d')
                     
-                total_cost = sum(float(line.get('amount') or 0) for line in lines)
-                if not total_cost and header.get('totalCost'):
-                    total_cost = float(header.get('totalCost'))
+                total_cost = 0.0
+                for line in lines:
+                    try:
+                        amt = float(line.get('amount') or 0.0)
+                        total_cost += amt
+                    except (ValueError, TypeError):
+                        pass
+
+                if not total_cost or total_cost <= 0:
+                    for src in [item, q_item, header, tariff]:
+                        if isinstance(src, dict):
+                            for key in ['totalAmount', 'totalCost', 'amount', 'grandTotal']:
+                                val = src.get(key)
+                                if val is not None:
+                                    try:
+                                        t_val = float(val)
+                                        if t_val > 0:
+                                            total_cost = t_val
+                                            break
+                                    except (ValueError, TypeError):
+                                        pass
+                            if total_cost > 0:
+                                break
                     
                 local_booking = Booking.query.filter_by(api_booking_ref=api_booking_ref).first()
                 status = local_booking.status if local_booking else "Saved Quote"
@@ -325,13 +345,16 @@ def api_my_quotes():
                 else:
                     computed_status = 'Active'
                     
+                quote_currency = header.get('currency') or item.get('currency') or q_item.get('currency') or tariff.get('quotationCurrency') or 'USD'
+                
                 quote_data.append({
                     'id': local_id,
                     'origin': origin,
                     'destination': destination,
                     'total_cost': total_cost,
-                    'selected_nvocc': header.get('nvoccName') or header.get('carrierName') or '—',
-                    'service_type': "LCL" if "LCL" in str(header.get('freightTransportType') or '').upper() else "FCL",
+                    'currency': quote_currency,
+                    'selected_nvocc': header.get('nvoccName') or header.get('carrierName') or item.get('customerName') or '—',
+                    'service_type': "LCL" if "LCL" in str(header.get('freightTransportType') or item.get('freightType') or '').upper() else "FCL",
                     'service_name': header.get('serviceName') or header.get('serviceLevel') or '',
                     'api_booking_ref': api_booking_ref,
                     'created_at': created_at.strftime('%d %b %Y'),
