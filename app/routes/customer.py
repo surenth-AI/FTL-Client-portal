@@ -267,6 +267,40 @@ def api_my_quotes():
                 total_count = data.get('pagination', {}).get('totalRecords', data.get('totalCount', data.get('total', len(items))))
                 
             now = datetime.utcnow()
+            
+            # Pre-fetch detailed quotation data in parallel to resolve complete commodities & weight
+            import concurrent.futures
+            quote_details_map = {}
+            def _fetch_detail(it):
+                header_obj = it.get('quotation', it).get('header', it)
+                q_num = header_obj.get('quoteNumber') or header_obj.get('quotationNo')
+                q_id = header_obj.get('quotationId')
+                ref_cand = q_num or (f"QUO-2026-{q_id}" if q_id else None)
+                if not ref_cand:
+                    return None, {}
+                try:
+                    r_det = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{ref_cand}?accountId={customer_id}", headers=headers, timeout=4)
+                    if r_det.status_code == 200:
+                        return ref_cand, r_det.json().get('quotation', {})
+                except Exception:
+                    pass
+                return ref_cand, {}
+
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(items) or 1)) as executor:
+                    detail_results = list(executor.map(_fetch_detail, items))
+                    for ref_key, det in detail_results:
+                        if ref_key and det:
+                            quote_details_map[ref_key] = det
+            except Exception as ex:
+                print(f"Parallel quote details fetch error: {ex}")
+
+            PKG_MAP = {
+                'BX': 'Box', 'PX': 'Pallet', 'CR': 'Crate', 'DR': 'Drum', 'BG': 'Bag',
+                'ZR': 'IBC', 'CT': 'Carton', 'CTN': 'Carton', 'CS': 'Case', 'CL': 'Colis',
+                'SK': 'Skid', 'RL': 'Roll', '20CN': "20' Container", '40CN': "40' Container"
+            }
+
             for item in items:
                 q_item = item.get('quotation', item)
                 header = q_item.get('header', q_item)
@@ -278,6 +312,10 @@ def api_my_quotes():
                 prefix2 = header.get('quoPrefix2', '2026')
                 api_booking_ref = header.get('quoteNumber') or header.get('quotationNo') or f"{prefix1}-{prefix2}-{quote_id}"
                 
+                detail_obj = quote_details_map.get(api_booking_ref, {}) or quote_details_map.get(quote_id, {})
+                if not lines:
+                    lines = detail_obj.get('tariff', {}).get('lines', []) or []
+
                 routing = header.get('routing', header.get('route', {}))
                 origin = header.get('polLocation') or routing.get('polLocation') or routing.get('porLocation') or "Unknown"
                 destination = header.get('podLocation') or routing.get('podLocation') or routing.get('delLocation') or "Unknown"
@@ -317,7 +355,7 @@ def api_my_quotes():
                         pass
 
                 if not total_cost or total_cost <= 0:
-                    for src in [item, q_item, header, tariff]:
+                    for src in [item, q_item, header, tariff, detail_obj]:
                         if isinstance(src, dict):
                             for key in ['totalAmount', 'totalCost', 'amount', 'grandTotal']:
                                 val = src.get(key)
@@ -357,17 +395,22 @@ def api_my_quotes():
                     c_vol = float(local_booking.volume or 0.0)
                     if local_booking.cargo_items:
                         c_weight = sum(float(ci.weight_kg or 0.0) for ci in local_booking.cargo_items)
-                        pkg_parts = [f"{ci.quantity} x {ci.package_type or 'Pkg'}" for ci in local_booking.cargo_items if ci.quantity]
+                        pkg_parts = [f"{ci.quantity} x {PKG_MAP.get(str(ci.package_type or '').upper(), ci.package_type or 'Pkg')}" for ci in local_booking.cargo_items if ci.quantity]
                         c_packages = ", ".join(pkg_parts)
                         c_desc = local_booking.cargo_items[0].description if local_booking.cargo_items else ""
 
-                commodities = q_item.get('commodities', []) or header.get('commodities', [])
+                commodities = detail_obj.get('commodities', []) or q_item.get('commodities', []) or header.get('commodities', [])
                 if not c_vol and commodities:
                     c_vol = sum(float(cm.get('volume') or 0.0) for cm in commodities)
                 if not c_weight and commodities:
                     c_weight = sum(float(cm.get('weight') or 0.0) for cm in commodities)
                 if not c_packages and commodities:
-                    pkg_parts = [f"{cm.get('nrPackages', 1)} x {cm.get('packageCode') or cm.get('packageTypeDescription') or 'Pkg'}" for cm in commodities]
+                    pkg_parts = []
+                    for cm in commodities:
+                        p_code = (cm.get('packageCode') or cm.get('packageTypeDescription') or 'Pkg').upper()
+                        p_label = PKG_MAP.get(p_code, p_code.capitalize())
+                        n_pkg = cm.get('nrPackages') or 1
+                        pkg_parts.append(f"{n_pkg} x {p_label}")
                     c_packages = ", ".join(pkg_parts)
                 if not c_desc and commodities:
                     c_desc = commodities[0].get('commodityDescription', '')
@@ -387,7 +430,7 @@ def api_my_quotes():
                     'computed_status': computed_status,
                     'valid_until': valid_until,
                     'volume': f"{c_vol:.2f}" if c_vol > 0 else "",
-                    'weight': f"{c_weight:.2f}" if c_weight > 0 else "",
+                    'weight': f"{c_weight:,.2f}" if c_weight > 0 else "",
                     'packages': c_packages,
                     'commodity': c_desc
                 })
