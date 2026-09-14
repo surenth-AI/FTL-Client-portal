@@ -16,30 +16,37 @@
         <a href="{{ url_for('customer.rates') }}" class="mq-btn mq-btn-book">+ New Quote Request</a>
     </div>
 
-    <!-- Status filter + search -->
-    <div class="toolbar">
-        <div class="sort-group">
-            <span class="sort-label">Filter</span>
-            <button class="sort-chip active" data-status="all" onclick="filterStatus('all', this)">All</button>
-            <button class="sort-chip" data-status="active" onclick="filterStatus('active', this)">🟢 Active</button>
-            <button class="sort-chip" data-status="expiring" onclick="filterStatus('expiring', this)">🟡 Expiring Soon</button>
-            <button class="sort-chip" data-status="booked" onclick="filterStatus('booked', this)">🔵 Booked</button>
-            <button class="sort-chip" data-status="expired" onclick="filterStatus('expired', this)">⚪ Expired</button>
+    <!-- UNIFIED TOOLBAR CONTAINER WITH SEPARATION LINE -->
+    <div class="mockup-toolbar-card">
+        <!-- FILTER ROW -->
+        <div class="mockup-toolbar-row">
+            <div class="sort-group">
+                <span class="sort-label">Filter</span>
+                <button class="sort-chip active" data-status="all" onclick="filterStatus('all', this)">All</button>
+                <button class="sort-chip" data-status="active" onclick="filterStatus('active', this)">🟢 Active</button>
+                <button class="sort-chip" data-status="expiring" onclick="filterStatus('expiring', this)">🟡 Expiring Soon</button>
+                <button class="sort-chip" data-status="booked" onclick="filterStatus('booked', this)">🔵 Booked</button>
+                <button class="sort-chip" data-status="expired" onclick="filterStatus('expired', this)">⚪ Expired</button>
+            </div>
         </div>
-        <div class="search-box">
-            <input type="text" id="mqSearch" placeholder="Search by reference, route or service" oninput="applyFilters()">
-        </div>
-    </div>
 
-    <!-- Sort -->
-    <div class="toolbar">
-        <div class="sort-group">
-            <span class="sort-label">Sort by</span>
-            <button class="sort-chip active" data-sort="recent" onclick="sortQuotes('recent', this)">🕐 Most recently saved</button>
-            <button class="sort-chip" data-sort="expiring" onclick="sortQuotes('expiring', this)">⏳ Expiring soonest</button>
-            <button class="sort-chip" data-sort="price" onclick="sortQuotes('price', this)">💲 Lowest price</button>
-        </div>
+        <hr class="mockup-toolbar-divider">
+
+        <!-- SORT BY & SEARCH ROW -->
+        <div class="mockup-toolbar-row">
+            <div class="sort-group">
+                <span class="sort-label">Sort by</span>
+                <button class="sort-chip active" data-sort="recent" onclick="sortQuotes('recent', this)">🕐 Most recently saved</button>
+                <button class="sort-chip" data-sort="expiring" onclick="sortQuotes('expiring', this)">⏳ Expiring soonest</button>
+                <button class="sort-chip" data-sort="price" onclick="sortQuotes('price', this)">💲 Lowest price</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div class="search-box">
+                    <input type="text" id="mqSearch" placeholder="Search by reference, route or service" oninput="applyFilters()">
+                </div>
                 <div class="results-count" id="resultsCount">Loading...</div>
+            </div>
+        </div>
     </div>
 
     <div class="offers-list" id="offersList">
