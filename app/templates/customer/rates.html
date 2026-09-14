@@ -3816,12 +3816,46 @@ document.getElementById('wizardSearchForm').submit();
         }
     
 
-// Ensure the first cargo item is added on load and default Cargo Ready Date to today's date
+// Ensure the first cargo item is added on load and restore previously entered search query data if present
 document.addEventListener('DOMContentLoaded', function() {
     const cargoReadyInput = document.getElementById('cargoReadyDate');
     if (cargoReadyInput && !cargoReadyInput.value) {
         cargoReadyInput.value = new Date().toISOString().split('T')[0];
     }
+
+    {% if query %}
+    try {
+        const savedQuery = {{ query | tojson | safe }};
+        if (savedQuery && Object.keys(savedQuery).length > 0) {
+            if (savedQuery.origin) {
+                const origEl = document.getElementById('originLocation');
+                if (origEl) origEl.value = savedQuery.origin;
+            }
+            if (savedQuery.destination) {
+                const destEl = document.getElementById('destLocation');
+                if (destEl) destEl.value = savedQuery.destination;
+            }
+            if (savedQuery.cargo_ready_date) {
+                if (cargoReadyInput) cargoReadyInput.value = savedQuery.cargo_ready_date;
+            }
+            if (savedQuery.traffic_type) {
+                const trEl = document.getElementById('trafficType');
+                if (trEl) trEl.value = savedQuery.traffic_type;
+            }
+            if (savedQuery.freight_terms) {
+                const ftEl = document.getElementById('freightTerms');
+                if (ftEl) ftEl.value = savedQuery.freight_terms;
+            }
+            if (savedQuery.incoterm) {
+                const incoEl = document.getElementById('incoterm');
+                if (incoEl) incoEl.value = savedQuery.incoterm;
+            }
+        }
+    } catch(err) {
+        console.warn("Could not restore saved search query:", err);
+    }
+    {% endif %}
+
     if (typeof addCargoItem === 'function') {
         addCargoItem();
     }

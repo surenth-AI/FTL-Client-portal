@@ -965,13 +965,19 @@ def rates():
                 quo_id = header_data.get('quotationNo') or header_data.get('quoteNo') or str(header_data.get('quotationId') or '')
                 flash(f"Success! Quotation {quo_id} has been created.", "success")
                 
-                # Mock up the rate results session so the redirect works nicely
+                # Save complete search query into session for Modify Search feature
                 session['search_query'] = {
                     'origin': origin_str,
                     'destination': dest_str,
-                    'volume': sum(c['volume'] for c in payload['cargo']),
+                    'volume': sum(c.get('volume', 0) for c in payload['cargo']),
                     'service_type': service_type,
                     'cargo_items': payload['cargo'],
+                    'cargo_ready_date': valid_from,
+                    'traffic_type': traffic_type,
+                    'incoterm': incoterm_val,
+                    'freight_terms': request.form.get('payment_terms') or request.form.get('freight_terms') or '',
+                    'customer_reference': request.form.get('customer_reference') or '',
+                    'special_instructions': request.form.get('special_instructions') or '',
                     'quote_id': quo_id,
                     'api_quotation_id': header_data.get('quotationId', '')
                 }
@@ -1016,7 +1022,8 @@ def rates():
                          vas_types_json='[]',
                          weight_uom_json='[]',
                          volume_uom_json='[]',
-                         freight_terms=freight_terms)
+                         freight_terms=freight_terms,
+                         query=session.get('search_query', {}))
 
 @customer.route('/api/lookups')
 @login_required
