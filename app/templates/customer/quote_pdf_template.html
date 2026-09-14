@@ -133,8 +133,9 @@
         <table class="breakdown-table">
             <thead>
                 <tr>
-                    <th>Charge Type</th>
+                    <th>Code</th>
                     <th>Description</th>
+                    <th>Base</th>
                     <th class="text-right">Amount</th>
                     <th class="text-center">Currency</th>
                 </tr>
@@ -144,6 +145,7 @@
                 <tr>
                     <td>{{ item.articleCode or item.chargeCode or 'N/A' }}</td>
                     <td>{{ item.articleName or item.description or 'Standard Charge' }}</td>
+                    <td>{{ 'W/M' if (item.calcCode or item.calcCodeBase or item.unitCode) in ['MTQ', 'KGM'] else ('LUMPSUM' if (item.calcCode or item.calcCodeBase or item.unitCode) == 'ACT' else (item.calcCode or item.calcCodeBase or item.unitCode or 'W/M')) }}</td>
                     <td class="text-right">${{ "{:,.2f}".format(item.amount) }}</td>
                     <td class="text-center">{{ item.currency or 'USD' }}</td>
                 </tr>
@@ -151,7 +153,7 @@
             </tbody>
             <tfoot>
                 <tr class="total-row">
-                    <td colspan="2" class="text-right">Total:</td>
+                    <td colspan="3" class="text-right">Total:</td>
                     <td class="text-right total-amount">${{ "{:,.2f}".format(quote.total_cost) }}</td>
                     <td class="text-center">USD</td>
                 </tr>

@@ -316,7 +316,8 @@
                             data.breakdown.forEach(line => {
                                 const chargeCode = line.articleCode || line.chargeCode || line.id || 'N/A';
                                 const description = line.articleName || line.chargeName || line.description || 'Standard Charge';
-                                const unitCode = line.calcCodeBase || line.calcCode || line.unitCode || 'ACT';
+                                const rawCalc = line.calcCode || line.calcCodeBase || line.unitCode || 'W/M';
+                                const unitCode = (rawCalc === 'MTQ' || rawCalc === 'KGM') ? 'W/M' : (rawCalc === 'ACT' ? 'LUMPSUM' : rawCalc);
                                 const qty = line.appliedQty !== undefined ? line.appliedQty : (line.quantity || 1);
                                 const curr = line.currency || 'USD';
                                 const rate = line.appliedRate !== undefined ? line.appliedRate : line.amount;
