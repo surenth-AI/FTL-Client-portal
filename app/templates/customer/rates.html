@@ -3816,8 +3816,12 @@ document.getElementById('wizardSearchForm').submit();
         }
     
 
-// Ensure the first cargo item is added on load
+// Ensure the first cargo item is added on load and default Cargo Ready Date to today's date
 document.addEventListener('DOMContentLoaded', function() {
+    const cargoReadyInput = document.getElementById('cargoReadyDate');
+    if (cargoReadyInput && !cargoReadyInput.value) {
+        cargoReadyInput.value = new Date().toISOString().split('T')[0];
+    }
     if (typeof addCargoItem === 'function') {
         addCargoItem();
     }

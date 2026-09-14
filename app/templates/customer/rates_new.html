@@ -3038,6 +3038,11 @@
         if(destInput) {
             destInput.addEventListener('blur', triggerAutomatedDataFetch);
         }
+
+        const cargoReadyInput = document.getElementById('cargoReadyDate');
+        if (cargoReadyInput && !cargoReadyInput.value) {
+            cargoReadyInput.value = new Date().toISOString().split('T')[0];
+        }
     });
 
 </script>
