@@ -77,7 +77,7 @@
 
             {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else ('BR-2026-' ~ '%05d'|format(shipment.id)) %}
             {% set parent_quote = shipment.customer_ref if shipment.customer_ref else ('From FTL-QR-' ~ (shipment.id + 540000)) %}
-            {% set po_num = shipment.po_number if hasattr(shipment, 'po_number') and shipment.po_number else ('PO-' ~ (shipment.id + 40000)) %}
+            {% set po_num = shipment.po_number if (shipment.po_number is defined and shipment.po_number) else ('PO-' ~ (shipment.id + 40000)) %}
 
             <div class="offer-card shipment-card-item"
                  data-status="{{ status_cat }}"
