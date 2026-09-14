@@ -956,6 +956,30 @@ def rates():
             if api_resp.status_code in [200, 201]:
                 data = api_resp.json()
                 
+                # Option 1 Validation: Check if Customs Clearance was requested and verify tariff lines
+                customs_requested = False
+                for key in request.form.keys():
+                    if any(k in key.lower() for k in ['custom', 'clearance', 'service1']):
+                        val = str(request.form.get(key, '')).lower()
+                        if val in ['on', 'true', '1', 'yes'] or any(k in val for k in ['custom', 'clearance']):
+                            customs_requested = True
+                            break
+                for vas in vas_list:
+                    if any(k in str(vas).lower() for k in ['custom', 'clearance']):
+                        customs_requested = True
+                        break
+
+                quot_obj = data.get("quotation", data)
+                tariff_lines = quot_obj.get("tariff", {}).get("lines", [])
+                has_customs_charge = any(
+                    any(term in (line.get('articleName') or '').upper() or term in (line.get('articleCode') or '').upper() for term in ['CUSTOM', 'CLEARANCE', 'DECLARATION', 'CUST'])
+                    for line in tariff_lines
+                )
+
+                if customs_requested and not has_customs_charge:
+                    flash("Quotation Unavailable: You requested Customs Clearance, but the ERP tariff database for this lane does not have a configured Customs Clearance charge. Incomplete offers with missing charges cannot be generated.", "danger")
+                    return redirect(url_for('customer.rates'))
+
                 # The new API endpoint wraps the response in a "quotation" object containing "header"
                 if "quotation" in data and "header" in data["quotation"]:
                     header_data = data["quotation"]["header"]
