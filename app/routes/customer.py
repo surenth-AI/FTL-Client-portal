@@ -1401,9 +1401,39 @@ def rate_results():
                         except Exception:
                             pass
                 
-                # Calculate total price
-                lines = tariff.get('lines', [])
-                total_cost = sum(line.get('amount', 0) for line in lines)
+                # Calculate total price & quotation currency safely
+                lines = tariff.get('lines', []) or []
+                total_cost = 0.0
+                for l_item in lines:
+                    try:
+                        amt = float(l_item.get('amount') or 0.0)
+                        total_cost += amt
+                    except (ValueError, TypeError):
+                        pass
+
+                if not total_cost or total_cost <= 0:
+                    for src in [header, tariff, data]:
+                        if isinstance(src, dict):
+                            for key in ['totalCost', 'totalAmount', 'amount', 'grandTotal']:
+                                val = src.get(key)
+                                if val is not None:
+                                    try:
+                                        t_val = float(val)
+                                        if t_val > 0:
+                                            total_cost = t_val
+                                            break
+                                    except (ValueError, TypeError):
+                                        pass
+                            if total_cost > 0:
+                                break
+
+                quotation_currency = (
+                    tariff.get('quotationCurrency')
+                    or header.get('currency')
+                    or data.get('currency')
+                    or (data.get('quotation', {}).get('header', {}).get('currency') if isinstance(data.get('quotation'), dict) else None)
+                    or 'USD'
+                )
                 
                 is_lcl = query.get('service_type', '') in ['Less than a container load', 'LCL']
                 branch_name = 'Fast Transitline Antwerp'
@@ -1549,6 +1579,7 @@ def rate_results():
                 results = [{
                     'api_quote': data,
                     'total_cost': total_cost,
+                    'quotation_currency': quotation_currency,
                     'transit_days': transit_days,
                     'carrier': carrier_name,
                     'frequency': 'Weekly',

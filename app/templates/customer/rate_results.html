@@ -891,9 +891,7 @@
                 <div class="offer-main">
                     <div class="offer-price-block">
                         <div class="price-label">Total</div>
-                        <div class="price-amount"><span class="currency">{{
-                                res.api_quote.tariff.quotationCurrency|default('USD') }}</span>{{
-                            "%.2f"|format(res.total_cost) }}</div>
+                        <div class="price-amount"><span class="currency">{{ res.quotation_currency or res.api_quote.tariff.quotationCurrency|default('USD') }}</span> {{ "%.2f"|format(res.total_cost) }}</div>
                         <div class="price-valid">📅 Valid until {{ res.rate.validity_end }}</div>
                         <form action="{{ url_for('customer.save_quote') }}" method="POST" class="m-0 p-0"
                             onsubmit="event.preventDefault(); submitSaveQuote(this, 'card-{{ loop.index }}');">
@@ -988,8 +986,7 @@
                         </table>
                         <div class="breakdown-total-row">
                             <span class="label">Total</span>
-                            <span class="amount">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{
-                                "%.2f"|format(res.total_cost) }}</span>
+                            <span class="amount">{{ res.quotation_currency or res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</span>
                         </div>
                         <div class="fx-note">ℹ️ Charges are calculated in their original currency and converted using
                             the rate of exchange shown on each line, fixed at quotation time.</div>
@@ -1042,8 +1039,7 @@
                             more</a>
                         {% endif %}
                     </td>
-                    <td class="price-cell">{{ res.api_quote.tariff.quotationCurrency|default('USD') }} {{
-                        "%.2f"|format(res.total_cost) }}</td>
+                    <td class="price-cell">{{ res.quotation_currency or res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</td>
                     <td style="display:flex; gap:0.5rem; align-items:center; justify-content: flex-end;"
                         onclick="event.stopPropagation();">
                         <a href="{{ url_for('customer.new_booking') }}" class="btn btn-book" style="padding: 0.5rem 1rem; width: auto; text-decoration:none;">Book</a>
