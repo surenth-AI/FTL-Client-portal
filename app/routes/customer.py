@@ -1493,7 +1493,18 @@ def rate_results():
 
                 validity_end = header.get('validUntil', 'N/A')
                 is_lcl = query.get('service_type', '') in ['Less than a container load', 'LCL']
-                branch_name = 'Fast Transit Line Antwerp'
+                
+                # Dynamically resolve branch/carrier name from API response or branch lookup
+                branch_name = header.get('branchName') or header.get('nvoccName') or header.get('carrierName')
+                if not branch_name and current_user.branches:
+                    for b in current_user.branches:
+                        if str(b.branch_id) == str(header.get('branchId')):
+                            branch_name = b.branch_name
+                            break
+                if not branch_name:
+                    por = query.get('origin', '').split('(')[0].strip()
+                    branch_name = f"Fast Transit Line ({por})" if por else f"Branch #{header.get('branchId', '')}"
+                
                 carrier_name = 'LCL Direct Consolidation' if is_lcl else 'FCL Ocean Service'
                 if schedules and len(schedules) > 0 and schedules[0].get('vessel'):
                     carrier_name = f"{schedules[0].get('vessel')} ({schedules[0].get('voyage') or 'Direct'})"
