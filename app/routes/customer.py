@@ -347,6 +347,31 @@ def api_my_quotes():
                     
                 quote_currency = header.get('currency') or item.get('currency') or q_item.get('currency') or tariff.get('quotationCurrency') or 'USD'
                 
+                # Resolve cargo details for quote card display
+                c_vol = 0.0
+                c_weight = 0.0
+                c_packages = ""
+                c_desc = ""
+
+                if local_booking:
+                    c_vol = float(local_booking.volume or 0.0)
+                    if local_booking.cargo_items:
+                        c_weight = sum(float(ci.weight_kg or 0.0) for ci in local_booking.cargo_items)
+                        pkg_parts = [f"{ci.quantity} x {ci.package_type or 'Pkg'}" for ci in local_booking.cargo_items if ci.quantity]
+                        c_packages = ", ".join(pkg_parts)
+                        c_desc = local_booking.cargo_items[0].description if local_booking.cargo_items else ""
+
+                commodities = q_item.get('commodities', []) or header.get('commodities', [])
+                if not c_vol and commodities:
+                    c_vol = sum(float(cm.get('volume') or 0.0) for cm in commodities)
+                if not c_weight and commodities:
+                    c_weight = sum(float(cm.get('weight') or 0.0) for cm in commodities)
+                if not c_packages and commodities:
+                    pkg_parts = [f"{cm.get('nrPackages', 1)} x {cm.get('packageCode') or cm.get('packageTypeDescription') or 'Pkg'}" for cm in commodities]
+                    c_packages = ", ".join(pkg_parts)
+                if not c_desc and commodities:
+                    c_desc = commodities[0].get('commodityDescription', '')
+
                 quote_data.append({
                     'id': local_id,
                     'origin': origin,
@@ -360,7 +385,11 @@ def api_my_quotes():
                     'created_at': created_at.strftime('%d %b %Y'),
                     'status': status,
                     'computed_status': computed_status,
-                    'valid_until': valid_until
+                    'valid_until': valid_until,
+                    'volume': f"{c_vol:.2f}" if c_vol > 0 else "",
+                    'weight': f"{c_weight:.2f}" if c_weight > 0 else "",
+                    'packages': c_packages,
+                    'commodity': c_desc
                 })
             api_success = True
             
@@ -387,11 +416,18 @@ def api_my_quotes():
             else:
                 computed_status = 'Active'
                 
+            c_vol = float(q.volume or 0.0)
+            c_weight = sum(float(ci.weight_kg or 0.0) for ci in q.cargo_items) if q.cargo_items else 0.0
+            pkg_parts = [f"{ci.quantity} x {ci.package_type or 'Pkg'}" for ci in q.cargo_items if ci.quantity] if q.cargo_items else []
+            c_packages = ", ".join(pkg_parts)
+            c_desc = q.cargo_items[0].description if q.cargo_items else ""
+
             quote_data.append({
                 'id': q.id,
                 'origin': q.origin,
                 'destination': q.destination,
                 'total_cost': float(q.total_cost or 0.0),
+                'currency': getattr(q, 'currency', 'USD') or 'USD',
                 'selected_nvocc': q.selected_nvocc or 'Local Quote',
                 'service_type': q.service_type,
                 'service_name': getattr(q, 'service_name', None) or 'Direct Service',
@@ -399,7 +435,11 @@ def api_my_quotes():
                 'created_at': q.created_at.strftime('%d %b %Y'),
                 'status': q.status,
                 'computed_status': computed_status,
-                'valid_until': valid_until.strftime('%Y-%m-%d')
+                'valid_until': valid_until.strftime('%Y-%m-%d'),
+                'volume': f"{c_vol:.2f}" if c_vol > 0 else "",
+                'weight': f"{c_weight:.2f}" if c_weight > 0 else "",
+                'packages': c_packages,
+                'commodity': c_desc
             })
         total_count = pagination.total
 
@@ -1598,11 +1638,45 @@ def rate_results():
                 has_freight_charges = any(l.get('articleCostGroup') in ['FC', 'AC'] or 'FREIGHT' in (l.get('articleName') or '').upper() for l in lines)
                 has_destination_charges = any(l.get('articleCostGroup') in ['DC', 'DL'] for l in lines)
                 
+                # Resolve cargo details for Rate Results display
+                cargo_items = query.get('cargo_items', []) or []
+                commodities = data.get('commodities', []) or (data.get('quotation', {}).get('commodities', []) if isinstance(data.get('quotation'), dict) else [])
+
+                rr_vol = float(query.get('volume') or 0.0)
+                if not rr_vol and commodities:
+                    rr_vol = sum(float(c.get('volume') or 0.0) for c in commodities)
+
+                rr_weight = 0.0
+                if commodities:
+                    rr_weight = sum(float(c.get('weight') or 0.0) for c in commodities)
+                elif cargo_items:
+                    rr_weight = sum(float(c.get('weight') or 0.0) for c in cargo_items if isinstance(c, dict))
+
+                rr_packages = ""
+                if commodities:
+                    rr_packages = ", ".join([f"{c.get('nrPackages', 1)} x {c.get('packageCode') or c.get('packageTypeDescription') or 'Pkg'}" for c in commodities])
+                elif cargo_items:
+                    rr_packages = ", ".join([f"{c.get('qty', 1)} x {c.get('type') or 'Pkg'}" for c in cargo_items if isinstance(c, dict) and c.get('qty')])
+
+                rr_commodity = ""
+                if commodities:
+                    rr_commodity = commodities[0].get('commodityDescription', '')
+                elif cargo_items and isinstance(cargo_items[0], dict):
+                    rr_commodity = cargo_items[0].get('desc') or cargo_items[0].get('commodityDescription', '')
+
+                cargo_details = {
+                    'volume': rr_vol,
+                    'weight': rr_weight,
+                    'packages': rr_packages,
+                    'commodity': rr_commodity
+                }
+
                 # Format to match the frontend expectations while passing real API data
                 results = [{
                     'api_quote': data,
                     'total_cost': total_cost,
                     'quotation_currency': quotation_currency,
+                    'cargo_details': cargo_details,
                     'transit_days': transit_days,
                     'carrier': carrier_name,
                     'frequency': 'Weekly',
