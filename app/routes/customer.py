@@ -801,6 +801,11 @@ def download_pdf(quote_id=None):
         return redirect(url_for('customer.my_quotes'))
     
     breakdown = []
+    header = {}
+    commodities = []
+    sailings = []
+    tariff = {}
+
     quote_number = quote.api_booking_ref or ref
     if quote_number:
         import requests
@@ -821,8 +826,12 @@ def download_pdf(quote_id=None):
                 if resp.status_code == 200:
                     resp_json = resp.json()
                     data = resp_json.get('quotation', resp_json)
+                    header = data.get('header', {})
+                    commodities = data.get('commodities', [])
+                    sailings = data.get('sailings', [])
                     tariff = data.get('tariff', data)
-                    breakdown = tariff.get('lines', [])
+                    if isinstance(tariff, dict):
+                        breakdown = tariff.get('lines') or []
                     break
                 else:
                     print(f"API returned {resp.status_code} for {cand}: {resp.text}")
@@ -839,19 +848,59 @@ def download_pdf(quote_id=None):
                 with open(temp_file, 'r', encoding='utf-8') as f:
                     cached_data = json.load(f)
                     data = cached_data.get('quotation', cached_data)
-                    header = data.get('header', data)
-                    quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
-                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or (quote.api_booking_ref and quote.api_booking_ref.endswith('-')):
-                        tariff = data.get('tariff', data)
-                        breakdown = tariff.get('lines', [])
+                    header = data.get('header', {})
+                    commodities = data.get('commodities', [])
+                    sailings = data.get('sailings', [])
+                    tariff = data.get('tariff', data)
+                    if isinstance(tariff, dict):
+                        breakdown = tariff.get('lines') or []
         except Exception as e:
             pass
+
+    # Categorize tariff lines into Ocean freight (FC), Surcharges (AC), and Local charges (LC/DC)
+    ocean_lines = []
+    surcharge_lines = []
+    local_lines = []
+
+    for l in breakdown:
+        cg = (l.get('articleCostGroup') or '').upper()
+        aname = (l.get('articleName') or '').upper()
+        if cg == 'FC' or 'OCEAN FREIGHT' in aname or 'FREIGHT' in aname:
+            ocean_lines.append(l)
+        elif cg == 'AC' or 'SURCHARGE' in aname or 'FUEL' in aname or 'EBAF' in aname or 'ETS' in aname:
+            surcharge_lines.append(l)
+        else:
+            local_lines.append(l)
+
+    ocean_subtotal = sum(float(l.get('amount') or 0.0) for l in ocean_lines)
+    surcharge_subtotal = sum(float(l.get('amount') or 0.0) for l in surcharge_lines)
+    local_subtotal = sum(float(l.get('amount') or 0.0) for l in local_lines)
+    total_cost = sum(float(l.get('amount') or 0.0) for l in breakdown)
+    if not total_cost and quote.total_cost:
+        total_cost = float(quote.total_cost)
+
+    quotation_currency = tariff.get('quotationCurrency') if isinstance(tariff, dict) else (header.get('currency') or 'USD')
 
     from xhtml2pdf import pisa
     from io import BytesIO
     from flask import make_response
 
-    html_content = render_template('customer/quote_pdf_template.html', quote=quote, breakdown=breakdown)
+    html_content = render_template(
+        'customer/quote_pdf_template.html',
+        quote=quote,
+        header=header,
+        commodities=commodities,
+        sailings=sailings,
+        ocean_lines=ocean_lines,
+        surcharge_lines=surcharge_lines,
+        local_lines=local_lines,
+        ocean_subtotal=ocean_subtotal,
+        surcharge_subtotal=surcharge_subtotal,
+        local_subtotal=local_subtotal,
+        total_cost=total_cost,
+        quotation_currency=quotation_currency,
+        breakdown=breakdown
+    )
     
     pdf = BytesIO()
     pisa_status = pisa.CreatePDF(BytesIO(html_content.encode('utf-8')), dest=pdf)
