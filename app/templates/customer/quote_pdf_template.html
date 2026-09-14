@@ -459,7 +459,7 @@
         </table>
     </div>
     <div style="font-size: 7.5pt; color: #64748b; margin-top: 3px;">
-        Rate of exchange is indicative and subject to change without notice. 1 USD = 1.0000 USD, applied at time of quotation.
+        Rate of exchange is indicative and subject to change without notice. {{ quotation_currency or 'EUR' }} 1.00 = USD {{ "%.2f"|format(ocean_lines[0].exchangeRate if ocean_lines and ocean_lines[0].exchangeRate else 0.87) }}, applied at time of quotation.
     </div>
 
 
@@ -483,22 +483,28 @@
     <!-- REMARKS -->
     <div class="section-heading">REMARKS</div>
     <div style="font-size: 8.5pt; color: #1e293b; line-height: 1.35; margin-bottom: 4px;">
-        • Ocean freight validity: {{ header.validFrom or quote.created_at.strftime('%d %b %Y') }} – {{ header.validUntil or quote.valid_until or '31 Jul 2026' }}<br>
+        • Ocean freight validity: {{ header.validFrom or (quote.created_at.strftime('%d %b %Y') if quote and quote.created_at else '22 Jul 2026') }} – {{ header.validUntil or (quote.valid_until if quote else '31 Jul 2026') }}<br>
         • Surcharges and fuel charges are valid at time of shipment
     </div>
     <div class="callout-box-green">
-        • Quote reference {{ header.quoteNumber or quote.api_booking_ref or ('FTL-QR-' ~ quote.id) }} is active for valid period
+        • Quote reference {{ header.quoteNumber or (quote.api_booking_ref if quote else 'FTL-QR-241173') }} is active for valid period
     </div>
 
     <!-- PICK-UP -->
-    <div class="section-heading" style="margin-top: 10px;">PICK-UP</div>
+    <div class="section-heading" style="margin-top: 8px;">PICK-UP</div>
     <div class="callout-box-blue">
-        ⏱️ Free time for pick-up: 30 minutes
+        ⏱ Free time for pick-up: 30 minutes
+    </div>
+
+    <!-- GENERAL REMARKS -->
+    <div class="section-heading" style="margin-top: 8px;">REMARKS</div>
+    <div style="font-size: 8.5pt; color: #64748b; font-style: italic; margin-bottom: 8px;">
+        No general remarks for this quotation.
     </div>
 
     <!-- REMARKS FOR DESTINATION -->
-    <div class="section-heading" style="margin-top: 10px;">REMARKS FOR {{ (quote.destination or header.podLocation or 'HONG KONG').upper() }}</div>
-    <div style="font-size: 8.5pt; color: #64748b; font-style: italic; margin-bottom: 10px;">
+    <div class="section-heading" style="margin-top: 8px;">REMARKS FOR {{ (quote.destination if quote and quote.destination else (header.podLocation or 'HONG KONG')).upper() }}</div>
+    <div style="font-size: 8.5pt; color: #64748b; font-style: italic; margin-bottom: 8px;">
         No destination-specific remarks.
     </div>
 
