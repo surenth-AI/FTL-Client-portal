@@ -815,3 +815,35 @@ html[data-color-scheme='dark'] .parent-quote-badge {
     border-color: var(--primary-color, #2563eb);
 }
 
+.mockup-toolbar-card {
+    background: var(--mq-bg-white);
+    border: 1px solid var(--mq-border-color);
+    border-radius: 12px;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.mockup-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.mockup-toolbar-divider {
+    border: none;
+    border-top: 1px solid var(--mq-border-color);
+    margin: 0.1rem 0;
+    width: 100%;
+}
+.mockup-card-footer-line {
+    border-top: 1px solid var(--mq-border-color);
+    padding: 0.6rem 1.25rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+

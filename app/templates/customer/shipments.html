@@ -17,31 +17,38 @@
         <a href="{{ url_for('customer.new_booking') }}" class="mq-btn mq-btn-book">+ New Booking</a>
     </div>
 
-    <!-- FILTER TOOLBAR (STATUS CHIPS WITH COUNTS) -->
-    <div class="toolbar">
-        <div class="sort-group" id="filterStatusGroup">
-            <span class="sort-label">STATUS</span>
-            <button class="sort-chip active" data-status="all" onclick="filterByStatus('all', this)">All <span id="cntAll">(0)</span></button>
-            <button class="sort-chip" data-status="pending" onclick="filterByStatus('pending', this)">🟡 Pending Review <span id="cntPending">(0)</span></button>
-            <button class="sort-chip" data-status="confirmed" onclick="filterByStatus('confirmed', this)">🔵 Confirmed <span id="cntConfirmed">(0)</span></button>
-            <button class="sort-chip" data-status="transit" onclick="filterByStatus('transit', this)">🟣 In Transit <span id="cntTransit">(0)</span></button>
-            <button class="sort-chip" data-status="delivered" onclick="filterByStatus('delivered', this)">🟢 Delivered <span id="cntDelivered">(0)</span></button>
+    <!-- UNIFIED TOOLBAR CONTAINER (EXACT CLIENT MOCKUP WITH SEPARATION LINE) -->
+    <div class="mockup-toolbar-card">
+        <!-- STATUS ROW -->
+        <div class="mockup-toolbar-row">
+            <div class="sort-group" id="filterStatusGroup">
+                <span class="sort-label">STATUS</span>
+                <button class="sort-chip active" data-status="all" onclick="filterByStatus('all', this)">All <span id="cntAll">(0)</span></button>
+                <button class="sort-chip" data-status="pending" onclick="filterByStatus('pending', this)">🟡 Pending Review <span id="cntPending">(0)</span></button>
+                <button class="sort-chip" data-status="confirmed" onclick="filterByStatus('confirmed', this)">🔵 Confirmed <span id="cntConfirmed">(0)</span></button>
+                <button class="sort-chip" data-status="transit" onclick="filterByStatus('transit', this)">🟣 In Transit <span id="cntTransit">(0)</span></button>
+                <button class="sort-chip" data-status="delivered" onclick="filterByStatus('delivered', this)">🟢 Delivered <span id="cntDelivered">(0)</span></button>
+            </div>
         </div>
-    </div>
 
-    <!-- SORT & SEARCH TOOLBAR -->
-    <div class="toolbar">
-        <div class="sort-group" id="sortGroup">
-            <span class="sort-label">SORT BY</span>
-            <button class="sort-chip active" data-sort="recent" onclick="sortBy('recent', this)">Most recent</button>
-            <button class="sort-chip" data-sort="etd" onclick="sortBy('etd', this)">Departure date</button>
-            <button class="sort-chip" data-sort="eta" onclick="sortBy('eta', this)">Arrival date</button>
-            <button class="sort-chip" data-sort="closing" onclick="sortBy('closing', this)">Closing date</button>
+        <hr class="mockup-toolbar-divider">
+
+        <!-- SORT & SEARCH ROW -->
+        <div class="mockup-toolbar-row">
+            <div class="sort-group" id="sortGroup">
+                <span class="sort-label">SORT BY</span>
+                <button class="sort-chip active" data-sort="recent" onclick="sortBy('recent', this)">Most recent</button>
+                <button class="sort-chip" data-sort="etd" onclick="sortBy('etd', this)">Departure date</button>
+                <button class="sort-chip" data-sort="eta" onclick="sortBy('eta', this)">Arrival date</button>
+                <button class="sort-chip" data-sort="closing" onclick="sortBy('closing', this)">Closing date</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div class="search-box">
+                    <input type="text" id="shipmentSearch" placeholder="Search by reference, route or PO..." oninput="applySearchAndFilter()">
+                </div>
+                <div class="results-count" id="resultsCount">Showing 0 of 0 bookings</div>
+            </div>
         </div>
-        <div class="search-box">
-            <input type="text" id="shipmentSearch" placeholder="Search by reference, route or PO..." oninput="applySearchAndFilter()">
-        </div>
-        <div class="results-count" id="resultsCount">Showing 0 of 0 bookings</div>
     </div>
 
     <!-- SHIPMENT CARDS LIST (EXACT CLIENT MOCKUP LAYOUT) -->
@@ -108,10 +115,10 @@
                     </div>
                 </div>
 
-                <!-- Main Content Row (2 Columns: Left details, Right action + note) -->
+                <!-- Main Content Row (2 Columns: Left details, Right action) -->
                 <div class="offer-main-booking">
                     <div class="offer-details">
-                        <!-- Carrier Logo & Title Route -->
+                        <!-- Route Title -->
                         <div class="carrier-row">
                             <div class="carrier-text">
                                 <div class="carrier-name route-line" style="font-size: 1.05rem; font-weight:700;">
@@ -146,12 +153,16 @@
                         </div>
                     </div>
 
-                    <!-- Right Actions Column & Footer Note -->
+                    <!-- Right Action Button -->
                     <div class="offer-actions">
                         <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="mq-btn-mockup-outline">View Booking →</a>
-                        <div class="status-subnote-footer">
-                            {{ status_note }}
-                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Divider Line & Status Note (EXACT CLIENT MOCKUP) -->
+                <div class="mockup-card-footer-line">
+                    <div class="status-subtext" style="font-size: 0.78rem; color: var(--mq-text-muted);">
+                        {{ status_note }}
                     </div>
                 </div>
             </div>
