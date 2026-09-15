@@ -143,11 +143,12 @@
                         } else if (c_status === 'Expired') {
                             actionHtml = `
                                 <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
-                                <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none;">Request Updated Quote →</a>
+                                <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none;">Request Updated Quote →</a>
                             `;
                         } else {
                             actionHtml = `
                                 <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
+                                <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none; margin-bottom: 0.4rem;">Request Updated Quote →</a>
                                 <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
                             `;
                         }

@@ -1376,8 +1376,39 @@ def rates():
         except Exception as e:
             flash(f"API Error: {str(e)}", "danger")
             return redirect(url_for('customer.rates'))
-    # Render template immediately with blank/minimal arrays for instant frontend rendering,
-    # offloading the lookup loading to an asynchronous fetch.
+    query_data = session.get('search_query', {})
+    quote_id = request.args.get('quote_id')
+    if quote_id:
+        quote = get_booking_safely(quote_id, user_id=current_user.id)
+        if not quote:
+            quote = get_booking_safely(quote_id)
+        if quote:
+            cargo_items = []
+            if quote.cargo_items:
+                for item in quote.cargo_items:
+                    cargo_items.append({
+                        'pieces': item.quantity or 1,
+                        'type': item.package_type or 'BX',
+                        'length': item.length_cm or '',
+                        'width': item.width_cm or '',
+                        'height': item.height_cm or '',
+                        'weight': item.weight_kg or '',
+                        'volume': item.volume_cbm or '',
+                        'desc': item.description or 'General Cargo',
+                        'goods_type': 'Hazardous' if item.is_imo else 'General',
+                        'imo_un': item.un_number or '',
+                        'imo_class': item.imo_class or ''
+                    })
+            query_data = {
+                'origin': quote.origin or '',
+                'destination': quote.destination or '',
+                'service': quote.service_type or 'LCL',
+                'cargo_ready_date': quote.created_at.strftime('%Y-%m-%d') if quote.created_at else '',
+                'cargoItems': cargo_items,
+                'totalVolume': quote.volume or 0,
+                'quote_id': quote.api_booking_ref or quote.id
+            }
+
     freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
     return render_template('customer/rates.html',
                          countries=[],
@@ -1388,7 +1419,7 @@ def rates():
                          weight_uom_json='[]',
                          volume_uom_json='[]',
                          freight_terms=freight_terms,
-                         query=session.get('search_query', {}))
+                         query=query_data)
 
 @customer.route('/api/lookups')
 @login_required
