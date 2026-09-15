@@ -2022,22 +2022,52 @@ function updateDirection() {
     }
 }
 
-function handleLocationTypeChange(locationType) {
-    const type = document.getElementById(locationType + 'Type').value;
+function ensureCountryOption(selectEl, code) {
+    if (!selectEl || !code) return;
+    const upperCode = code.toUpperCase();
+    let exists = Array.from(selectEl.options).some(opt => opt.value.toUpperCase() === upperCode);
+    if (!exists) {
+        let name = upperCode;
+        if (typeof apiCountries !== 'undefined' && Array.isArray(apiCountries)) {
+            const found = apiCountries.find(c => c.code && c.code.toUpperCase() === upperCode);
+            if (found) name = found.name;
+        }
+        if (name === upperCode) {
+            const names = {
+                'BE': 'Belgium', 'SG': 'Singapore', 'DE': 'Germany', 'NL': 'Netherlands',
+                'CN': 'China', 'IN': 'India', 'US': 'United States', 'ES': 'Spain',
+                'FR': 'France', 'GB': 'United Kingdom', 'IT': 'Italy', 'AE': 'United Arab Emirates',
+                'KR': 'South Korea', 'JP': 'Japan', 'AU': 'Australia', 'ZA': 'South Africa'
+            };
+            name = names[upperCode] || upperCode;
+        }
+        const opt = document.createElement('option');
+        opt.value = upperCode;
+        opt.textContent = name;
+        selectEl.appendChild(opt);
+    }
+    selectEl.value = upperCode;
+}
+
+function handleLocationTypeChange(locationType, clearInput = true) {
+    const typeEl = document.getElementById(locationType + 'Type');
+    if (!typeEl) return;
+    const type = typeEl.value;
     const label = document.getElementById(locationType + 'LocationLabel');
     const input = document.getElementById(locationType + 'Location');
 
     if (type === 'door') {
-        label.innerHTML = 'City <span class="required">*</span>';
-        input.placeholder = 'Search by city name or zip code';
+        if (label) label.innerHTML = 'City <span class="required">*</span>';
+        if (input) input.placeholder = 'Search by city name or zip code';
     } else {
-        label.innerHTML = 'Port <span class="required">*</span>';
-        input.placeholder = 'Search by port name or UN code';
+        if (label) label.innerHTML = 'Port <span class="required">*</span>';
+        if (input) input.placeholder = 'Search by port name or UN code';
     }
 
-    // Clear selection
-    selectedLocations[locationType] = null;
-    input.value = '';
+    if (clearInput) {
+        selectedLocations[locationType] = null;
+        if (input) input.value = '';
+    }
     
     populateCountries(locationType, type);
     updateMovementType();
@@ -2052,19 +2082,20 @@ function populateCountries(locationType, type) {
     const countrySelect = document.getElementById(locationType + 'Country');
     if (!countrySelect) return;
     const currentValue = countrySelect.value;
-    countrySelect.innerHTML = '<option value="">Select country</option>';
     
-    // Sort apiCountries by name, filtering out empty keys
-    const sorted = [...apiCountries].filter(c => c.code && c.name).sort((a, b) => a.name.localeCompare(b.name));
-    sorted.forEach(c => {
-        const option = document.createElement('option');
-        option.value = c.code;
-        option.textContent = c.name;
-        countrySelect.appendChild(option);
-    });
+    if (apiCountries && apiCountries.length > 0) {
+        countrySelect.innerHTML = '<option value="">Select country</option>';
+        const sorted = [...apiCountries].filter(c => c.code && c.name).sort((a, b) => a.name.localeCompare(b.name));
+        sorted.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.code.toUpperCase();
+            option.textContent = c.name;
+            countrySelect.appendChild(option);
+        });
+    }
     
-    if (currentValue && sorted.some(c => c.code === currentValue)) {
-        countrySelect.value = currentValue;
+    if (currentValue) {
+        ensureCountryOption(countrySelect, currentValue);
     }
 }
 
@@ -3965,12 +3996,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const origTypeEl = document.getElementById('originType');
             if (origTypeEl) {
                 origTypeEl.value = orgType;
-                if (typeof handleLocationTypeChange === 'function') handleLocationTypeChange('origin');
+                if (typeof handleLocationTypeChange === 'function') handleLocationTypeChange('origin', false);
             }
             const destTypeEl = document.getElementById('destType');
             if (destTypeEl) {
                 destTypeEl.value = destType;
-                if (typeof handleLocationTypeChange === 'function') handleLocationTypeChange('dest');
+                if (typeof handleLocationTypeChange === 'function') handleLocationTypeChange('dest', false);
             }
 
             if (savedQuery.origin) {
@@ -3979,11 +4010,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const orgCountryCode = deduceCountryCode(savedQuery.origin, savedQuery.origin_country || savedQuery.originCountry || '');
                 const origCountryEl = document.getElementById('originCountry');
-                if (origCountryEl) {
-                    if (origCountryEl.options.length <= 1 && typeof populateCountries === 'function') {
-                        populateCountries('origin', orgType);
-                    }
-                    if (orgCountryCode) origCountryEl.value = orgCountryCode;
+                if (origCountryEl && orgCountryCode) {
+                    ensureCountryOption(origCountryEl, orgCountryCode);
                 }
                 const orgPortCode = deducePortCode(savedQuery.origin);
                 selectedLocations.origin = {
@@ -3998,11 +4026,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const destCountryCode = deduceCountryCode(savedQuery.destination, savedQuery.destination_country || savedQuery.destCountry || '');
                 const destCountryEl = document.getElementById('destCountry');
-                if (destCountryEl) {
-                    if (destCountryEl.options.length <= 1 && typeof populateCountries === 'function') {
-                        populateCountries('dest', destType);
-                    }
-                    if (destCountryCode) destCountryEl.value = destCountryCode;
+                if (destCountryEl && destCountryCode) {
+                    ensureCountryOption(destCountryEl, destCountryCode);
                 }
                 const destPortCode = deducePortCode(savedQuery.destination);
                 selectedLocations.dest = {
