@@ -2150,7 +2150,7 @@
         });
         
         // Initialize dynamic countries & default dates on load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             populateCountries('origin', 'port');
             populateCountries('dest', 'port');
 
@@ -2167,7 +2167,44 @@
                 }
                 cargoReadyInput.min = todayStr;
             }
+
+            // Check if quote_id parameter exists in URL to auto pre-fill steps
+            await checkUrlQuotePreFill();
         });
+
+        async function checkUrlQuotePreFill() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramQuoteId = urlParams.get('quote_id');
+            if (!paramQuoteId) return;
+
+            try {
+                const resp = await fetch(`/customer/api/quote-details/${encodeURIComponent(paramQuoteId)}`);
+                if (resp.ok) {
+                    const qData = await resp.json();
+                    if (qData && !qData.error) {
+                        const ref = qData.quote_ref || paramQuoteId;
+                        quoteData[ref] = {
+                            route: `${qData.origin} → ${qData.destination}`,
+                            price: 'Saved Quote',
+                            originType: 'port',
+                            originLocation: qData.origin,
+                            destType: 'port',
+                            destLocation: qData.destination,
+                            readyDate: qData.cargo_ready_date,
+                            pieces: qData.cargo && qData.cargo.length > 0 ? qData.cargo[0].pieces : 1,
+                            packageType: qData.cargo && qData.cargo.length > 0 ? qData.cargo[0].packageType : 'BX',
+                            goodsType: qData.cargo && qData.cargo.length > 0 ? qData.cargo[0].goodsType : 'GENERAL',
+                            weight: qData.cargo && qData.cargo.length > 0 ? qData.cargo[0].weight : 0,
+                            volume: qData.cargo && qData.cargo.length > 0 ? qData.cargo[0].volume : 0,
+                            incoterms: qData.incoterm || 'FOB',
+                        };
+                        useQuote(ref);
+                    }
+                }
+            } catch (err) {
+                console.error('Error auto pre-filling quote from URL:', err);
+            }
+        }
         // ------------------------------------------
 
 

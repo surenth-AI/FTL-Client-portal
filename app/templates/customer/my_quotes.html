@@ -143,7 +143,7 @@
                         } else if (c_status === 'Expired') {
                             actionHtml = `
                                 <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
-                                <a href="/customer/rates" class="mq-btn mq-btn-outline">Request Updated Quote →</a>
+                                <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none;">Request Updated Quote →</a>
                             `;
                         } else {
                             actionHtml = `

@@ -819,6 +819,88 @@ def api_quote_breakdown(quote_id):
 
     return jsonify({'breakdown': breakdown or []})
 
+@customer.route('/api/quote-details/<path:quote_id>')
+@login_required
+def api_quote_details(quote_id):
+    ref = str(quote_id).strip()
+    customer_id = 1
+    if current_user.accounts:
+        try: customer_id = int(current_user.accounts[0].account_id)
+        except: pass
+
+    import requests
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    params = {'accountId': customer_id} if customer_id else {}
+    
+    candidates = [ref]
+    if ref.isdigit():
+        candidates.extend([f"QUO-2026-{ref}", f"26-TDR-{ref}"])
+        
+    api_quote = None
+    for cand in candidates:
+        try:
+            resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{cand}", params=params, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                api_quote = resp.json().get('quotation', resp.json())
+                break
+        except Exception as e:
+            print(f"Error fetching quote details for {cand}: {e}")
+
+    local_booking = Booking.query.filter(
+        (Booking.api_booking_ref == ref) | (Booking.id == (int(ref) if ref.isdigit() else 0))
+    ).first()
+
+    if not api_quote and not local_booking:
+        return jsonify({'error': 'Quote not found'}), 404
+
+    header = api_quote.get('header', api_quote) if api_quote else {}
+    routing = header.get('routing', header.get('route', {}))
+    commodities = api_quote.get('commodities', []) if api_quote else []
+    
+    origin_loc = header.get('polLocation') or routing.get('polLocation') or (local_booking.origin if local_booking else "")
+    dest_loc = header.get('podLocation') or routing.get('podLocation') or (local_booking.destination if local_booking else "")
+    
+    cargo = []
+    if commodities:
+        for c in commodities:
+            cargo.append({
+                'pieces': c.get('nrPackages', 1),
+                'packageType': c.get('packageCode') or c.get('packageTypeDescription') or 'BX',
+                'goodsType': 'HAZARDOUS' if c.get('isHazardous') else 'GENERAL',
+                'weight': float(c.get('weight') or 0.0),
+                'volume': float(c.get('volume') or 0.0),
+                'description': c.get('commodityDescription', ''),
+                'is_imo': bool(c.get('isHazardous')),
+                'imo_un': c.get('imo', {}).get('un') if isinstance(c.get('imo'), dict) else '',
+                'imo_class': c.get('imo', {}).get('class') if isinstance(c.get('imo'), dict) else '',
+            })
+    elif local_booking and local_booking.cargo_items:
+        for item in local_booking.cargo_items:
+            cargo.append({
+                'pieces': item.quantity or 1,
+                'packageType': item.package_type or 'BX',
+                'goodsType': 'HAZARDOUS' if item.is_imo else 'GENERAL',
+                'weight': float(item.weight_kg or 0.0),
+                'volume': float(item.volume_cbm or 0.0),
+                'description': item.description or '',
+                'is_imo': bool(item.is_imo),
+                'imo_un': item.un_number or '',
+                'imo_class': item.imo_class or '',
+            })
+
+    result = {
+        'quote_ref': header.get('quoteNumber') or ref,
+        'origin': origin_loc,
+        'destination': dest_loc,
+        'service_type': 'LCL' if 'LCL' in str(header.get('freightTransportType') or (local_booking.service_type if local_booking else '')).upper() else 'FCL',
+        'incoterm': header.get('incoTerm') or header.get('incoterm') or (local_booking.incoterm if local_booking else 'FOB'),
+        'cargo_ready_date': str(header.get('validFrom') or '')[:10] or (local_booking.cargo_ready_date.strftime('%Y-%m-%d') if (local_booking and local_booking.cargo_ready_date) else ''),
+        'cargo': cargo
+    }
+
+    return jsonify(result)
+
+
 @customer.route('/quote/<quote_id>/download_pdf')
 @customer.route('/quote/<int:quote_id>/download_pdf')
 @customer.route('/download_pdf')
