@@ -1392,8 +1392,32 @@ def api_get_schedules():
     headers = {'accept': 'application/json', 'x-api-key': '1'}
     try:
         resp = requests.get(url, params=params, headers=headers, timeout=5)
-        if resp.status_code == 200:
+        if resp.status_code == 200 and isinstance(resp.json(), list) and len(resp.json()) > 0:
             return jsonify(resp.json())
+        
+        # Fallback 1: Broad date query if exact closing_date yielded 0 results
+        if closing_date:
+            params_broad = {
+                'portOfLoading': pol,
+                'portOfDischarge': pod,
+                'product': product,
+                'closingDate': '2026-01-01',
+                'branchID': branch_id
+            }
+            resp_broad = requests.get(url, params=params_broad, headers=headers, timeout=5)
+            if resp_broad.status_code == 200 and isinstance(resp_broad.json(), list) and len(resp_broad.json()) > 0:
+                return jsonify(resp_broad.json())
+
+        # Fallback 2: General query without date or branch filter
+        params_fb = {
+            'portOfLoading': pol,
+            'portOfDischarge': pod,
+            'product': product
+        }
+        resp_fb = requests.get(url, params=params_fb, headers=headers, timeout=5)
+        if resp_fb.status_code == 200 and isinstance(resp_fb.json(), list):
+            return jsonify(resp_fb.json())
+
         return jsonify([])
     except Exception as e:
         print(f"Error fetching schedules: {e}")

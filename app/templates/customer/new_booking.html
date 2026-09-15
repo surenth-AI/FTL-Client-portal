@@ -2244,7 +2244,12 @@
                         });
                         
                         mockSailings.sort((a, b) => a.etd.localeCompare(b.etd));
-                        sailings = [...mockSailings];
+                        if (cargoReadyDate) {
+                            const filtered = mockSailings.filter(s => s.etd >= cargoReadyDate);
+                            sailings = filtered.length > 0 ? filtered : [...mockSailings];
+                        } else {
+                            sailings = [...mockSailings];
+                        }
                         selectedSailingIndex = 0;
                         renderSailingCard();
                         return;
@@ -2267,20 +2272,13 @@
             } else {
                 const dateStr = document.getElementById('cargoReadyDate').value;
                 if (dateStr) {
-                    sailings = mockSailings.filter(s => new Date(s.etd) >= new Date(dateStr));
+                    const filtered = mockSailings.filter(s => s.etd >= dateStr);
+                    sailings = filtered.length > 0 ? filtered : [...mockSailings];
                 } else {
                     sailings = [...mockSailings];
                 }
                 selectedSailingIndex = 0;
-                if (sailings.length > 0) {
-                    renderSailingCard();
-                } else {
-                    document.getElementById('sailingVesselText').innerHTML = 'No available sailings';
-                    document.getElementById('sailingDatesText').textContent = 'Please choose a different date';
-                }
-                if (document.getElementById('sailingPicker').classList.contains('show')) {
-                    renderSailingPickerList();
-                }
+                renderSailingCard();
             }
         }
         
