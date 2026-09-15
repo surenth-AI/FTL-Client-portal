@@ -1030,8 +1030,34 @@
             const isFastest = minTransit > 0 && s.transitDays === minTransit;
             const etdStr = s.etd ? s.etd.substring(0, 10) : 'TBD';
             const etaStr = s.eta ? s.eta.substring(0, 10) : 'TBD';
-            const cargoCutoff = s.closingLCL ? s.closingLCL.substring(0, 10) : (s.closingFCL ? s.closingFCL.substring(0, 10) : '—');
-            const docCutoff = s.closingDoc ? s.closingDoc.substring(0, 10) : '—';
+            const cargoCutoffRaw = s.closingLCL || s.closingFCL || null;
+            const docCutoffRaw = s.closingDoc || null;
+
+            const cargoCutoffStr = (cargoCutoffRaw && cargoCutoffRaw !== '—') ? cargoCutoffRaw.substring(0, 10) : null;
+            const docCutoffStr = (docCutoffRaw && docCutoffRaw !== '—') ? docCutoffRaw.substring(0, 10) : null;
+
+            let cutoffsContentHtml = '';
+            if (cargoCutoffStr) {
+                cutoffsContentHtml += `
+                    <div class="cutoff-row-item">
+                        <span class="cutoff-label-text">CARGO CUT-OFF</span>
+                        <span class="cutoff-value-date">${cargoCutoffStr}</span>
+                    </div>`;
+            }
+            if (docCutoffStr) {
+                cutoffsContentHtml += `
+                    <div class="cutoff-row-item">
+                        <span class="cutoff-label-text">DOC CUT-OFF</span>
+                        <span class="cutoff-value-doc">${docCutoffStr}</span>
+                    </div>`;
+            }
+
+            const cutoffsBlockHtml = cutoffsContentHtml ? `
+                <div class="cutoff-dates-block">
+                    <div class="cutoff-dates-group">
+                        ${cutoffsContentHtml}
+                    </div>
+                </div>` : '<div class="cutoff-dates-block"></div>';
 
             const isDirect = (s.routing || 'DIRECT').toUpperCase().includes('DIRECT');
             const viaText = s.via && s.via !== '—' ? `VIA ${s.via.toUpperCase()}` : 'DIRECT';
@@ -1076,18 +1102,7 @@
                         </div>
 
                         <!-- Right Cutoffs -->
-                        <div class="cutoff-dates-block">
-                            <div class="cutoff-dates-group">
-                                <div class="cutoff-row-item">
-                                    <span class="cutoff-label-text">CARGO CUT-OFF</span>
-                                    <span class="cutoff-value-date">${cargoCutoff}</span>
-                                </div>
-                                <div class="cutoff-row-item">
-                                    <span class="cutoff-label-text">DOC CUT-OFF</span>
-                                    <span class="cutoff-value-doc">${docCutoff}</span>
-                                </div>
-                            </div>
-                        </div>
+                        ${cutoffsBlockHtml}
                     </div>
 
                     <!-- Horizontal Separator Line (EXACT MATCH TO MOCKUP) -->
