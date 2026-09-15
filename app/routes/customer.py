@@ -134,6 +134,30 @@ def get_booking_safely(ref_or_id, user_id=None, status=None):
         (Booking.api_booking_ref == ref_str) | (Booking.uuid == ref_str)
     ).first()
 
+def _parse_cc(loc_str, hint=None):
+    if hint and len(hint) == 2:
+        return hint.upper()
+    if not loc_str:
+        return hint or ''
+    loc = str(loc_str).strip()
+    m = re.search(r'\(([A-Za-z]{2})[A-Za-z0-9]{3}\)', loc)
+    if m:
+        return m.group(1).upper()
+    u = re.search(r'\b([A-Za-z]{2})[A-Za-z0-9]{3}\b', loc)
+    if u:
+        return u.group(1).upper()
+    city_map = {
+        'antwerp': 'BE', 'singapore': 'SG', 'rotterdam': 'NL', 'hamburg': 'DE',
+        'shanghai': 'CN', 'ningbo': 'CN', 'busan': 'KR', 'nhava sheva': 'IN',
+        'mundra': 'IN', 'chennai': 'IN', 'barcelona': 'ES', 'valencia': 'ES',
+        'le havre': 'FR', 'felixstowe': 'GB', 'genoa': 'IT', 'jebel ali': 'AE',
+        'dubai': 'AE', 'los angeles': 'US', 'new york': 'US'
+    }
+    for k, v in city_map.items():
+        if k in loc.lower():
+            return v
+    return hint or ''
+
 def post_booking_to_api(booking_id):
     try:
         booking = get_booking_safely(booking_id)
@@ -905,19 +929,7 @@ def api_quote_details(quote_id):
                 'imo_class': item.imo_class or '',
             })
 
-    import re
-    def _parse_cc(loc_str, hint):
-        if hint and len(hint) == 2:
-            return hint.upper()
-        if not loc_str:
-            return hint or ''
-        m = re.search(r'\(([A-Za-z]{2})[A-Za-z0-9]{3}\)', str(loc_str))
-        if m:
-            return m.group(1).upper()
-        u = re.search(r'\b([A-Za-z]{2})[A-Za-z0-9]{3}\b', str(loc_str))
-        if u:
-            return u.group(1).upper()
-        return hint or ''
+
 
     org_country = _parse_cc(origin_loc, header.get('polCountry') or header.get('polCountryCode') or routing.get('polCountry'))
     dest_country = _parse_cc(dest_loc, header.get('podCountry') or header.get('podCountryCode') or routing.get('podCountry'))
