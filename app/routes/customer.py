@@ -905,10 +905,29 @@ def api_quote_details(quote_id):
                 'imo_class': item.imo_class or '',
             })
 
+    import re
+    def _parse_cc(loc_str, hint):
+        if hint and len(hint) == 2:
+            return hint.upper()
+        if not loc_str:
+            return hint or ''
+        m = re.search(r'\(([A-Za-z]{2})[A-Za-z0-9]{3}\)', str(loc_str))
+        if m:
+            return m.group(1).upper()
+        u = re.search(r'\b([A-Za-z]{2})[A-Za-z0-9]{3}\b', str(loc_str))
+        if u:
+            return u.group(1).upper()
+        return hint or ''
+
+    org_country = _parse_cc(origin_loc, header.get('polCountry') or header.get('polCountryCode') or routing.get('polCountry'))
+    dest_country = _parse_cc(dest_loc, header.get('podCountry') or header.get('podCountryCode') or routing.get('podCountry'))
+
     result = {
         'quote_ref': header.get('quoteNumber') or ref,
         'origin': origin_loc,
         'destination': dest_loc,
+        'origin_country': org_country,
+        'destination_country': dest_country,
         'service_type': 'LCL' if 'LCL' in str(header.get('freightTransportType') or (local_booking.service_type if local_booking else '')).upper() else 'FCL',
         'incoterm': header.get('incoTerm') or header.get('incoterm') or (local_booking.incoterm if local_booking else 'FOB'),
         'cargo_ready_date': str(header.get('validFrom') or '')[:10] or (local_booking.cargo_ready_date.strftime('%Y-%m-%d') if (local_booking and local_booking.cargo_ready_date) else ''),
