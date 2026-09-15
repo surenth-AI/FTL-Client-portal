@@ -1829,8 +1829,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // Re-populate selects that depend on these lists
+            const prevOrgCountry = document.getElementById('originCountry')?.value;
+            const prevDestCountry = document.getElementById('destCountry')?.value;
+
             populateCountries('origin', document.getElementById('originType').value);
             populateCountries('dest', document.getElementById('destType').value);
+
+            if (prevOrgCountry) {
+                const oc = document.getElementById('originCountry');
+                if (oc) oc.value = prevOrgCountry;
+            }
+            if (prevDestCountry) {
+                const dc = document.getElementById('destCountry');
+                if (dc) dc.value = prevDestCountry;
+            }
+
             populateIncoterms();
             updateAvailableIncoterms();
             updateAllCargoPackageTypes();
@@ -1844,6 +1857,125 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Cache for dynamically fetched ports
 window.fetchedPortsCache = { origin: {}, dest: {} };
+
+function deduceCountryCode(locStr, countryHint) {
+    if (countryHint && countryHint.length === 2) {
+        return countryHint.toUpperCase();
+    }
+    if (!locStr) return countryHint || '';
+    
+    let str = String(locStr).trim();
+    if (countryHint && typeof apiCountries !== 'undefined' && Array.isArray(apiCountries)) {
+        const found = apiCountries.find(c => 
+            c.code && (c.code.toUpperCase() === countryHint.toUpperCase() || 
+            (c.name && c.name.toLowerCase() === countryHint.toLowerCase()))
+        );
+        if (found) return found.code.toUpperCase();
+    }
+    
+    const parenMatch = str.match(/\(([A-Za-z]{2})[A-Za-z0-9]{3}\)/);
+    if (parenMatch) return parenMatch[1].toUpperCase();
+    
+    const unlocodeMatch = str.match(/\b([A-Za-z]{2})[A-Za-z0-9]{3}\b/);
+    if (unlocodeMatch) {
+        const code = unlocodeMatch[1].toUpperCase();
+        if (typeof apiCountries !== 'undefined' && Array.isArray(apiCountries) && apiCountries.length > 0) {
+            if (apiCountries.some(c => c.code && c.code.toUpperCase() === code)) {
+                return code;
+            }
+        } else {
+            return code;
+        }
+    }
+    
+    const cityLower = str.toLowerCase();
+    const cityMap = {
+        'antwerp': 'BE', 'anr': 'BE', 'beanr': 'BE', 'belgium': 'BE',
+        'singapore': 'SG', 'sin': 'SG', 'sgsin': 'SG',
+        'rotterdam': 'NL', 'rtm': 'NL', 'nlrtm': 'NL', 'netherlands': 'NL',
+        'hamburg': 'DE', 'ham': 'DE', 'deham': 'DE', 'germany': 'DE',
+        'shanghai': 'CN', 'sha': 'CN', 'cnsha': 'CN', 'china': 'CN',
+        'ningbo': 'CN', 'ngb': 'CN', 'cnngb': 'CN',
+        'shenzhen': 'CN', 'szx': 'CN', 'cnszx': 'CN',
+        'qingdao': 'CN', 'tao': 'CN', 'cntao': 'CN',
+        'busan': 'KR', 'pus': 'KR', 'krpus': 'KR', 'korea': 'KR',
+        'nhava sheva': 'IN', 'nsa': 'IN', 'innsa': 'IN', 'mumbai': 'IN', 'india': 'IN',
+        'mundra': 'IN', 'mun': 'IN', 'inmun': 'IN',
+        'chennai': 'IN', 'maa': 'IN', 'inmaa': 'IN',
+        'barcelona': 'ES', 'bcn': 'ES', 'esbcn': 'ES', 'spain': 'ES',
+        'valencia': 'ES', 'vlc': 'ES', 'esvlc': 'ES',
+        'le havre': 'FR', 'leh': 'FR', 'frleh': 'FR', 'france': 'FR',
+        'felixstowe': 'GB', 'fxt': 'GB', 'gbfxt': 'GB', 'uk': 'GB', 'united kingdom': 'GB',
+        'london': 'GB', 'lon': 'GB', 'gblon': 'GB',
+        'southampton': 'GB', 'sou': 'GB', 'gbsou': 'GB',
+        'genoa': 'IT', 'goa': 'IT', 'itgoa': 'IT', 'italy': 'IT',
+        'piraeus': 'GR', 'pir': 'GR', 'grpir': 'GR', 'greece': 'GR',
+        'jebel ali': 'AE', 'jea': 'AE', 'aejea': 'AE', 'uae': 'AE', 'dubai': 'AE',
+        'los angeles': 'US', 'lax': 'US', 'uslax': 'US', 'usa': 'US', 'united states': 'US',
+        'new york': 'US', 'nyc': 'US', 'usnyc': 'US',
+        'long beach': 'US', 'lgb': 'US', 'uslgb': 'US',
+        'durban': 'ZA', 'dur': 'ZA', 'zadur': 'ZA', 'south africa': 'ZA',
+        'melbourne': 'AU', 'mel': 'AU', 'aumel': 'AU', 'australia': 'AU',
+        'sydney': 'AU', 'syd': 'AU', 'ausyd': 'AU',
+        'tokyo': 'JP', 'tyo': 'JP', 'jptyo': 'JP', 'japan': 'JP',
+        'yokohama': 'JP', 'yok': 'JP', 'jpyok': 'JP'
+    };
+    
+    for (const [key, code] of Object.entries(cityMap)) {
+        if (cityLower.includes(key)) return code;
+    }
+    
+    if (typeof apiCountries !== 'undefined' && Array.isArray(apiCountries)) {
+        for (const c of apiCountries) {
+            if (c.name && cityLower.includes(c.name.toLowerCase())) {
+                return c.code.toUpperCase();
+            }
+        }
+    }
+    
+    return countryHint || '';
+}
+
+function deducePortCode(locStr) {
+    if (!locStr) return '';
+    let str = String(locStr).trim();
+    const m = str.match(/\(([^)]+)\)/);
+    if (m) return m[1].trim().toUpperCase();
+    const u = str.match(/\b[A-Za-z]{5}\b/);
+    if (u) return u[0].toUpperCase();
+    const cityLower = str.toLowerCase();
+    const portMap = {
+        'antwerp': 'BEANR', 'anr': 'BEANR',
+        'singapore': 'SGSIN', 'sin': 'SGSIN',
+        'rotterdam': 'NLRTM', 'rtm': 'NLRTM',
+        'hamburg': 'DEHAM', 'ham': 'DEHAM',
+        'shanghai': 'CNSHA', 'sha': 'CNSHA',
+        'ningbo': 'CNNGB', 'ngb': 'CNNGB',
+        'shenzhen': 'CNSZX',
+        'qingdao': 'CNTAO',
+        'busan': 'KRPUS',
+        'nhava sheva': 'INNSA', 'nsa': 'INNSA', 'mumbai': 'INNSA',
+        'mundra': 'INMUN',
+        'chennai': 'INMAA',
+        'barcelona': 'ESBCN',
+        'valencia': 'ESVLC',
+        'le havre': 'FRLEH',
+        'felixstowe': 'GBFXT',
+        'london': 'GBLON',
+        'southampton': 'GBSOU',
+        'genoa': 'ITGOA',
+        'piraeus': 'GRPIR',
+        'jebel ali': 'AEJEA',
+        'dubai': 'AEDXB',
+        'los angeles': 'USLAX',
+        'new york': 'USNYC',
+        'long beach': 'USLGB'
+    };
+    for (const [k, v] of Object.entries(portMap)) {
+        if (cityLower.includes(k)) return v;
+    }
+    return str.toUpperCase();
+}
 
 
 function updateMovementType() {
@@ -3827,14 +3959,58 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         const savedQuery = {{ query | tojson | safe }};
         if (savedQuery && Object.keys(savedQuery).length > 0) {
+            const orgType = savedQuery.origin_type || savedQuery.originType || 'port';
+            const destType = savedQuery.dest_type || savedQuery.destType || 'port';
+            
+            const origTypeEl = document.getElementById('originType');
+            if (origTypeEl) {
+                origTypeEl.value = orgType;
+                if (typeof handleLocationTypeChange === 'function') handleLocationTypeChange('origin');
+            }
+            const destTypeEl = document.getElementById('destType');
+            if (destTypeEl) {
+                destTypeEl.value = destType;
+                if (typeof handleLocationTypeChange === 'function') handleLocationTypeChange('dest');
+            }
+
             if (savedQuery.origin) {
                 const origEl = document.getElementById('originLocation');
                 if (origEl) origEl.value = savedQuery.origin;
+                
+                const orgCountryCode = deduceCountryCode(savedQuery.origin, savedQuery.origin_country || savedQuery.originCountry || '');
+                const origCountryEl = document.getElementById('originCountry');
+                if (origCountryEl) {
+                    if (origCountryEl.options.length <= 1 && typeof populateCountries === 'function') {
+                        populateCountries('origin', orgType);
+                    }
+                    if (orgCountryCode) origCountryEl.value = orgCountryCode;
+                }
+                const orgPortCode = deducePortCode(savedQuery.origin);
+                selectedLocations.origin = {
+                    name: savedQuery.origin.split('(')[0].trim(),
+                    code: orgPortCode
+                };
             }
+
             if (savedQuery.destination) {
                 const destEl = document.getElementById('destLocation');
                 if (destEl) destEl.value = savedQuery.destination;
+                
+                const destCountryCode = deduceCountryCode(savedQuery.destination, savedQuery.destination_country || savedQuery.destCountry || '');
+                const destCountryEl = document.getElementById('destCountry');
+                if (destCountryEl) {
+                    if (destCountryEl.options.length <= 1 && typeof populateCountries === 'function') {
+                        populateCountries('dest', destType);
+                    }
+                    if (destCountryCode) destCountryEl.value = destCountryCode;
+                }
+                const destPortCode = deducePortCode(savedQuery.destination);
+                selectedLocations.dest = {
+                    name: savedQuery.destination.split('(')[0].trim(),
+                    code: destPortCode
+                };
             }
+
             if (savedQuery.cargo_ready_date) {
                 if (cargoReadyInput) cargoReadyInput.value = savedQuery.cargo_ready_date;
             }
@@ -3849,6 +4025,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedQuery.incoterm) {
                 const incoEl = document.getElementById('incoterm');
                 if (incoEl) incoEl.value = savedQuery.incoterm;
+            }
+
+            if (savedQuery.origin && savedQuery.destination) {
+                const rv = document.getElementById('routeValue');
+                if (rv) rv.textContent = `${savedQuery.origin} → ${savedQuery.destination}`;
             }
         }
     } catch(err) {

@@ -1399,9 +1399,15 @@ def rates():
                         'imo_un': item.un_number or '',
                         'imo_class': item.imo_class or ''
                     })
+            org_country = _parse_cc(quote.origin, None)
+            dest_country = _parse_cc(quote.destination, None)
             query_data = {
                 'origin': quote.origin or '',
                 'destination': quote.destination or '',
+                'origin_type': 'port',
+                'dest_type': 'port',
+                'origin_country': org_country,
+                'dest_country': dest_country,
                 'service': quote.service_type or 'LCL',
                 'cargo_ready_date': quote.created_at.strftime('%Y-%m-%d') if quote.created_at else '',
                 'cargoItems': cargo_items,
