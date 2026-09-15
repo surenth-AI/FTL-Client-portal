@@ -2149,10 +2149,24 @@
             }
         });
         
-        // Initialize dynamic countries on load
+        // Initialize dynamic countries & default dates on load
         document.addEventListener('DOMContentLoaded', function() {
             populateCountries('origin', 'port');
             populateCountries('dest', 'port');
+
+            // Default Cargo Ready Date to current date
+            const cargoReadyInput = document.getElementById('cargoReadyDate');
+            if (cargoReadyInput) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${yyyy}-${mm}-${dd}`;
+                if (!cargoReadyInput.value) {
+                    cargoReadyInput.value = todayStr;
+                }
+                cargoReadyInput.min = todayStr;
+            }
         });
         // ------------------------------------------
 
