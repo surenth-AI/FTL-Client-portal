@@ -904,3 +904,23 @@ html[data-color-scheme='dark'] .file-card      { background: #263348 !important;
 html[data-color-scheme='dark'] .tracking-marker{ border-color: #0F172A; }
 html[data-color-scheme='dark'] .route-box      { background: #263348; }
 html[data-color-scheme='dark'] .milestone-list li.completed .bi-check-circle-fill { color: var(--primary-color); }
+
+/* Shared Back Link & Modify Search Styling */
+.back-link, .modify-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-color, #2563eb);
+    text-decoration: none;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.back-link:hover, .modify-search:hover {
+    color: var(--primary-hover, #1d4ed8);
+    text-decoration: underline;
+}
+

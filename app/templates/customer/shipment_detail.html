@@ -575,14 +575,9 @@
 
 <div class="vb-container">
 
-    <!-- BREADCRUMB & BACK NAVIGATION -->
-    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-        <a href="{{ url_for('customer.my_shipments') }}" class="vb-btn" style="padding: 0.35rem 0.75rem; text-decoration: none;">
-            <i class="bi bi-arrow-left me-1"></i> Back
-        </a>
-        <div class="vb-breadcrumb" style="margin-bottom: 0;">
-            <a href="{{ url_for('customer.my_shipments') }}">My Bookings</a> / <span>{{ booking.api_booking_ref or ('BR-2026-' ~ '%05d'|format(booking.id)) }}</span>
-        </div>
+    <!-- BACK NAVIGATION & BREADCRUMB -->
+    <div style="margin-bottom: 0.75rem;">
+        <a href="{{ url_for('customer.my_shipments') }}" class="back-link">← Back to My Bookings</a>
     </div>
 
     <!-- HEADER & ACTION TOOLBAR -->
