@@ -909,7 +909,39 @@
         }
 
         const summaryEl = document.getElementById('summaryCount');
-        summaryEl.innerHTML = `Searching upcoming sailings for <strong>${originTxt} → ${destTxt}</strong>...`;
+        summaryEl.innerHTML = `<span class="spinner-border spinner-border-sm text-primary me-2" role="status"></span>Searching upcoming sailings for <strong>${originTxt} → ${destTxt}</strong>...`;
+
+        const searchBtn = document.querySelector('.btn-submit-search');
+        if (searchBtn) {
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Searching...`;
+        }
+
+        // Show Loader in Card View & Table List View while searching
+        const cardContainer = document.getElementById('cardViewContainer');
+        const tableBody = document.getElementById('tableBody');
+
+        if (cardContainer) {
+            cardContainer.innerHTML = `
+                <div class="empty-state-box" style="padding: 3rem 1.5rem;">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 2.5rem; height: 2.5rem; border-width: 0.2em;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h4 style="font-weight:700; color:#0f172a; margin-bottom:0.35rem;">Searching Sailing Schedules...</h4>
+                    <p style="color:#64748b; font-size:0.875rem; margin-bottom:0;">Fetching live departures from <strong>${originTxt}</strong> to <strong>${destTxt}</strong></p>
+                </div>
+            `;
+        }
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        Searching live sailing schedules...
+                    </td>
+                </tr>
+            `;
+        }
 
         try {
             const resp = await fetch(`/customer/api/schedules-search?pol=${encodeURIComponent(oLocode)}&pod=${encodeURIComponent(dLocode)}&closingDate=${encodeURIComponent(cDate)}`);
@@ -947,6 +979,11 @@
             console.error("Error fetching live API schedules:", e);
             currentSchedules = [];
             sortAndRender();
+        } finally {
+            if (searchBtn) {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = `<i class="bi bi-search"></i> Search`;
+            }
         }
     }
 
@@ -1010,8 +1047,8 @@
             container.innerHTML = `
                 <div class="empty-state-box">
                     <i class="bi bi-calendar-x empty-icon-large"></i>
-                    <h4 style="font-weight:700;">No Sailing Schedules Found in API</h4>
-                    <p style="color:#64748b;">No live schedules returned for the selected ports and cargo date.</p>
+                    <h4 style="font-weight:700;">No Sailing Schedules Found</h4>
+                    <p style="color:#64748b;">No schedules returned for the selected ports and cargo date.</p>
                 </div>
             `;
             return;
@@ -1124,7 +1161,7 @@
         if (currentSchedules.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-4 text-muted">No live sailing schedules available in API.</td>
+                    <td colspan="10" class="text-center py-4 text-muted">No sailing schedules available for the selected route.</td>
                 </tr>
             `;
             return;
