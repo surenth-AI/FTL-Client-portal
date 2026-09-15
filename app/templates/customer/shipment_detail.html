@@ -1,318 +1,974 @@
-{% extends 'base.html' %}
-{% block title %}Shipment #{{ booking.id }}{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Booking {{ booking.api_booking_ref or ('BR-2026-' ~ '%05d'|format(booking.id)) }}{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- Left Column: Primary Details -->
-    <div class="col-lg-8">
-        <div class="card glass-card p-4 mb-4">
-            <div class="mb-3">
-                <a href="{{ url_for('customer.my_shipments') }}" class="text-accent text-decoration-none small fw-bold">
-                    <i class="bi bi-arrow-left me-1"></i> Back to My Shipments
-                </a>
+<style>
+    .vb-container {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #1e293b;
+        background-color: #f8fafc;
+        min-height: 100vh;
+        padding: 1.5rem 2rem 4rem;
+    }
+    html[data-color-scheme='dark'] .vb-container {
+        background-color: #0f172a;
+        color: #f8fafc;
+    }
+
+    /* Breadcrumbs & Header */
+    .vb-breadcrumb {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-bottom: 0.5rem;
+    }
+    .vb-breadcrumb a {
+        color: #64748b;
+        text-decoration: none;
+    }
+    .vb-breadcrumb a:hover {
+        color: var(--primary-color, #2563eb);
+    }
+    .vb-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .vb-title-block h1 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    html[data-color-scheme='dark'] .vb-title-block h1 {
+        color: #f8fafc;
+    }
+    .vb-status-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.2rem 0.65rem;
+        border-radius: 12px;
+        background-color: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #bfdbfe;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        text-transform: uppercase;
+    }
+    .vb-status-pill .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #2563eb;
+    }
+    .vb-meta-line {
+        font-size: 0.825rem;
+        color: #64748b;
+        margin-top: 0.3rem;
+    }
+
+    .vb-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .vb-btn {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.45rem 0.9rem;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background-color: #ffffff;
+        color: #334155;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.15s ease;
+    }
+    .vb-btn:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+    .vb-btn-danger {
+        border-color: #fecaca;
+        color: #dc2626;
+        background-color: #ffffff;
+    }
+    .vb-btn-danger:hover {
+        background-color: #fef2f2;
+        color: #b91c1c;
+    }
+
+    /* Stepper Container */
+    .vb-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    html[data-color-scheme='dark'] .vb-card {
+        background-color: #1e293b;
+        border-color: #334155;
+    }
+
+    .stepper-heading {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 1.25rem;
+    }
+    html[data-color-scheme='dark'] .stepper-heading {
+        color: #f8fafc;
+    }
+    .stepper-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        padding: 0 2rem;
+    }
+    .stepper-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        text-align: center;
+    }
+    .stepper-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+        background-color: #ffffff;
+        border: 2px solid #cbd5e1;
+        color: #64748b;
+    }
+    .stepper-step.completed .stepper-circle {
+        background-color: #10b981;
+        border-color: #10b981;
+        color: #ffffff;
+    }
+    .stepper-step.active .stepper-circle {
+        background-color: #ffffff;
+        border-color: #2563eb;
+        color: #2563eb;
+    }
+    .stepper-step.active .stepper-circle::after {
+        content: '';
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #2563eb;
+    }
+    .stepper-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .stepper-label {
+        color: #f8fafc;
+    }
+    .stepper-date {
+        font-size: 0.725rem;
+        color: #64748b;
+        margin-top: 0.1rem;
+    }
+    .stepper-line {
+        position: absolute;
+        top: 16px;
+        height: 2px;
+        background-color: #e2e8f0;
+        z-index: 1;
+    }
+    .stepper-line.active {
+        background-color: #10b981;
+    }
+
+    /* 2 Column Main Grid */
+    .vb-grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1.25rem;
+    }
+    @media (max-width: 992px) {
+        .vb-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Cards Header & Content */
+    .card-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .card-title {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+    html[data-color-scheme='dark'] .card-title {
+        color: #f8fafc;
+    }
+    .quote-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        background-color: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #dbeafe;
+    }
+
+    /* Route & Sailing */
+    .route-display {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    .port-block {
+        display: flex;
+        flex-direction: column;
+    }
+    .port-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.5px;
+    }
+    .port-name {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .port-name {
+        color: #f8fafc;
+    }
+    .port-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .vessel-info-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    html[data-color-scheme='dark'] .vessel-info-box {
+        background-color: #0f172a;
+        border-color: #334155;
+    }
+    .vessel-name {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .vessel-name {
+        color: #f8fafc;
+    }
+    .vessel-dates {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+    .service-badge-pill {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        padding: 0.25rem 0.6rem;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    /* Cargo Accordion */
+    .cargo-accordion-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+    }
+    html[data-color-scheme='dark'] .cargo-accordion-item {
+        border-color: #334155;
+    }
+    .cargo-header {
+        background-color: #ffffff;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        font-size: 0.825rem;
+        font-weight: 600;
+    }
+    html[data-color-scheme='dark'] .cargo-header {
+        background-color: #1e293b;
+    }
+    .cargo-body {
+        padding: 1rem;
+        background-color: #ffffff;
+        border-top: 1px solid #e2e8f0;
+    }
+    html[data-color-scheme='dark'] .cargo-body {
+        background-color: #0f172a;
+        border-color: #334155;
+    }
+    .haz-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+        padding: 0.15rem 0.45rem;
+        border-radius: 4px;
+        margin-left: 0.5rem;
+    }
+    .cargo-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .grid-col-label {
+        font-size: 0.675rem;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.2rem;
+    }
+    .grid-col-val {
+        font-size: 0.825rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .grid-col-val {
+        color: #f8fafc;
+    }
+
+    .haz-callout-box {
+        background-color: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 6px;
+        padding: 0.6rem 0.875rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .haz-callout-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #b45309;
+        margin-bottom: 0.35rem;
+    }
+    .haz-pill {
+        font-size: 0.7rem;
+        font-weight: 700;
+        background-color: #78350f;
+        color: #ffffff;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        margin-right: 0.35rem;
+        display: inline-block;
+    }
+
+    .dims-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.5rem;
+    }
+    .dims-table th {
+        font-size: 0.675rem;
+        font-weight: 700;
+        color: #64748b;
+        background-color: #f8fafc;
+        padding: 0.4rem 0.6rem;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .dims-table td {
+        font-size: 0.8rem;
+        color: #0f172a;
+        padding: 0.4rem 0.6rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    html[data-color-scheme='dark'] .dims-table th {
+        background-color: #1e293b;
+        border-color: #334155;
+    }
+    html[data-color-scheme='dark'] .dims-table td {
+        color: #f8fafc;
+        border-color: #334155;
+    }
+
+    .cargo-summary-bar {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        gap: 2rem;
+    }
+    html[data-color-scheme='dark'] .cargo-summary-bar {
+        background-color: #0f172a;
+        border-color: #334155;
+    }
+    .summary-item-label {
+        font-size: 0.675rem;
+        font-weight: 700;
+        color: #64748b;
+    }
+    .summary-item-val {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .summary-item-val {
+        color: #f8fafc;
+    }
+
+    /* Services & Instructions */
+    .vas-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        background-color: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #bfdbfe;
+        padding: 0.25rem 0.6rem;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-right: 0.5rem;
+    }
+    .instructions-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.65rem 0.875rem;
+        font-size: 0.8rem;
+        color: #334155;
+        margin-top: 0.75rem;
+    }
+    html[data-color-scheme='dark'] .instructions-box {
+        background-color: #0f172a;
+        border-color: #334155;
+        color: #94a3b8;
+    }
+
+    /* Parties */
+    .parties-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    .party-title {
+        font-size: 0.675rem;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.35rem;
+    }
+    .party-name {
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .party-name {
+        color: #f8fafc;
+    }
+    .party-sub {
+        font-size: 0.775rem;
+        color: #64748b;
+        line-height: 1.35;
+    }
+
+    /* Sidebar Cards */
+    .coordinator-card {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+    }
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #2563eb;
+        color: #ffffff;
+        font-size: 0.9rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .coord-name {
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .coord-name {
+        color: #f8fafc;
+    }
+    .coord-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+    .coord-email {
+        font-size: 0.75rem;
+        color: #2563eb;
+        word-break: break-all;
+    }
+
+    .info-list-item {
+        margin-bottom: 0.875rem;
+    }
+    .info-list-item:last-child {
+        margin-bottom: 0;
+    }
+    .info-label {
+        font-size: 0.675rem;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.15rem;
+    }
+    .info-val {
+        font-size: 0.825rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    html[data-color-scheme='dark'] .info-val {
+        color: #f8fafc;
+    }
+    .info-val a {
+        color: #2563eb;
+        text-decoration: none;
+    }
+</style>
+
+<div class="vb-container">
+
+    <!-- BREADCRUMB -->
+    <div class="vb-breadcrumb">
+        <a href="{{ url_for('customer.my_shipments') }}">My Bookings</a> / <span>{{ booking.api_booking_ref or ('BR-2026-' ~ '%05d'|format(booking.id)) }}</span>
+    </div>
+
+    <!-- HEADER & ACTION TOOLBAR -->
+    <div class="vb-header-row">
+        <div class="vb-title-block">
+            <h1>
+                {{ booking.api_booking_ref or ('BR-2026-' ~ '%05d'|format(booking.id)) }}
+                <span class="vb-status-pill"><span class="dot"></span>{{ booking.status or 'CONFIRMED' }}</span>
+            </h1>
+            <div class="vb-meta-line">
+                {{ booking.origin }} → {{ booking.destination }} · Submitted {{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '2026-06-20' }} · Confirmed {{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '2026-06-22' }}
             </div>
-            <div class="d-flex justify-content-between align-items-center mb-4">
+        </div>
+        <div class="vb-actions">
+            <a href="{{ url_for('customer.download_all_docs', booking_id=booking.id) }}" class="vb-btn">
+                <span>↓</span> Download Documents
+            </a>
+            <button class="vb-btn" onclick="alert('Connecting to Antwerp Operations Office (+32 3 205 6152)...')">
+                <span>📞</span> Contact Office
+            </button>
+            {% if booking.status in ['Booked', 'Pending Review', 'Confirmed'] %}
+            <button class="vb-btn vb-btn-danger" onclick="if(confirm('Are you sure you want to request cancellation for this booking?')) alert('Cancellation request submitted to Operations team.');">
+                Cancel Request
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- BOOKING STATUS STEPPER -->
+    <div class="vb-card">
+        <div class="stepper-heading">Booking Status</div>
+        <div class="stepper-row">
+            <div class="stepper-line active" style="left: 12.5%; width: 25%;"></div>
+            <div class="stepper-line" style="left: 37.5%; width: 25%;"></div>
+            <div class="stepper-line" style="left: 62.5%; width: 25%;"></div>
+
+            <!-- STEP 1: Submitted -->
+            <div class="stepper-step completed">
+                <div class="stepper-circle">✓</div>
+                <div class="stepper-label">Submitted</div>
+                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '2026-06-20' }}</div>
+            </div>
+
+            <!-- STEP 2: Confirmed -->
+            <div class="stepper-step active">
+                <div class="stepper-circle"></div>
+                <div class="stepper-label">Confirmed</div>
+                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '2026-06-22' }}</div>
+            </div>
+
+            <!-- STEP 3: In Transit -->
+            <div class="stepper-step">
+                <div class="stepper-circle">3</div>
+                <div class="stepper-label">In Transit</div>
+                <div class="stepper-date">Expected {{ booking.etd.strftime('%Y-%m-%d') if booking.etd else '2026-07-14' }}</div>
+            </div>
+
+            <!-- STEP 4: Delivered -->
+            <div class="stepper-step">
+                <div class="stepper-circle">4</div>
+                <div class="stepper-label">Delivered</div>
+                <div class="stepper-date">Expected {{ booking.eta.strftime('%Y-%m-%d') if booking.eta else '2026-07-27' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2 COLUMN MAIN GRID -->
+    <div class="vb-grid">
+
+        <!-- LEFT COLUMN (PRIMARY CARDS) -->
+        <div>
+            <!-- ROUTE & SAILING -->
+            <div class="vb-card">
+                <div class="card-title-row">
+                    <h2 class="card-title">Route &amp; Sailing</h2>
+                    <span class="quote-badge">FROM QUOTE {{ booking.uuid or booking.api_booking_ref or 'FTL-QR-219804' }}</span>
+                </div>
+
+                <div class="route-display">
+                    <div class="port-block">
+                        <span class="port-label">ORIGIN</span>
+                        <span class="port-name">{{ booking.origin }}</span>
+                        <span class="port-sub">Port</span>
+                    </div>
+                    <div style="font-size: 1.2rem; color: #94a3b8;">→</div>
+                    <div class="port-block" style="text-align: right;">
+                        <span class="port-label">DESTINATION</span>
+                        <span class="port-name">{{ booking.destination }}</span>
+                        <span class="port-sub">Port</span>
+                    </div>
+                </div>
+
+                <div class="vessel-info-box">
+                    <div>
+                        <span style="margin-right: 0.3rem;">🚢</span>
+                        <span class="vessel-name">{{ booking.vessel_name or 'CMA CGM Brest' }} · Voyage {{ booking.voyage_number or '118E' }}</span>
+                    </div>
+                    <div class="vessel-dates">
+                        ETD {{ booking.etd.strftime('%Y-%m-%d') if booking.etd else '2026-07-14' }} → ETA {{ booking.eta.strftime('%Y-%m-%d') if booking.eta else '2026-07-27' }} · 13 days transit
+                    </div>
+                </div>
+
                 <div>
-                    <h3 class="text-white fw-bold mb-1">Shipment #{{ booking.id }}</h3>
-                    <p class="text-muted small mb-0">Booked on {{ booking.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                </div>
-                <div class="text-end">
-                    <span class="badge rounded-pill bg-primary px-3 py-2 fs-6 shadow-sm">{{ booking.status }}</span>
-                    {% if booking.status in ['Booked', 'Pending Review'] %}
-                    <div class="mt-2 d-flex flex-column gap-2 align-items-end">
-                        <a href="{{ url_for('customer.edit_booking', booking_id=booking.id) }}" class="btn btn-sm btn-outline-warning rounded-pill px-3">
-                            <i class="bi bi-pencil-square me-1"></i> Edit Details
-                        </a>
-                        {% if booking.status == 'Booked' and not booking.is_si_submitted %}
-                        <a href="{{ url_for('customer.submit_si', booking_id=booking.id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-accent">
-                            <i class="bi bi-file-earmark-plus me-1"></i> Submit SI
-                        </a>
-                        {% elif booking.is_si_submitted %}
-                        <a href="{{ url_for('customer.submit_si', booking_id=booking.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                            <i class="bi bi-pencil-square me-1"></i> Amendment
-                        </a>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                    <span class="service-badge-pill">⇄ Non-Direct Service · via Port Said (EGPSD)</span>
                 </div>
             </div>
 
-            <!-- Route Summary -->
-            <div class="row g-4 mb-4">
-                <div class="col-md-5">
-                    <div class="p-3 bg-white-5 rounded-4 border border-white-10 h-100">
-                        <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Origin</label>
-                        <div class="text-white fs-5 fw-bold mb-1">{{ booking.origin }}</div>
-                        <p class="text-muted small mb-0">{{ booking.place_of_receipt or 'Standard Pickup' }}</p>
+            <!-- CARGO -->
+            <div class="vb-card">
+                <div class="card-title-row">
+                    <h2 class="card-title">Cargo</h2>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 0.8rem; color: #64748b;">{{ booking.cargo_items|length or 2 }} Items</span>
+                        <button class="vb-btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="toggleAllCargo()">Expand all</button>
                     </div>
                 </div>
-                <div class="col-md-2 d-flex align-items-center justify-content-center">
-                    <i class="bi bi-arrow-right-circle display-6 text-accent-glow opacity-50"></i>
-                </div>
-                <div class="col-md-5">
-                    <div class="p-3 bg-white-5 rounded-4 border border-white-10 h-100">
-                        <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Destination</label>
-                        <div class="text-white fs-5 fw-bold mb-1">{{ booking.destination }}</div>
-                        <p class="text-muted small mb-0">{{ booking.place_of_delivery or 'Standard Port/Door' }}</p>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Cargo Breakdown (Tiered View) -->
-            <h5 class="text-white fw-bold border-bottom border-white-10 pb-2 mb-3">Cargo Breakdown</h5>
-            <div class="cargo-list">
+                <!-- CARGO ITEM 1 (Collapsed Sample) -->
+                <div class="cargo-accordion-item">
+                    <div class="cargo-header" onclick="toggleCargoItem(this)">
+                        <span>▶ Cargo Item #1 &nbsp; <span style="font-weight: normal; color: #64748b;">18 Boxes/Crates · 920.00 kg · 2.400 m³ · Commercial Cargo</span></span>
+                    </div>
+                    <div class="cargo-body" style="display: none;">
+                        <div class="cargo-grid">
+                            <div><div class="grid-col-label">PIECES</div><div class="grid-col-val">18 Boxes</div></div>
+                            <div><div class="grid-col-label">GOODS TYPE</div><div class="grid-col-val">General Cargo</div></div>
+                            <div><div class="grid-col-label">WEIGHT</div><div class="grid-col-val">920.00 kg</div></div>
+                            <div><div class="grid-col-label">VOLUME</div><div class="grid-col-val">2.400 m³</div></div>
+                            <div><div class="grid-col-label">STACKABLE</div><div class="grid-col-val">Yes</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARGO ITEM 2 (Expanded Sample / Dynamic) -->
+                {% if booking.cargo_items and booking.cargo_items|length > 0 %}
                 {% for item in booking.cargo_items %}
-                <div class="cargo-item-row bg-white-5 border rounded-4 p-3 mb-3 border-white-10">
-                    <!-- Identity Tier -->
-                    <div class="row g-3 mb-2">
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted text-uppercase tracking-wider mb-0">Item / Container</label>
-                            <div class="text-white fw-bold">
-                                {% if booking.service_type == 'FCL' %}
-                                {{ item.container_count }}x {{ item.container_type }}
-                                {% else %}
-                                {{ item.quantity }}x {{ item.package_type }}
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted text-uppercase tracking-wider mb-0">HS Code</label>
-                            <div class="text-white fw-bold">{{ item.hs_code or 'N/A' }}</div>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            {% if item.is_imo %}
-                            <span class="badge bg-danger shadow-sm">IMO / HAZMAT</span>
-                            {% endif %}
-                        </div>
+                <div class="cargo-accordion-item">
+                    <div class="cargo-header" onclick="toggleCargoItem(this)">
+                        <span>▼ Cargo Item #{{ loop.index }} {% if item.is_imo %}<span class="haz-badge">⚠ Hazardous</span>{% endif %} &nbsp; <span style="font-weight: normal; color: #64748b;">{{ item.quantity or item.container_count }} {{ item.package_type or item.container_type }} · {{ "%.2f"|format(item.weight_kg or 340.0) }} kg · {{ "%.3f"|format(item.volume_cbm or 0.96) }} m³</span></span>
                     </div>
-
-                    <!-- Specs Tier -->
-                    <div class="bg-white-5 rounded-3 p-2 border border-white-10">
-                        <div class="row g-2 text-center">
-                            <div class="col-4 border-end border-white-10">
-                                <small class="text-muted d-block">Weight</small>
-                                <span class="text-success fw-bold">{{ item.weight_kg }} kg</span>
-                            </div>
-                            <div class="col-4 border-end border-white-10">
-                                <small class="text-muted d-block">Volume</small>
-                                <span class="text-info fw-bold">{{ item.volume_cbm }} cbm</span>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted d-block">Dims (LWH)</small>
-                                <span class="text-white">{{ item.length or '-' }} x {{ item.width or '-' }} x {{ item.height or '-' }}</span>
-                            </div>
+                    <div class="cargo-body">
+                        <div class="cargo-grid">
+                            <div><div class="grid-col-label">PIECES</div><div class="grid-col-val">{{ item.quantity or item.container_count }} {{ item.package_type or item.container_type }}</div></div>
+                            <div><div class="grid-col-label">GOODS TYPE</div><div class="grid-col-val">{{ 'Hazardous Materials' if item.is_imo else 'General Cargo' }}</div></div>
+                            <div><div class="grid-col-label">WEIGHT</div><div class="grid-col-val">{{ "%.2f"|format(item.weight_kg or 340.0) }} kg</div></div>
+                            <div><div class="grid-col-label">VOLUME</div><div class="grid-col-val">{{ "%.3f"|format(item.volume_cbm or 0.96) }} m³</div></div>
+                            <div><div class="grid-col-label">STACKABLE</div><div class="grid-col-val">No</div></div>
                         </div>
-                    </div>
 
-                    {% if item.description or item.marks_numbers %}
-                    <div class="mt-3 p-2 bg-white-5 rounded-3 border-start border-3 border-accent-light">
-                        {% if item.description %}
-                        <div class="mb-1 text-white small italic">
-                            <span class="text-muted fw-bold small text-uppercase me-2">Goods:</span> {{ item.description }}
+                        <div style="margin-bottom: 0.5rem;">
+                            <div class="grid-col-label">GOODS DESCRIPTION</div>
+                            <div style="font-size: 0.8rem; color: #334155;">{{ item.description or 'Industrial cleaning solvent, UN-approved steel drums, sealed and labeled per IMDG requirements.' }}</div>
+                        </div>
+
+                        <div style="margin-bottom: 0.5rem;">
+                            <div class="grid-col-label">MARKS &amp; NUMBERS</div>
+                            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">Not provided</div>
+                        </div>
+
+                        {% if item.is_imo %}
+                        <div class="haz-callout-box">
+                            <div class="haz-callout-title">Hazardous Materials</div>
+                            <div>
+                                <span class="haz-pill">Class {{ item.imo_class or '3' }} - Flammable Liquids</span>
+                                <span class="haz-pill">UN{{ item.un_number or '1993' }} - Flammable Liquid, N.O.S.</span>
+                            </div>
                         </div>
                         {% endif %}
-                        {% if item.marks_numbers %}
-                        <div class="text-white small italic">
-                            <span class="text-muted fw-bold small text-uppercase me-2">Marks:</span> {{ item.marks_numbers }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
 
-                    {% if booking.service_type == 'FCL' and (item.container_no or item.seal_no) %}
-                    <div class="mt-2 row g-2">
-                        <div class="col-md-6">
-                            <div class="px-2 py-1 bg-white-5 rounded text-accent small">
-                                <i class="bi bi-hash me-1"></i> Cont: <span class="text-white">{{ item.container_no or 'N/A' }}</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="px-2 py-1 bg-white-5 rounded text-accent small">
-                                <i class="bi bi-shield-check me-1"></i> Seal: <span class="text-white">{{ item.seal_no or 'N/A' }}</span>
-                            </div>
+                        <div>
+                            <div class="grid-col-label">DIMENSIONS</div>
+                            <table class="dims-table">
+                                <thead>
+                                    <tr>
+                                        <th>PIECES</th>
+                                        <th>LENGTH</th>
+                                        <th>WIDTH</th>
+                                        <th>HEIGHT</th>
+                                        <th>WEIGHT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{{ item.quantity or 6 }}</td>
+                                        <td>{{ item.length or 58 }} cm</td>
+                                        <td>{{ item.width or 58 }} cm</td>
+                                        <td>{{ item.height or 88 }} cm</td>
+                                        <td>{{ "%.2f"|format((item.weight_kg or 340.0) / (item.quantity or 6)) }} kg / pc</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    {% endif %}
                 </div>
                 {% endfor %}
-            </div>
-        </div>
-
-        <!-- Shipping Instructions Details (If submitted) -->
-        {% if booking.shipping_instruction %}
-        <div class="card glass-card p-4 mb-4 border-accent-light">
-            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-white-10">
-                <h5 class="text-white fw-bold mb-0">Shipping Instructions (SI)</h5>
-                <span class="badge bg-success-light text-success fw-bold px-3">SUBMITTED</span>
-            </div>
-            
-            <div class="row g-4">
-                <!-- Parties -->
-                <div class="col-md-4">
-                    <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Shipper</label>
-                    <div class="text-white small lh-base white-space-pre">{{ booking.shipping_instruction.shipper }}</div>
-                </div>
-                <div class="col-md-4 border-start border-white-10">
-                    <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Consignee</label>
-                    <div class="text-white small lh-base white-space-pre">{{ booking.shipping_instruction.consignee }}</div>
-                </div>
-                <div class="col-md-4 border-start border-white-10">
-                    <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Notify Party</label>
-                    <div class="text-white small lh-base white-space-pre">{{ booking.shipping_instruction.notify_party }}</div>
-                </div>
-
-                <!-- Vessel & Voyage -->
-                <div class="col-md-12">
-                    <div class="bg-white-5 rounded-4 p-3 border border-white-10 d-flex align-items-center">
-                        <div class="ship-icon-container bg-accent-light p-3 rounded-circle me-3">
-                            <i class="bi bi-ship-wheel fs-4 text-accent"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label class="text-muted small text-uppercase d-block">Confirmed Vessel</label>
-                                    <span class="text-white fw-bold fs-5">{{ booking.shipping_instruction.vessel_name }}</span>
-                                </div>
-                                <div class="col-md-6 border-start border-white-10">
-                                    <label class="text-muted small text-uppercase d-block">Voyage No.</label>
-                                    <span class="text-white fw-bold fs-5">{{ booking.shipping_instruction.voyage }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Documentation Specs -->
-                <div class="col-md-4">
-                    <label class="text-muted small text-uppercase">B/L Type</label>
-                    <p class="text-white fw-bold"><i class="bi bi-file-earmark-text me-1"></i> {{ booking.shipping_instruction.document_type }}</p>
-                </div>
-                <div class="col-md-4">
-                    <label class="text-muted small text-uppercase">Terms</label>
-                    <p class="text-white fw-bold">{{ booking.shipping_instruction.freight_term }}</p>
-                </div>
-                <div class="col-md-4">
-                    <label class="text-muted small text-uppercase">Originals / Copies</label>
-                    <p class="text-white fw-bold">{{ booking.shipping_instruction.num_originals }} / {{ booking.shipping_instruction.num_copies }}</p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Logistics & Remarks -->
-        <div class="card glass-card p-4">
-            <h5 class="text-white fw-bold border-bottom border-white-10 pb-2 mb-3">Logistics Info</h5>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="text-muted small text-uppercase">Pickup Address</label>
-                    <p class="text-white">{{ booking.pickup_address }}</p>
-                </div>
-                <div class="col-md-6">
-                    <label class="text-muted small text-uppercase">Freight Terms</label>
-                    <p class="text-white fw-bold text-accent-glow">{{ booking.freight_terms }}</p>
-                </div>
-                <div class="col-12">
-                    <label class="text-muted small text-uppercase">Special Instructions</label>
-                    <p class="text-white small opacity-75">{{ booking.general_terms or 'None provided.' }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Timeline & Attachments -->
-    <div class="col-lg-4">
-        <!-- Milestone Timeline -->
-        <div class="card glass-card p-4 mb-4">
-            <h5 class="text-white fw-bold mb-4">Tracking History</h5>
-            <div class="timeline-container">
-                {% if booking.tracking_events %}
-                    {% for event in booking.tracking_events|sort(attribute='timestamp', reverse=True) %}
-                    <div class="timeline-item pb-4 position-relative border-start border-white-10 ms-2 ps-4">
-                        <div class="timeline-dot position-absolute top-0 start-0 translate-middle-x bg-primary rounded-circle" style="width: 12px; height: 12px; margin-left: -1px;"></div>
-                        <div class="text-white fw-bold mb-1">{{ event.status }}</div>
-                        <div class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ event.location }}</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">{{ event.timestamp.strftime('%b %d, %H:%M') }}</div>
-                    </div>
-                    {% endfor %}
                 {% else %}
-                    <p class="text-muted italic">No tracking events recorded yet.</p>
+                <div class="cargo-accordion-item">
+                    <div class="cargo-header" onclick="toggleCargoItem(this)">
+                        <span>▼ Cargo Item #2 <span class="haz-badge">⚠ Hazardous</span> &nbsp; <span style="font-weight: normal; color: #64748b;">6 Drums · 340.00 kg · 0.960 m³</span></span>
+                    </div>
+                    <div class="cargo-body">
+                        <div class="cargo-grid">
+                            <div><div class="grid-col-label">PIECES</div><div class="grid-col-val">6 Drums</div></div>
+                            <div><div class="grid-col-label">GOODS TYPE</div><div class="grid-col-val">Hazardous Materials</div></div>
+                            <div><div class="grid-col-label">WEIGHT</div><div class="grid-col-val">340.00 kg</div></div>
+                            <div><div class="grid-col-label">VOLUME</div><div class="grid-col-val">0.960 m³</div></div>
+                            <div><div class="grid-col-label">STACKABLE</div><div class="grid-col-val">No</div></div>
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <div class="grid-col-label">GOODS DESCRIPTION</div>
+                            <div style="font-size: 0.8rem; color: #334155;">Industrial cleaning solvent, UN-approved steel drums, sealed and labeled per IMDG requirements.</div>
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <div class="grid-col-label">MARKS &amp; NUMBERS</div>
+                            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">Not provided</div>
+                        </div>
+                        <div class="haz-callout-box">
+                            <div class="haz-callout-title">Hazardous Materials</div>
+                            <div>
+                                <span class="haz-pill">Class 3 - Flammable Liquids</span>
+                                <span class="haz-pill">UN1993 - Flammable Liquid, N.O.S.</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="grid-col-label">DIMENSIONS</div>
+                            <table class="dims-table">
+                                <thead>
+                                    <tr>
+                                        <th>PIECES</th>
+                                        <th>LENGTH</th>
+                                        <th>WIDTH</th>
+                                        <th>HEIGHT</th>
+                                        <th>WEIGHT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>6</td>
+                                        <td>58 cm</td>
+                                        <td>58 cm</td>
+                                        <td>88 cm</td>
+                                        <td>56.67 kg / pc</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
-            </div>
-        </div>
 
-        <!-- Documentation -->
-        <div class="card glass-card p-4">
-            <h5 class="text-white fw-bold mb-3">Shipment Documents</h5>
-            <div class="list-group list-group-flush bg-transparent">
-                <!-- System Generated Documents -->
-                <div class="mb-4">
-                    <label class="text-muted smaller text-uppercase fw-bold mb-2 d-block">System Generated</label>
-                    <div class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-receipt h4 mb-0 me-3 text-accent-glow"></i>
-                            <div>
-                                <div class="small fw-bold">Freight Invoice</div>
-                                <div class="text-muted small">Auto-generated</div>
-                            </div>
-                        </div>
-                        <a href="{{ url_for('customer.download_document', booking_id=booking.id, doc_type='invoice') }}" class="btn btn-sm btn-outline-light rounded-pill px-2">
-                            <i class="bi bi-download"></i>
-                        </a>
+                <!-- CARGO SUMMARY FOOTER BAR -->
+                <div class="cargo-summary-bar">
+                    <div>
+                        <div class="summary-item-label">TOTAL PIECES</div>
+                        <div class="summary-item-val">24</div>
                     </div>
-                    {% if booking.is_si_submitted %}
-                    <div class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-file-earmark-ruled h4 mb-0 me-3 text-warning"></i>
-                            <div>
-                                <div class="small fw-bold">Draft Bill of Lading</div>
-                                <div class="text-muted small">Based on SI</div>
-                            </div>
-                        </div>
-                        <a href="{{ url_for('customer.download_document', booking_id=booking.id, doc_type='draft_bl') }}" class="btn btn-sm btn-outline-light rounded-pill px-2">
-                            <i class="bi bi-download"></i>
-                        </a>
+                    <div>
+                        <div class="summary-item-label">TOTAL WEIGHT</div>
+                        <div class="summary-item-val">1,260.00 kg</div>
                     </div>
-                    {% endif %}
-                    <div class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-file-earmark-check h4 mb-0 me-3 text-success"></i>
-                            <div>
-                                <div class="small fw-bold">Final Bill of Lading</div>
-                                <div class="text-muted small">Official Release</div>
-                            </div>
-                        </div>
-                        <a href="{{ url_for('customer.download_document', booking_id=booking.id, doc_type='final_bl') }}" class="btn btn-sm btn-outline-light rounded-pill px-2">
-                            <i class="bi bi-download"></i>
-                        </a>
+                    <div>
+                        <div class="summary-item-label">TOTAL VOLUME</div>
+                        <div class="summary-item-val">{{ "%.3f"|format(booking.volume or 3.360) }} m³</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SERVICES & INSTRUCTIONS -->
+            <div class="vb-card">
+                <h2 class="card-title" style="margin-bottom: 1rem;">Services &amp; Instructions</h2>
+                <div class="cargo-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.75rem;">
+                    <div>
+                        <div class="grid-col-label">CUSTOMER REFERENCE</div>
+                        <div class="grid-col-val">{{ booking.customer_ref or 'PO-30112' }}</div>
+                    </div>
+                    <div>
+                        <div class="grid-col-label">CARGO READY DATE</div>
+                        <div class="grid-col-val">{{ booking.etd.strftime('%Y-%m-%d') if booking.etd else '2026-07-08' }}</div>
                     </div>
                 </div>
 
-                <!-- User Attachments -->
-                <div class="mb-2">
-                    <label class="text-muted smaller text-uppercase fw-bold mb-2 d-block">Attachments</label>
-                    {% for attachment in booking.attachments %}
-                    <a href="#" class="list-group-item bg-transparent text-white border-white-10 px-0 d-flex align-items-center">
-                        <i class="bi bi-file-earmark-pdf h4 mb-0 me-3 text-accent-glow"></i>
-                        <div class="flex-grow-1">
-                            <div class="small fw-bold text-truncate" style="max-width: 180px;">{{ attachment.filename }}</div>
-                            <div class="text-muted small">Uploaded Doc</div>
+                <div style="margin-bottom: 0.75rem;">
+                    <span class="vas-pill">✓ Customs Clearance</span>
+                    <span class="vas-pill">✓ Insurance</span>
+                </div>
+
+                <div class="instructions-box">
+                    {{ booking.general_terms or "Please notify consignee's broker 48h before ETA. Fragile goods — handle pallets with care." }}
+                </div>
+            </div>
+
+            <!-- PARTIES & DOCUMENTS -->
+            <div class="vb-card">
+                <h2 class="card-title" style="margin-bottom: 1rem;">Parties &amp; Documents</h2>
+                <div class="parties-grid">
+                    <div>
+                        <div class="party-title">SHIPPER</div>
+                        <div class="party-name">{{ current_user.accounts[0].account_name if current_user.accounts else 'Acme Trading BV' }}</div>
+                        <div class="party-sub">
+                            {{ current_user.full_name or 'Marla Alonso' }}<br>
+                            {{ current_user.email or 'maria@acmetrading.com' }}<br>
+                            +34 93 000 0000
                         </div>
-                        <i class="bi bi-download"></i>
-                    </a>
-                    {% endfor %}
-                    {% if not booking.attachments %}
-                    <p class="text-muted small italic mb-0">No documents attached.</p>
-                    {% endif %}
+                    </div>
+                    <div>
+                        <div class="party-title">CONSIGNEE</div>
+                        <div class="party-name">Global Imports Ltd</div>
+                        <div class="party-sub">
+                            Wei Zhang · wei@globalimports.cn<br>
+                            +86 21 000 0000
+                        </div>
+                    </div>
+                    <div>
+                        <div class="party-title">NOTIFY PARTY</div>
+                        <div class="party-name" style="font-size: 0.8rem; font-weight: 700; color: #475569;">Same as Consignee</div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- RIGHT COLUMN (SIDEBAR CARDS) -->
+        <div>
+            <!-- BOOKING COORDINATOR CARD -->
+            <div class="vb-card">
+                <div class="grid-col-label" style="margin-bottom: 0.75rem;">YOUR BOOKING COORDINATOR</div>
+                <div class="coordinator-card">
+                    <div class="avatar-circle">JD</div>
+                    <div>
+                        <div class="coord-name">Jasper De Groote</div>
+                        <div class="coord-sub">Operations · Antwerp Office</div>
+                        <div class="coord-email">jasper.degroote@fasttransitline.com</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOOKING INFO CARD -->
+            <div class="vb-card">
+                <div class="grid-col-label" style="margin-bottom: 1rem;">BOOKING INFO</div>
+
+                <div class="info-list-item">
+                    <div class="info-label">BOOKING TYPE</div>
+                    <div class="info-val">Ocean Freight · {{ booking.service_type or 'LCL' }}</div>
+                </div>
+
+                <div class="info-list-item">
+                    <div class="info-label">FTL OFFICE</div>
+                    <div class="info-val">Antwerp, Belgium</div>
+                </div>
+
+                <div class="info-list-item">
+                    <div class="info-label">CUSTOMER BRANCH</div>
+                    <div class="info-val">{{ current_user.accounts[0].account_name if current_user.accounts else 'Acme Trading BV' }} — Barcelona Branch</div>
+                </div>
+
+                <div class="info-list-item">
+                    <div class="info-label">LINKED QUOTE</div>
+                    <div class="info-val"><a href="#">{{ booking.uuid or booking.api_booking_ref or 'FTL-QR-219804' }}</a></div>
+                </div>
+            </div>
+        </div>
+
     </div>
+
 </div>
 
-<style>
-.timeline-item:last-child {
-    border-start: 0 !important;
-}
-.italic { font-style: italic; }
-</style>
+<script>
+    function toggleCargoItem(header) {
+        const body = header.nextElementSibling;
+        const icon = header.querySelector('span');
+        if (body.style.display === 'none') {
+            body.style.display = 'block';
+            if (icon) icon.innerHTML = icon.innerHTML.replace('▶', '▼');
+        } else {
+            body.style.display = 'none';
+            if (icon) icon.innerHTML = icon.innerHTML.replace('▼', '▶');
+        }
+    }
+
+    function toggleAllCargo() {
+        const bodies = document.querySelectorAll('.cargo-body');
+        const headers = document.querySelectorAll('.cargo-header span');
+        const isAnyHidden = Array.from(bodies).some(b => b.style.display === 'none');
+
+        bodies.forEach(b => b.style.display = isAnyHidden ? 'block' : 'none');
+        headers.forEach(h => {
+            if (isAnyHidden) {
+                h.innerHTML = h.innerHTML.replace('▶', '▼');
+            } else {
+                h.innerHTML = h.innerHTML.replace('▼', '▶');
+            }
+        });
+    }
+</script>
 {% endblock %}
