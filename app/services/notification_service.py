@@ -51,7 +51,13 @@ class NotificationService:
 
     @staticmethod
     def notify_all_parties(booking_id):
-        booking = Booking.query.get(booking_id)
+        if not booking_id: return {"success": False, "message": "Booking not found"}
+        ref_str = str(booking_id).strip()
+        booking = None
+        if ref_str.isdigit():
+            booking = Booking.query.get(int(ref_str))
+        if not booking:
+            booking = Booking.query.filter((Booking.api_booking_ref == ref_str) | (Booking.uuid == ref_str)).first()
         if not booking: return {"success": False, "message": "Booking not found"}
 
         # Fetch details from linked EDI if available

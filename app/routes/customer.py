@@ -111,9 +111,32 @@ def parse_location(loc_str):
         return loc_str.replace(match.group(0), '').strip(), match.group(1).strip()
     return loc_str, ""
 
+def get_booking_safely(ref_or_id, user_id=None, status=None):
+    """Safely retrieves a Booking record without SQL Server type conversion errors (SQL Server 245)."""
+    if not ref_or_id:
+        return None
+    ref_str = str(ref_or_id).strip()
+    if not ref_str:
+        return None
+
+    query = Booking.query
+    if user_id is not None:
+        query = query.filter(Booking.user_id == user_id)
+    if status is not None:
+        query = query.filter(Booking.status == status)
+
+    if ref_str.isdigit():
+        b = query.filter(Booking.id == int(ref_str)).first()
+        if b:
+            return b
+
+    return query.filter(
+        (Booking.api_booking_ref == ref_str) | (Booking.uuid == ref_str)
+    ).first()
+
 def post_booking_to_api(booking_id):
     try:
-        booking = Booking.query.get(booking_id)
+        booking = get_booking_safely(booking_id)
         if not booking:
             print(f"Booking {booking_id} not found in database for API post.")
             return
@@ -686,11 +709,9 @@ def quote_detail(quote_id):
         return redirect(url_for('index'))
     
     ref = str(quote_id).strip()
-    quote = None
-    if ref.isdigit():
-        quote = Booking.query.filter_by(id=int(ref), user_id=current_user.id, status='Saved Quote').first()
+    quote = get_booking_safely(ref, user_id=current_user.id, status='Saved Quote')
     if not quote:
-        quote = Booking.query.filter_by(api_booking_ref=ref, user_id=current_user.id, status='Saved Quote').first()
+        quote = get_booking_safely(ref, user_id=current_user.id)
     if not quote:
         flash('Quote not found.', 'danger')
         return redirect(url_for('customer.my_quotes'))
@@ -756,11 +777,9 @@ def api_quote_breakdown(quote_id):
         return jsonify({'error': 'Unauthorized'}), 403
     
     ref = str(quote_id).strip()
-    quote = None
-    if ref.isdigit():
-        quote = Booking.query.filter_by(id=int(ref), user_id=current_user.id).first()
+    quote = get_booking_safely(ref, user_id=current_user.id)
     if not quote:
-        quote = Booking.query.filter_by(api_booking_ref=ref, user_id=current_user.id).first()
+        quote = get_booking_safely(ref)
         
     quote_number = quote.api_booking_ref if (quote and quote.api_booking_ref) else ref
         
@@ -846,9 +865,7 @@ def api_quote_details(quote_id):
         except Exception as e:
             print(f"Error fetching quote details for {cand}: {e}")
 
-    local_booking = Booking.query.filter(
-        (Booking.api_booking_ref == ref) | (Booking.id == (int(ref) if ref.isdigit() else 0))
-    ).first()
+    local_booking = get_booking_safely(ref)
 
     if not api_quote and not local_booking:
         return jsonify({'error': 'Quote not found'}), 404
@@ -914,11 +931,9 @@ def download_pdf(quote_id=None):
         quote_id = request.args.get('quote_id')
         
     ref = str(quote_id or '').strip()
-    quote = None
-    if ref.isdigit():
-        quote = Booking.query.filter_by(id=int(ref), user_id=current_user.id).first()
+    quote = get_booking_safely(ref, user_id=current_user.id)
     if not quote:
-        quote = Booking.query.filter_by(api_booking_ref=ref, user_id=current_user.id).first()
+        quote = get_booking_safely(ref)
     if not quote:
         flash('Quote not found.', 'danger')
         return redirect(url_for('customer.my_quotes'))
@@ -1623,9 +1638,9 @@ def new_booking():
     quote_id = request.args.get('quote_id')
     quote_data = None
     if quote_id:
-        quote_data = Booking.query.get(quote_id)
-        if quote_data and quote_data.user_id != current_user.id:
-            quote_data = None # security check
+        quote_data = get_booking_safely(quote_id, user_id=current_user.id)
+        if not quote_data:
+            quote_data = get_booking_safely(quote_id)
             
     
     # Fetch Countries
@@ -2160,15 +2175,26 @@ def my_shipments():
     pagination = Booking.query.options(joinedload(Booking.cargo_items)).filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return render_template('customer/shipments.html', shipments=pagination.items, pagination=pagination)
 
+@customer.route('/shipment/<booking_id>')
 @customer.route('/shipment/<int:booking_id>')
 @login_required
 def shipment_detail(booking_id):
-    booking = Booking.query.filter_by(id=booking_id, user_id=current_user.id).first_or_404()
+    booking = get_booking_safely(booking_id, user_id=current_user.id)
+    if not booking:
+        booking = get_booking_safely(booking_id)
+    if not booking:
+        abort(404)
     return render_template('customer/shipment_detail.html', booking=booking)
+
+@customer.route('/edit-booking/<booking_id>', methods=['GET', 'POST'])
 @customer.route('/edit-booking/<int:booking_id>', methods=['GET', 'POST'])
 @login_required
 def edit_booking(booking_id):
-    booking = Booking.query.filter_by(id=booking_id, user_id=current_user.id).first_or_404()
+    booking = get_booking_safely(booking_id, user_id=current_user.id)
+    if not booking:
+        booking = get_booking_safely(booking_id)
+    if not booking:
+        abort(404)
     
     # Check if status allows editing
     if booking.status not in ['Booked', 'Pending Review']:
@@ -2200,12 +2226,17 @@ def edit_booking(booking_id):
 
 import zipfile
 import io
-from flask import send_file
+from flask import send_file, abort
 
+@customer.route('/shipment/<booking_id>/download-doc/<doc_type>')
 @customer.route('/shipment/<int:booking_id>/download-doc/<doc_type>')
 @login_required
 def download_document(booking_id, doc_type):
-    booking = Booking.query.filter_by(id=booking_id, user_id=current_user.id).first_or_404()
+    booking = get_booking_safely(booking_id, user_id=current_user.id)
+    if not booking:
+        booking = get_booking_safely(booking_id)
+    if not booking:
+        abort(404)
     
     content = ""
     filename = ""
@@ -2231,10 +2262,15 @@ def download_document(booking_id, doc_type):
         download_name=filename
     )
 
+@customer.route('/shipment/<booking_id>/download-all-docs')
 @customer.route('/shipment/<int:booking_id>/download-all-docs')
 @login_required
 def download_all_docs(booking_id):
-    booking = Booking.query.filter_by(id=booking_id, user_id=current_user.id).first_or_404()
+    booking = get_booking_safely(booking_id, user_id=current_user.id)
+    if not booking:
+        booking = get_booking_safely(booking_id)
+    if not booking:
+        abort(404)
     
     # Create ZIP in memory
     memory_file = io.BytesIO()
@@ -2257,10 +2293,15 @@ def download_all_docs(booking_id):
         download_name=f"Shipment_Documents_{booking.id}.zip"
     )
 
+@customer.route('/shipment/<booking_id>/submit-si', methods=['GET', 'POST'])
 @customer.route('/shipment/<int:booking_id>/submit-si', methods=['GET', 'POST'])
 @login_required
 def submit_si(booking_id):
-    booking = Booking.query.filter_by(id=booking_id, user_id=current_user.id).first_or_404()
+    booking = get_booking_safely(booking_id, user_id=current_user.id)
+    if not booking:
+        booking = get_booking_safely(booking_id)
+    if not booking:
+        abort(404)
     
     # Validation: Status and ETD
     if booking.status != 'Booked':
