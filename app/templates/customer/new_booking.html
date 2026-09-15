@@ -2009,6 +2009,85 @@
             dest: null
         };
 
+        function extractCountryCode(locStr, countryStr) {
+            if (countryStr && String(countryStr).trim().length === 2) {
+                return String(countryStr).trim().toUpperCase();
+            }
+            if (countryStr && typeof apiCountries !== 'undefined') {
+                const found = apiCountries.find(c => c.name && c.name.toLowerCase() === String(countryStr).trim().toLowerCase());
+                if (found) return found.code;
+            }
+
+            const str = String(locStr || '').trim();
+            if (!str) return '';
+
+            // Match UN/LOCODE in parentheses e.g. "Antwerp (BEANR)" or "(BE)"
+            const parentMatch = str.match(/\(([^)]+)\)/);
+            if (parentMatch) {
+                const codeInParen = parentMatch[1].trim();
+                if (codeInParen.length === 2) return codeInParen.toUpperCase();
+                if (codeInParen.length >= 5) return codeInParen.substring(0, 2).toUpperCase();
+            }
+
+            // Match standalone 5-letter UN/LOCODE e.g. "BEANR", "SGSIN"
+            const words = str.split(/[\s,–-]+/);
+            for (const w of words) {
+                const clean = w.replace(/[^A-Za-z]/g, '');
+                if (clean.length === 5 && clean === clean.toUpperCase()) {
+                    const country2 = clean.substring(0, 2);
+                    if (typeof apiCountries !== 'undefined' && apiCountries.some(c => c.code === country2)) {
+                        return country2;
+                    }
+                    return country2;
+                }
+            }
+
+            // Match 2-letter country code at end or after comma e.g. "Antwerp, BE"
+            if (words.length > 1) {
+                const lastWord = words[words.length - 1].replace(/[^A-Za-z]/g, '').toUpperCase();
+                if (lastWord.length === 2 && typeof apiCountries !== 'undefined' && apiCountries.some(c => c.code === lastWord)) {
+                    return lastWord;
+                }
+            }
+
+            // Match country name in apiCountries
+            if (typeof apiCountries !== 'undefined') {
+                const lowerStr = str.toLowerCase();
+                for (const c of apiCountries) {
+                    if (c.name && lowerStr.includes(c.name.toLowerCase())) {
+                        return c.code;
+                    }
+                }
+            }
+
+            // Common city dictionary fallback
+            const cityCountryMap = {
+                'antwerp': 'BE', 'anr': 'BE', 'zeebrugge': 'BE',
+                'singapore': 'SG', 'sin': 'SG',
+                'rotterdam': 'NL', 'amsterdam': 'NL',
+                'hamburg': 'DE', 'bremerhaven': 'DE',
+                'shanghai': 'CN', 'ningbo': 'CN', 'shenzhen': 'CN', 'qingdao': 'CN', 'tianjin': 'CN', 'guangzhou': 'CN', 'xiamen': 'CN', 'hong kong': 'HK',
+                'nhava sheva': 'IN', 'mumbai': 'IN', 'mundra': 'IN', 'chennai': 'IN', 'delhi': 'IN', 'pipavav': 'IN',
+                'los angeles': 'US', 'long beach': 'US', 'new york': 'US', 'savannah': 'US', 'houston': 'US', 'chicago': 'US',
+                'busan': 'KR', 'incheon': 'KR',
+                'tokyo': 'JP', 'yokohama': 'JP', 'kobe': 'JP',
+                'barcelona': 'ES', 'valencia': 'ES',
+                'le havre': 'FR', 'marseille': 'FR',
+                'felixstowe': 'GB', 'southampton': 'GB', 'london': 'GB',
+                'dubai': 'AE', 'jebel ali': 'AE',
+                'port klang': 'MY', 'penang': 'MY'
+            };
+
+            const lower = str.toLowerCase();
+            for (const [city, code] of Object.entries(cityCountryMap)) {
+                if (lower.includes(city)) {
+                    return code;
+                }
+            }
+
+            return '';
+        }
+
         function handleLocationTypeChange(locationType) {
             const type = document.getElementById(locationType + 'Type').value;
             const label = document.getElementById(locationType + 'LocationLabel');
@@ -2187,8 +2266,10 @@
                             route: `${qData.origin} → ${qData.destination}`,
                             price: 'Saved Quote',
                             originType: 'port',
+                            originCountry: extractCountryCode(qData.origin, qData.origin_country),
                             originLocation: qData.origin,
                             destType: 'port',
+                            destCountry: extractCountryCode(qData.destination, qData.dest_country),
                             destLocation: qData.destination,
                             readyDate: qData.cargo_ready_date,
                             pieces: qData.cargo && qData.cargo.length > 0 ? qData.cargo[0].pieces : 1,
@@ -2439,38 +2520,37 @@
             document.getElementById('linkedPrice').textContent = q.price;
             
             // Extract country from location if not provided
-            let orgCountry = q.originCountry;
-            let destCountry = q.destCountry;
-            
-            // Extract from UNCODE e.g., (ESBCN) -> ES
-            const orgMatch = q.originLocation.match(/\(([^)]+)\)/);
-            if (orgMatch && !orgCountry) orgCountry = orgMatch[1].substring(0, 2);
-            
-            const destMatch = q.destLocation.match(/\(([^)]+)\)/);
-            if (destMatch && !destCountry) destCountry = destMatch[1].substring(0, 2);
+            let orgCountry = extractCountryCode(q.originLocation, q.originCountry);
+            let destCountry = extractCountryCode(q.destLocation, q.destCountry);
 
             // Prefill route
             document.getElementById('originType').value = q.originType || 'port';
             handleLocationTypeChange('origin');
             const oc = document.getElementById('originCountry');
-            if (oc && orgCountry) oc.value = orgCountry;
+            if (oc && orgCountry) {
+                oc.value = orgCountry;
+            }
             
             const ol = document.getElementById('originLocation');
             if (ol) ol.value = q.originLocation;
-            if (orgCountry) {
-                 selectedLocations.origin = { name: q.originLocation.split('(')[0].trim(), code: orgMatch ? orgMatch[1].trim() : '' };
-            }
+            
+            const orgMatch = q.originLocation.match(/\(([^)]+)\)/);
+            const orgCode = orgMatch ? orgMatch[1].trim() : (q.originLocation.trim().length === 5 ? q.originLocation.trim() : '');
+            selectedLocations.origin = { name: q.originLocation.split('(')[0].trim(), code: orgCode };
 
             document.getElementById('destType').value = q.destType || 'port';
             handleLocationTypeChange('dest');
             const dc = document.getElementById('destCountry');
-            if (dc && destCountry) dc.value = destCountry;
+            if (dc && destCountry) {
+                dc.value = destCountry;
+            }
             
             const dl = document.getElementById('destLocation');
             if (dl) dl.value = q.destLocation;
-            if (destCountry) {
-                 selectedLocations.dest = { name: q.destLocation.split('(')[0].trim(), code: destMatch ? destMatch[1].trim() : '' };
-            }
+            
+            const destMatch = q.destLocation.match(/\(([^)]+)\)/);
+            const destCode = destMatch ? destMatch[1].trim() : (q.destLocation.trim().length === 5 ? q.destLocation.trim() : '');
+            selectedLocations.dest = { name: q.destLocation.split('(')[0].trim(), code: destCode };
 
             document.getElementById('originFromQuoteTag').style.display = 'inline-block';
             document.getElementById('destFromQuoteTag').style.display = 'inline-block';
@@ -3342,10 +3422,10 @@
                     route: holder.dataset.route,
                     price: "N/A",
                     originType: "port",
-                    originCountry: "", // We could map country codes if available
+                    originCountry: extractCountryCode(holder.dataset.origin, holder.dataset.origincountry || ''),
                     originLocation: holder.dataset.origin,
                     destType: "port",
-                    destCountry: "",
+                    destCountry: extractCountryCode(holder.dataset.dest, holder.dataset.destcountry || ''),
                     destLocation: holder.dataset.dest,
                     pieces: 1,
                     packageType: "pallets",
