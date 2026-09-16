@@ -1388,8 +1388,11 @@ def rates():
         except Exception as e:
             flash(f"API Error: {str(e)}", "danger")
             return redirect(url_for('customer.rates'))
-    query_data = session.get('search_query', {})
+    query_data = {}
     quote_id = request.args.get('quote_id')
+    origin_param = request.args.get('origin')
+    dest_param = request.args.get('destination')
+
     if quote_id:
         quote = get_booking_safely(quote_id, user_id=current_user.id)
         if not quote:
@@ -1426,6 +1429,18 @@ def rates():
                 'totalVolume': quote.volume or 0,
                 'quote_id': quote.api_booking_ref or quote.id
             }
+    elif origin_param or dest_param:
+        org_country = _parse_cc(origin_param, None) if origin_param else ''
+        dest_country = _parse_cc(dest_param, None) if dest_param else ''
+        query_data = {
+            'origin': origin_param or '',
+            'destination': dest_param or '',
+            'origin_type': 'port',
+            'dest_type': 'port',
+            'origin_country': org_country,
+            'dest_country': dest_country,
+            'service': request.args.get('service', 'LCL')
+        }
 
     freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
     return render_template('customer/rates.html',

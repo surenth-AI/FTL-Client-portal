@@ -4056,13 +4056,74 @@ document.addEventListener('DOMContentLoaded', function() {
                 const rv = document.getElementById('routeValue');
                 if (rv) rv.textContent = `${savedQuery.origin} → ${savedQuery.destination}`;
             }
+
+            if (savedQuery.cargoItems && savedQuery.cargoItems.length > 0) {
+                const container = document.getElementById('cargoItems');
+                if (container) container.innerHTML = '';
+                cargoItemCounter = 0;
+                savedQuery.cargoItems.forEach(item => {
+                    addCargoItem();
+                    const itemId = `cargo-${cargoItemCounter}`;
+                    setTimeout(() => {
+                        const el = document.getElementById(itemId);
+                        if (el) {
+                            if (item.pieces) {
+                                const qEl = el.querySelector('input[name="item_qty[]"]');
+                                if (qEl) qEl.value = item.pieces;
+                            }
+                            if (item.type) {
+                                const tEl = el.querySelector('select[name="item_type[]"]');
+                                if (tEl) tEl.value = item.type;
+                            }
+                            if (item.length) {
+                                const lEl = el.querySelector('input[name="item_length[]"]');
+                                if (lEl) lEl.value = item.length;
+                            }
+                            if (item.width) {
+                                const wEl = el.querySelector('input[name="item_width[]"]');
+                                if (wEl) wEl.value = item.width;
+                            }
+                            if (item.height) {
+                                const hEl = el.querySelector('input[name="item_height[]"]');
+                                if (hEl) hEl.value = item.height;
+                            }
+                            if (item.weight) {
+                                const wtEl = el.querySelector('input[name="item_weight[]"]');
+                                if (wtEl) wtEl.value = item.weight;
+                            }
+                            if (item.volume) {
+                                const vEl = el.querySelector('input[name="item_volume[]"]');
+                                if (vEl) vEl.value = item.volume;
+                            }
+                            if (item.desc) {
+                                const dEl = el.querySelector('input[name="item_desc[]"]');
+                                if (dEl) dEl.value = item.desc;
+                            }
+                            if (item.goods_type) {
+                                const goodsSel = el.querySelector('select[name="goods_type[]"]');
+                                if (goodsSel) {
+                                    goodsSel.value = item.goods_type;
+                                    goodsSel.dispatchEvent(new Event('change'));
+                                    if (item.goods_type.toLowerCase() === 'hazardous') {
+                                        const unEl = el.querySelector('input[name="item_imo_un[]"]');
+                                        if (unEl) unEl.value = item.imo_un || '';
+                                        const clsEl = el.querySelector('input[name="item_imo_class[]"]');
+                                        if (clsEl) clsEl.value = item.imo_class || '';
+                                    }
+                                }
+                            }
+                        }
+                    }, 50);
+                });
+            }
         }
     } catch(err) {
         console.warn("Could not restore saved search query:", err);
     }
     {% endif %}
 
-    if (typeof addCargoItem === 'function') {
+    const existingCargo = document.querySelectorAll('.cargo-item');
+    if (existingCargo.length === 0 && typeof addCargoItem === 'function') {
         addCargoItem();
     }
 });
