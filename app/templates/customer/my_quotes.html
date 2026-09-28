@@ -71,6 +71,7 @@
 <script>
     let currentQuotes = [];
     let currentPage = 1;
+    let currentPerPage = 10;
     let currentStatus = 'all';
 
     async function loadQuotes(page = 1) {
@@ -93,7 +94,7 @@
             const validOn = urlParams.get('validOn') || '';
             const traffic = urlParams.get('trafficType') || '';
             
-            const response = await fetch(`/customer/api/my-quotes?page=${page}&reference=${ref}&validOn=${validOn}&trafficType=${traffic}`);
+            const response = await fetch(`/customer/api/my-quotes?page=${page}&per_page=${currentPerPage}&reference=${ref}&validOn=${validOn}&trafficType=${traffic}`);
             if (response.ok) {
                 const data = await response.json();
                 currentQuotes = data.quotes || [];
@@ -266,33 +267,54 @@
             return;
         }
         
-        let html = '<ul class="pagination justify-content-center">';
+        let html = '<div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-3">';
+        
+        // Rows per page
+        html += `<div class="d-flex align-items-center">
+                    <span class="text-muted small me-2">Rows per page:</span>
+                    <select class="form-select form-select-sm border-0 shadow-sm rounded bg-white text-dark w-auto" 
+                            onchange="updateQuotesPerPage(this.value)">
+                        <option value="10" ${currentPerPage == 10 ? 'selected' : ''}>10</option>
+                        <option value="25" ${currentPerPage == 25 ? 'selected' : ''}>25</option>
+                        <option value="50" ${currentPerPage == 50 ? 'selected' : ''}>50</option>
+                        <option value="100" ${currentPerPage == 100 ? 'selected' : ''}>100</option>
+                    </select>
+                 </div>`;
+
+        html += '<nav aria-label="Pagination"><ul class="pagination d-flex align-items-center justify-content-center m-0" style="gap: 0.25rem;">';
         
         // Previous button
         if (data.has_prev) {
-            html += `<li class="page-item"><button class="page-link" onclick="loadQuotes(${data.page - 1})">« Prev</button></li>`;
+            html += `<li class="page-item m-0"><button class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2" onclick="loadQuotes(${data.page - 1})">← Previous</button></li>`;
         } else {
-            html += `<li class="page-item disabled"><span class="page-link">« Prev</span></li>`;
+            html += `<li class="page-item disabled m-0"><span class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2">← Previous</span></li>`;
         }
         
-        // Page numbers
+        // Page numbers container
+        html += `<div class="d-flex" style="gap: 0.25rem;">`;
         for (let i = 1; i <= data.pages; i++) {
             if (i === data.page) {
-                html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                html += `<li class="page-item active"><span class="page-link shadow-sm rounded border-0 bg-primary text-white fw-bold">${i}</span></li>`;
             } else {
-                html += `<li class="page-item"><button class="page-link" onclick="loadQuotes(${i})">${i}</button></li>`;
+                html += `<li class="page-item"><button class="page-link shadow-sm rounded border-0 bg-white text-dark" onclick="loadQuotes(${i})">${i}</button></li>`;
             }
         }
+        html += `</div>`;
         
         // Next button
         if (data.has_next) {
-            html += `<li class="page-item"><button class="page-link" onclick="loadQuotes(${data.page + 1})">Next »</button></li>`;
+            html += `<li class="page-item m-0"><button class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2" onclick="loadQuotes(${data.page + 1})">Next →</button></li>`;
         } else {
-            html += `<li class="page-item disabled"><span class="page-link">Next »</span></li>`;
+            html += `<li class="page-item disabled m-0"><span class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2">Next →</span></li>`;
         }
         
-        html += '</ul>';
+        html += '</ul></nav></div>';
         nav.innerHTML = html;
+    }
+
+    function updateQuotesPerPage(value) {
+        currentPerPage = parseInt(value);
+        loadQuotes(1);
     }
 
     function clearLocalPagination() {
