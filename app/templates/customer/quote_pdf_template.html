@@ -246,13 +246,17 @@
     <table class="header-table">
         <tr>
             <td style="width: 55%; vertical-align: top;">
+                {% if logo_abs_path %}
+                <img src="{{ logo_abs_path }}" style="max-height: 50px; max-width: 200px; object-fit: contain;" alt="Company Logo">
+                {% else %}
                 <div class="logo-main"><span class="logo-ftl">F+L</span> Fast Transit Line</div>
                 <div class="logo-sub">Freight forwarding &amp; logistics</div>
+                {% endif %}
             </td>
             <td style="width: 45%; text-align: right; vertical-align: top;">
                 <div class="quote-label">QUOTATION</div>
                 <div class="quote-number">{{ header.quoteNumber or quote.api_booking_ref or ('FTL-QR-' ~ quote.id) }}</div>
-                <div class="quote-dates">Issued {{ header.validFrom or quote.created_at.strftime('%d %b %Y') }} &nbsp;•&nbsp; Valid until {{ header.validUntil or quote.valid_until or '31 Jul 2026' }}</div>
+                <div class="quote-dates">Issued {{ header.validFrom or quote.created_at.strftime('%d %b %Y') }} &nbsp;•&nbsp; Valid until {{ header.validUntil or quote.valid_until or '' }}</div>
             </td>
         </tr>
     </table>
@@ -262,37 +266,76 @@
         <tr>
             <td class="col-cell" style="width: 50%;">
                 <div class="section-heading">PREPARED FOR</div>
-                <div class="val-bold">{{ current_user.accounts[0].account_name if current_user.accounts else (current_user.full_name or 'Sodimax Logistic Services') }}</div>
-                <div class="val-sub">Attn: {{ current_user.full_name or 'Daniele Vezzoso' }}</div>
+                <div class="val-bold">{{ company_name or (current_user.company.name if current_user and current_user.company else current_user.name) }}</div>
+                {% if current_user and current_user.name %}
+                <div class="val-sub">Attn: {{ header.contactName or current_user.name }}</div>
+                {% endif %}
             </td>
             <td class="col-cell" style="width: 50%;">
+                {% if prepared_by_name or prepared_by_email %}
                 <div class="section-heading">PREPARED BY</div>
-                <div class="val-bold">Christel Sanders</div>
-                <div class="val-sub">christel.sanders@ftl-logistics.com &nbsp;•&nbsp; +32 3 205 6152</div>
+                <div class="val-bold">{{ prepared_by_name }}</div>
+                <div class="val-sub">{% if prepared_by_email %}{{ prepared_by_email }}{% endif %}{% if prepared_by_phone %} &nbsp;•&nbsp; {{ prepared_by_phone }}{% endif %}</div>
+                {% endif %}
             </td>
         </tr>
     </table>
 
     <!-- ROUTING -->
-    <table style="width: 100%; margin-top: 4px; margin-bottom: 2px;">
-        <tr>
-            <td class="section-heading">ROUTING</td>
-            <td style="text-align: right;"><span class="incoterm-pill">{{ header.incoTerm or header.incoterm or 'CFR' }}</span></td>
-        </tr>
-    </table>
-    <div class="routing-box">
-        <table style="width: 100%;">
+    <div style="border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding-top: 6px; padding-bottom: 8px; margin-top: 8px; margin-bottom: 8px;">
+        <table style="width: 100%; margin-bottom: 4px;">
             <tr>
-                <td style="width: 35%; vertical-align: middle;">
-                    <div class="port-title">{{ quote.origin or header.polLocation or 'Antwerpen' }}</div>
-                    <div class="port-sub">PORT OF LOADING</div>
+                <td class="section-heading" style="font-size: 7.5pt; font-weight: bold; color: #64748b; letter-spacing: 0.5px;">ROUTING</td>
+                <td style="text-align: right;">
+                    <span style="background-color: #e0f2fe; color: #0369a1; font-size: 7.5pt; font-weight: bold; padding: 2px 8px; border-radius: 10px; display: inline-block;">{{ header.incoTerm or header.incoterm or quote.incoterm or 'CFR' }}</span>
                 </td>
-                <td style="width: 30%; text-align: center; vertical-align: middle;">
-                    <div class="via-text">• • • 🚢 via {{ transit_port or 'Singapore' }} • • •</div>
+            </tr>
+        </table>
+        
+        <table style="width: 100%; vertical-align: middle;">
+            <tr>
+                <!-- POL -->
+                <td style="width: 30%; vertical-align: middle;">
+                    <div style="font-size: 11pt; font-weight: bold; color: #0f172a; line-height: 1.1;">{{ quote.origin or header.polLocation or '' }}</div>
+                    <div style="font-size: 6.5pt; color: #94a3b8; font-weight: bold; letter-spacing: 0.4px; margin-top: 2px;">PORT OF LOADING</div>
                 </td>
-                <td style="width: 35%; text-align: right; vertical-align: middle;">
-                    <div class="port-title">{{ quote.destination or header.podLocation or 'Hong Kong' }}</div>
-                    <div class="port-sub">PORT OF DISCHARGE</div>
+                
+                <!-- Green Dot -->
+                <td style="width: 2%; vertical-align: middle; text-align: center;">
+                    <span style="color: #059669; font-size: 10pt; line-height: 1;">●</span>
+                </td>
+                
+                {% if transit_port %}
+                <!-- Dotted Line Left -->
+                <td style="width: 16%; vertical-align: middle;">
+                    <div style="border-bottom: 1.5px dotted #94a3b8; height: 1px; width: 100%; margin-top: 2px;"></div>
+                </td>
+                
+                <!-- Center Via Port -->
+                <td style="width: 24%; text-align: center; vertical-align: middle;">
+                    <div style="font-size: 8.5pt; color: #0f172a;"><span style="font-size: 6pt; color: #0f172a;">■</span> via <strong>{{ transit_port }}</strong></div>
+                </td>
+                
+                <!-- Dotted Line Right -->
+                <td style="width: 16%; vertical-align: middle;">
+                    <div style="border-bottom: 1.5px dotted #94a3b8; height: 1px; width: 100%; margin-top: 2px;"></div>
+                </td>
+                {% else %}
+                <!-- Dotted Line Full Center -->
+                <td style="width: 56%; vertical-align: middle;">
+                    <div style="border-bottom: 1.5px dotted #94a3b8; height: 1px; width: 100%; margin-top: 2px;"></div>
+                </td>
+                {% endif %}
+                
+                <!-- Dark Dot -->
+                <td style="width: 2%; vertical-align: middle; text-align: center;">
+                    <span style="color: #0f172a; font-size: 10pt; line-height: 1;">●</span>
+                </td>
+                
+                <!-- POD -->
+                <td style="width: 30%; text-align: right; vertical-align: middle;">
+                    <div style="font-size: 11pt; font-weight: bold; color: #0f172a; line-height: 1.1;">{{ quote.destination or header.podLocation or '' }}</div>
+                    <div style="font-size: 6.5pt; color: #94a3b8; font-weight: bold; letter-spacing: 0.4px; margin-top: 2px;">PORT OF DISCHARGE</div>
                 </td>
             </tr>
         </table>
@@ -314,20 +357,20 @@
             {% if commodities and commodities|length > 0 %}
             {% for c in commodities %}
             <tr>
-                <td><strong>{{ c.nrPackages or 1 }}</strong> {{ c.packageCode or c.packageTypeDescription or 'Pallet' }}</td>
+                <td><strong>{{ c.nrPackages or 1 }}</strong> {{ c.packageCode or c.packageTypeDescription or 'Pkg' }}</td>
                 <td>{{ c.commodityDescription or 'General Cargo' }}</td>
-                <td>{% if c.dimensions and c.dimensions.length %}{{ c.dimensions.length }} × {{ c.dimensions.width }} × {{ c.dimensions.height }}{% else %}120 × 80 × 180{% endif %}</td>
+                <td>{% if c.dimensions and c.dimensions.length %}{{ c.dimensions.length }} × {{ c.dimensions.width }} × {{ c.dimensions.height }}{% else %}-{% endif %}</td>
                 <td style="text-align: right;">{{ "{:,.2f}".format(c.weight or 0) }} kg</td>
                 <td style="text-align: right;">{{ "{:,.2f}".format(c.volume or 0) }} m³</td>
             </tr>
             {% endfor %}
             {% else %}
             <tr>
-                <td><strong>1</strong> Package</td>
-                <td>General Cargo</td>
-                <td>120 × 80 × 180</td>
-                <td style="text-align: right;">{{ "{:,.2f}".format(quote.weight or 500) }} kg</td>
-                <td style="text-align: right;">{{ "{:,.2f}".format(quote.volume or 1.5) }} m³</td>
+                <td><strong>{{ quote.packages or 1 }}</strong> Pkg</td>
+                <td>{{ quote.commodity or 'General Cargo' }}</td>
+                <td>-</td>
+                <td style="text-align: right;">{% if quote.weight %}{{ "{:,.2f}".format(quote.weight) }} kg{% else %}-{% endif %}</td>
+                <td style="text-align: right;">{% if quote.volume %}{{ "{:,.2f}".format(quote.volume) }} m³{% else %}-{% endif %}</td>
             </tr>
             {% endif %}
         </tbody>
@@ -368,15 +411,15 @@
             {% else %}
             <tr>
                 <td>Ocean freight</td>
-                <td>USD 17.00</td>
-                <td>1.50 / W/M</td>
+                <td>{{ quotation_currency or 'USD' }} {{ "%.2f"|format(total_cost or quote.total_cost or 0.0) }}</td>
+                <td>1 / Lumpsum</td>
                 <td>1.00</td>
-                <td style="text-align: right;">25.50</td>
+                <td style="text-align: right;">{{ "%.2f"|format(total_cost or quote.total_cost or 0.0) }}</td>
             </tr>
             {% endif %}
             <tr class="subtotal-row">
                 <td colspan="4" style="text-align: right;">Subtotal</td>
-                <td style="text-align: right;">{{ "%.2f"|format(ocean_subtotal or 25.50) }}</td>
+                <td style="text-align: right;">{{ "%.2f"|format(ocean_subtotal or total_cost or quote.total_cost or 0.0) }}</td>
             </tr>
         </tbody>
     </table>
@@ -420,7 +463,7 @@
     <table class="data-table">
         <thead>
             <tr class="cat-row">
-                <td colspan="4">Origin &amp; destination charges</td>
+                <td colspan="4">Local charges</td>
                 <td style="text-align: right; font-size: 7.5pt; font-weight: normal; color: #475569;">EUR</td>
             </tr>
             <tr>
@@ -458,9 +501,11 @@
             </tr>
         </table>
     </div>
+    {% if exchange_rate_val %}
     <div style="font-size: 7.5pt; color: #64748b; margin-top: 3px;">
-        Rate of exchange is indicative and subject to change without notice. {{ quotation_currency or 'EUR' }} 1.00 = USD {{ "%.2f"|format(ocean_lines[0].exchangeRate if ocean_lines and ocean_lines[0].exchangeRate else 0.87) }}, applied at time of quotation.
+        Rate of exchange is indicative and subject to change without notice. {{ from_curr }} 1.00 = {{ to_curr }} {{ "%.4f"|format(exchange_rate_val) }}, applied at time of quotation.
     </div>
+    {% endif %}
 
 
     <!-- ================= PAGE 2 ================= -->
@@ -470,8 +515,12 @@
     <table class="header-table">
         <tr>
             <td style="width: 55%; vertical-align: top;">
+                {% if logo_abs_path %}
+                <img src="{{ logo_abs_path }}" style="max-height: 50px; max-width: 200px; object-fit: contain;" alt="Company Logo">
+                {% else %}
                 <div class="logo-main"><span class="logo-ftl">F+L</span> Fast Transit Line</div>
                 <div class="logo-sub">Freight forwarding &amp; logistics</div>
+                {% endif %}
             </td>
             <td style="width: 45%; text-align: right; vertical-align: top;">
                 <div class="quote-label">QUOTATION</div>
@@ -483,30 +532,40 @@
     <!-- REMARKS -->
     <div class="section-heading">REMARKS</div>
     <div style="font-size: 8.5pt; color: #1e293b; line-height: 1.35; margin-bottom: 4px;">
-        • Ocean freight validity: {{ header.validFrom or (quote.created_at.strftime('%d %b %Y') if quote and quote.created_at else '22 Jul 2026') }} – {{ header.validUntil or (quote.valid_until if quote else '31 Jul 2026') }}<br>
+        {% if header.validFrom or header.validUntil or (quote and quote.created_at) %}
+        • Ocean freight validity: {{ header.validFrom or (quote.created_at.strftime('%d %b %Y') if quote and quote.created_at else '') }} – {{ header.validUntil or (quote.valid_until if quote else '') }}<br>
+        {% endif %}
         • Surcharges and fuel charges are valid at time of shipment
     </div>
+    {% if header.quoteNumber or (quote and quote.api_booking_ref) %}
     <div class="callout-box-green">
-        • Quote reference {{ header.quoteNumber or (quote.api_booking_ref if quote else 'FTL-QR-241173') }} is active for valid period
+        • Quote reference {{ header.quoteNumber or quote.api_booking_ref }} is active for valid period
     </div>
+    {% endif %}
 
+    {% if header.pickupRemarks or header.pickup_remarks %}
     <!-- PICK-UP -->
-    <div class="section-heading" style="margin-top: 8px;">PICK-UP</div>
+    <div class="section-heading" style="margin-top: 8px;">PICK-UP REMARKS</div>
     <div class="callout-box-blue">
-        ⏱ Free time for pick-up: 30 minutes
+        {{ header.pickupRemarks or header.pickup_remarks }}
     </div>
+    {% endif %}
 
+    {% if header.generalRemarks or header.remarks %}
     <!-- GENERAL REMARKS -->
-    <div class="section-heading" style="margin-top: 8px;">REMARKS</div>
-    <div style="font-size: 8.5pt; color: #64748b; font-style: italic; margin-bottom: 8px;">
-        No general remarks for this quotation.
+    <div class="section-heading" style="margin-top: 8px;">GENERAL REMARKS</div>
+    <div style="font-size: 8.5pt; color: #1e293b; margin-bottom: 8px;">
+        {{ header.generalRemarks or header.remarks }}
     </div>
+    {% endif %}
 
+    {% if header.destinationRemarks %}
     <!-- REMARKS FOR DESTINATION -->
-    <div class="section-heading" style="margin-top: 8px;">REMARKS FOR {{ (quote.destination if quote and quote.destination else (header.podLocation or 'HONG KONG')).upper() }}</div>
-    <div style="font-size: 8.5pt; color: #64748b; font-style: italic; margin-bottom: 8px;">
-        No destination-specific remarks.
+    <div class="section-heading" style="margin-top: 8px;">REMARKS FOR {{ (quote.destination or header.podLocation or '').upper() }}</div>
+    <div style="font-size: 8.5pt; color: #1e293b; margin-bottom: 8px;">
+        {{ header.destinationRemarks }}
     </div>
+    {% endif %}
 
     <!-- TERMS & CONDITIONS -->
     <div class="section-heading" style="margin-top: 10px;">TERMS &amp; CONDITIONS</div>
@@ -537,7 +596,7 @@
 
     <div class="tc-subtitle">Governing terms</div>
     <ul class="tc-list">
-        <li>LCL — our Bill of Lading terms and conditions apply, available at <strong>ftl-logistics.com/terms</strong></li>
+        <li>LCL — our Bill of Lading terms and conditions apply{% if system_terms_url %}, available at <a href="{{ system_terms_url }}" target="_blank" style="color:inherit;text-decoration:underline;"><strong>{{ system_terms_url }}</strong></a>{% else %}, available at <strong>ftl-logistics.com/terms</strong>{% endif %}</li>
         <li>FCL, air &amp; other services — all activities are subject to the general conditions of the Belgian Forwarding Agents Federation. By accepting this offer, the co-contractor recognizes and agrees that these general conditions are legally binding on both parties.</li>
     </ul>
 

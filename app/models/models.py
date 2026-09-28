@@ -405,6 +405,8 @@ class SystemSetting(db.Model):
     login_banner_path = db.Column(db.String(255), default='img/login_hero.png')
     default_layout = db.Column(db.String(50), default='sidebar') # sidebar, topbar
     typography = db.Column(db.String(100), default='Inter')
+    terms_conditions_url = db.Column(db.String(500), nullable=True)
+
 
     # SMTP Configuration
     smtp_server = db.Column(db.String(255), nullable=True)

@@ -430,7 +430,7 @@ def api_my_quotes():
                 else:
                     computed_status = 'Active'
                     
-                quote_currency = header.get('currency') or item.get('currency') or q_item.get('currency') or tariff.get('quotationCurrency') or 'USD'
+                quote_currency = header.get('currency') or item.get('currency') or q_item.get('currency') or tariff.get('quotationCurrency') or ''
                 
                 # Resolve cargo details for quote card display
                 c_vol = 0.0
@@ -492,8 +492,8 @@ def api_my_quotes():
                     'destination': destination,
                     'total_cost': total_cost,
                     'currency': quote_currency,
-                    'selected_nvocc': header.get('nvoccName') or header.get('carrierName') or item.get('customerName') or '—',
-                    'service_type': "LCL" if "LCL" in str(header.get('freightTransportType') or item.get('freightType') or '').upper() else "FCL",
+                    'selected_nvocc': header.get('nvoccName') or header.get('carrierName') or item.get('customerName') or '',
+                    'service_type': "LCL" if "LCL" in str(header.get('freightTransportType') or item.get('freightType') or '').upper() else ("FCL" if "FCL" in str(header.get('freightTransportType') or item.get('freightType') or '').upper() else ""),
                     'service_name': header.get('serviceName') or header.get('serviceLevel') or '',
                     'api_booking_ref': api_booking_ref,
                     'created_at': created_at.strftime('%d %b %Y'),
@@ -1034,6 +1034,7 @@ def download_pdf(quote_id=None):
     for l in breakdown:
         cg = (l.get('articleCostGroup') or '').upper()
         aname = (l.get('articleName') or '').upper()
+        # FC = Freight Charge (Ocean Freight), AC = Additional Charge (Surcharges), LC/OC/DC = Local/Origin/Destination Charges
         if cg == 'FC' or 'OCEAN FREIGHT' in aname or 'FREIGHT' in aname:
             ocean_lines.append(l)
         elif cg == 'AC' or 'SURCHARGE' in aname or 'FUEL' in aname or 'EBAF' in aname or 'ETS' in aname:
@@ -1049,6 +1050,59 @@ def download_pdf(quote_id=None):
         total_cost = float(quote.total_cost)
 
     quotation_currency = tariff.get('quotationCurrency') if isinstance(tariff, dict) else (header.get('currency') or 'USD')
+
+    # Extract dynamic Rate of Exchange (ROE) and target currency from API payload
+    exchange_rate_val = None
+    from_curr = quotation_currency or 'EUR'
+    to_curr = 'USD' if from_curr == 'EUR' else 'EUR'
+
+    if header.get('roe1') and float(header.get('roe1')) > 0:
+        exchange_rate_val = float(header.get('roe1'))
+        if header.get('cur1'): to_curr = header.get('cur1')
+    elif header.get('roe2') and float(header.get('roe2')) > 0:
+        exchange_rate_val = float(header.get('roe2'))
+        if header.get('cur2'): to_curr = header.get('cur2')
+
+    if not exchange_rate_val:
+        for l in breakdown:
+            r = float(l.get('exchangeRate') or 0.0)
+            if r > 0 and r != 1.0:
+                exchange_rate_val = r
+                if l.get('currency') and l.get('currency') != from_curr:
+                    to_curr = l.get('currency')
+                break
+
+    if not exchange_rate_val:
+        for l in breakdown:
+            r = float(l.get('exchangeRate') or 0.0)
+            if r > 0:
+                exchange_rate_val = r
+                break
+
+    import os
+    from app import get_cached_system_settings
+    settings_data = get_cached_system_settings()
+    logo_rel = settings_data.get('logo_path', 'img/logo.png')
+    logo_abs_path = os.path.join(current_app.root_path, 'static', logo_rel)
+    if not os.path.exists(logo_abs_path):
+        logo_abs_path = os.path.join(current_app.root_path, 'static', 'img', 'logo.png')
+
+    system_terms_url = settings_data.get('terms_conditions_url', '')
+
+    company_name = (header.get('customerName') or header.get('companyName') or 
+                    (current_user.company.name if (hasattr(current_user, 'company') and current_user.company) else None) or 
+                    (current_user.accounts[0].account_name if current_user.accounts else None) or 
+                    current_user.name)
+
+    prepared_by_name = (header.get('preparedBy') or header.get('salesPerson') or header.get('createdBy') or '')
+    prepared_by_email = (header.get('salesPersonEmail') or header.get('createdByEmail') or '')
+    prepared_by_phone = (header.get('salesPersonPhone') or header.get('createdByPhone') or '')
+
+    routing_data = header.get('routing', {}) if isinstance(header, dict) else {}
+    transit_port = (header.get('viaPort') or header.get('transshipmentPort') or 
+                    routing_data.get('viaPort') or routing_data.get('transshipmentPort') or '')
+    if not transit_port and sailings and isinstance(sailings, list) and len(sailings) > 0:
+        transit_port = sailings[0].get('viaPort') or sailings[0].get('transshipmentPort') or ''
 
     from xhtml2pdf import pisa
     from io import BytesIO
@@ -1068,7 +1122,17 @@ def download_pdf(quote_id=None):
         local_subtotal=local_subtotal,
         total_cost=total_cost,
         quotation_currency=quotation_currency,
-        breakdown=breakdown
+        breakdown=breakdown,
+        logo_abs_path=logo_abs_path,
+        system_terms_url=system_terms_url,
+        company_name=company_name,
+        prepared_by_name=prepared_by_name,
+        prepared_by_email=prepared_by_email,
+        prepared_by_phone=prepared_by_phone,
+        exchange_rate_val=exchange_rate_val,
+        from_curr=from_curr,
+        to_curr=to_curr,
+        transit_port=transit_port
     )
     
     pdf = BytesIO()
@@ -1348,6 +1412,8 @@ def rates():
                     'destination': dest_str,
                     'volume': sum(c.get('volume', 0) for c in payload['cargo']),
                     'service_type': service_type,
+                    'transport_mode': request.form.get('transport_mode', 'ocean').lower(),
+                    'movement_type': request.form.get('movement_type', 'PORT_TO_PORT'),
                     'cargo_items': payload['cargo'],
                     'cargo_ready_date': valid_from,
                     'traffic_type': traffic_type,
@@ -1392,6 +1458,7 @@ def rates():
     quote_id = request.args.get('quote_id')
     origin_param = request.args.get('origin')
     dest_param = request.args.get('destination')
+    modify_param = request.args.get('modify')
 
     if quote_id:
         quote = get_booking_safely(quote_id, user_id=current_user.id)
@@ -1401,19 +1468,36 @@ def rates():
             cargo_items = []
             if quote.cargo_items:
                 for item in quote.cargo_items:
+                    imo_un = getattr(item, 'un_number', '') or getattr(item, 'imo_un', '') or ''
+                    imo_class = getattr(item, 'imo_class', '') or ''
+                    if imo_un == 'string': imo_un = ''
+                    if imo_class == 'string': imo_class = ''
+                    is_haz = getattr(item, 'is_imo', False) or getattr(item, 'is_hazardous', False) or bool(imo_un)
                     cargo_items.append({
-                        'pieces': item.quantity or 1,
-                        'type': item.package_type or 'BX',
-                        'length': item.length_cm or '',
-                        'width': item.width_cm or '',
-                        'height': item.height_cm or '',
-                        'weight': item.weight_kg or '',
-                        'volume': item.volume_cbm or '',
-                        'desc': item.description or 'General Cargo',
-                        'goods_type': 'Hazardous' if item.is_imo else 'General',
-                        'imo_un': item.un_number or '',
-                        'imo_class': item.imo_class or ''
+                        'pieces': getattr(item, 'quantity', 1) or getattr(item, 'pieces', 1) or 1,
+                        'type': getattr(item, 'package_type', 'PX') or 'PX',
+                        'length': getattr(item, 'length', '') or '',
+                        'width': getattr(item, 'width', '') or '',
+                        'height': getattr(item, 'height', '') or '',
+                        'weight': getattr(item, 'weight_kg', '') or getattr(item, 'weight', '') or '',
+                        'volume': getattr(item, 'volume_cbm', '') or getattr(item, 'volume', '') or '',
+                        'desc': getattr(item, 'general_description', None) or getattr(item, 'description', None) or 'General Cargo',
+                        'goods_type': 'hazardous' if is_haz else 'commercial',
+                        'imo_un': imo_un,
+                        'imo_class': imo_class
                     })
+            if not cargo_items:
+                # Fallback if no individual items exist
+                cargo_items.append({
+                    'pieces': getattr(quote, 'pieces', getattr(quote, 'quantity', 1)) or 1,
+                    'type': 'PX',
+                    'length': '', 'width': '', 'height': '',
+                    'weight': getattr(quote, 'weight', getattr(quote, 'total_weight', 0)),
+                    'volume': getattr(quote, 'volume', getattr(quote, 'total_volume', 0)),
+                    'desc': 'General Cargo',
+                    'goods_type': 'commercial',
+                    'imo_un': '', 'imo_class': ''
+                })
             org_country = _parse_cc(quote.origin, None)
             dest_country = _parse_cc(quote.destination, None)
             query_data = {
@@ -1424,11 +1508,115 @@ def rates():
                 'origin_country': org_country,
                 'dest_country': dest_country,
                 'service': quote.service_type or 'LCL',
+                'transport_mode': getattr(quote, 'transport_mode', 'ocean') or 'ocean',
+                'movement_type': getattr(quote, 'movement_type', 'PORT_TO_PORT') or 'PORT_TO_PORT',
+                'traffic_type': getattr(quote, 'traffic_type', 'EX') or 'EX',
+                'incoterm': getattr(quote, 'incoterm', '') or '',
+                'freight_terms': getattr(quote, 'freight_terms', '') or '',
                 'cargo_ready_date': quote.created_at.strftime('%Y-%m-%d') if quote.created_at else '',
                 'cargoItems': cargo_items,
                 'totalVolume': quote.volume or 0,
                 'quote_id': quote.api_booking_ref or quote.id
             }
+
+        if not query_data:
+            quote_number = str(quote_id).strip()
+            headers = {'accept': 'application/json', 'x-api-key': '1'}
+            customer_id = None
+            if hasattr(current_user, 'accounts') and current_user.accounts:
+                try: customer_id = int(current_user.accounts[0].account_id)
+                except: pass
+            params = {'accountId': customer_id} if customer_id else {}
+            
+            candidates = [quote_number]
+            if quote_number.isdigit():
+                candidates.extend([f"QUO-2026-{quote_number}", f"26-TDR-{quote_number}"])
+                
+            header = {}
+            commodities = []
+            for cand in candidates:
+                try:
+                    resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{cand}", params=params, headers=headers, timeout=5)
+                    if resp.status_code == 200:
+                        resp_json = resp.json()
+                        data = resp_json.get('quotation', resp_json)
+                        header = data.get('header', {})
+                        commodities = data.get('commodities') or data.get('freightDetails') or data.get('freight_details') or []
+                        break
+                except Exception as e:
+                    print(f"Failed to fetch quotation for rerun {cand}:", e)
+            
+            if header or commodities:
+                routing = header.get('routing', {}) if isinstance(header, dict) else {}
+                pol_name = routing.get('polLocation') or routing.get('porLocation') or header.get('polLocation') or ''
+                pod_name = routing.get('podLocation') or routing.get('delLocation') or header.get('podLocation') or ''
+                pol_code = routing.get('polLocode') or routing.get('porLocode') or ''
+                pod_code = routing.get('podLocode') or routing.get('delLocode') or ''
+                
+                pol_full = f"{pol_name} ({pol_code})" if pol_code and '(' not in pol_name else pol_name
+                pod_full = f"{pod_name} ({pod_code})" if pod_code and '(' not in pod_name else pod_name
+                
+                cargo_items = []
+                for c in commodities:
+                    dims = c.get('dimensions', {}) if isinstance(c.get('dimensions'), dict) else {}
+                    imo = c.get('imo', {}) if isinstance(c.get('imo'), dict) else {}
+                    imo_un = imo.get('un') or c.get('imo_un') or c.get('un_number') or ''
+                    imo_class = imo.get('class') or c.get('imo_class') or ''
+                    if imo_un == 'string': imo_un = ''
+                    if imo_class == 'string': imo_class = ''
+                    is_haz = c.get('isHazardous') or bool(imo_un)
+                    
+                    cargo_items.append({
+                        'pieces': c.get('nrPackages') or c.get('pieceCount') or c.get('quantity') or 1,
+                        'type': c.get('packageCode') or c.get('packageTypeDescription') or 'PX',
+                        'length': dims.get('length') or c.get('length') or '',
+                        'width': dims.get('width') or c.get('width') or '',
+                        'height': dims.get('height') or c.get('height') or '',
+                        'weight': c.get('weight') or '',
+                        'volume': c.get('volume') or '',
+                        'desc': c.get('commodityDescription') or c.get('desc') or 'General Cargo',
+                        'goods_type': 'hazardous' if is_haz else 'commercial',
+                        'imo_un': imo_un,
+                        'imo_class': imo_class
+                    })
+                if not cargo_items:
+                    cargo_items.append({
+                        'pieces': header.get('totalPackages') or header.get('totalPieces') or 1,
+                        'type': 'PX',
+                        'length': '', 'width': '', 'height': '',
+                        'weight': header.get('totalWeight') or header.get('weight') or '',
+                        'volume': header.get('totalVolume') or header.get('volume') or '',
+                        'desc': 'General Cargo',
+                        'goods_type': 'commercial',
+                        'imo_un': '', 'imo_class': ''
+                    })
+
+                org_country = _parse_cc(pol_full, None)
+                dest_country = _parse_cc(pod_full, None)
+                pm = header.get('paymentMethod', '')
+                f_terms = 'prepaid' if pm == 'PP' else ('collect' if pm == 'CC' else '')
+                
+                query_data = {
+                    'origin': pol_full,
+                    'destination': pod_full,
+                    'origin_type': 'port',
+                    'dest_type': 'port',
+                    'origin_country': org_country,
+                    'dest_country': dest_country,
+                    'service': 'FCL' if header.get('freightTransportType') == 'FCL' else 'LCL',
+                    'transport_mode': 'air' if str(header.get('freightTransportMode')) == '20' else 'ocean',
+                    'movement_type': 'PORT_TO_PORT',
+                    'traffic_type': header.get('trafficType') or 'EX',
+                    'incoterm': header.get('incoTerm') or 'CFR',
+                    'freight_terms': f_terms,
+                    'cargo_ready_date': (header.get('validFrom') or '')[:10],
+                    'cargoItems': cargo_items,
+                    'totalVolume': sum(float(c.get('volume') or 0) for c in commodities if c.get('volume')),
+                    'quote_id': quote_number
+                }
+
+        if query_data:
+            session['search_query'] = query_data
     elif origin_param or dest_param:
         org_country = _parse_cc(origin_param, None) if origin_param else ''
         dest_country = _parse_cc(dest_param, None) if dest_param else ''
@@ -1441,6 +1629,57 @@ def rates():
             'dest_country': dest_country,
             'service': request.args.get('service', 'LCL')
         }
+    elif modify_param == '1' or session.get('search_query'):
+        sq = session.get('search_query') or {}
+        if sq:
+            org_country = _parse_cc(sq.get('origin'), None) if sq.get('origin') else ''
+            dest_country = _parse_cc(sq.get('destination'), None) if sq.get('destination') else ''
+            
+            c_items = []
+            if sq.get('cargo_items'):
+                for ci in sq.get('cargo_items'):
+                    dims = ci.get('dimensions', {}) if isinstance(ci.get('dimensions'), dict) else {}
+                    imo = ci.get('imo', {}) if isinstance(ci.get('imo'), dict) else {}
+                    # Filter out 'string' API placeholder values from IMO fields
+                    imo_un = imo.get('un') or ci.get('imo_un') or ci.get('un_number') or ''
+                    imo_class = imo.get('class') or ci.get('imo_class') or ''
+                    if imo_un == 'string': imo_un = ''
+                    if imo_class == 'string': imo_class = ''
+                    is_haz = ci.get('isHazardous') or ci.get('is_imo') or bool(imo_un)
+                    c_items.append({
+                        'pieces': ci.get('pieceCount') or ci.get('pieces') or ci.get('quantity') or ci.get('nrPackages') or 1,
+                        'type': ci.get('packageType') or ci.get('type') or ci.get('packageCode') or 'PX',
+                        'length': dims.get('length') or ci.get('length') or '',
+                        'width': dims.get('width') or ci.get('width') or '',
+                        'height': dims.get('height') or ci.get('height') or '',
+                        'weight': ci.get('weight') or ci.get('weight_kg') or '',
+                        'volume': ci.get('volume') or ci.get('volume_cbm') or '',
+                        'desc': ci.get('commodityDescription') or ci.get('desc') or ci.get('description') or 'General Cargo',
+                        'goods_type': 'hazardous' if is_haz else 'commercial',
+                        'imo_un': imo_un,
+                        'imo_class': imo_class
+                    })
+
+
+            query_data = {
+                'origin': sq.get('origin') or '',
+                'destination': sq.get('destination') or '',
+                'origin_type': 'port',
+                'dest_type': 'port',
+                'origin_country': org_country,
+                'dest_country': dest_country,
+                'service': sq.get('service_type') or 'LCL',
+                'transport_mode': sq.get('transport_mode') or 'ocean',
+                'movement_type': sq.get('movement_type') or 'PORT_TO_PORT',
+                'cargo_ready_date': sq.get('cargo_ready_date') or '',
+                'cargoItems': c_items,
+                'totalVolume': sq.get('volume') or 0,
+                'traffic_type': sq.get('traffic_type') or 'EX',
+                'incoterm': sq.get('incoterm') or '',
+                'freight_terms': sq.get('freight_terms') or '',
+                'customer_reference': sq.get('customer_reference') or '',
+                'special_instructions': sq.get('special_instructions') or ''
+            }
 
     freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
     return render_template('customer/rates.html',

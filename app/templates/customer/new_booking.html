@@ -1953,7 +1953,7 @@
                         <div class="terms-confirm">
                             <input type="checkbox" id="termsCheck">
                             <label for="termsCheck">I confirm the information provided is accurate and I agree to Fast
-                                Transit Line's <a href="#">Terms &amp; Conditions</a> and <a href="#">Booking
+                                Transit Line's <a href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>Terms &amp; Conditions</a> and <a href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>Booking
                                     Policy</a>.</label>
                         </div>
 

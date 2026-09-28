@@ -680,9 +680,11 @@
                     </div>
                 </div>
 
+                {% if booking.via_port or via_port %}
                 <div>
-                    <span class="service-badge-pill">⇄ Non-Direct Service · via Port Said (EGPSD)</span>
+                    <span class="service-badge-pill">⇄ Non-Direct Service · via {{ booking.via_port or via_port }}</span>
                 </div>
+                {% endif %}
             </div>
 
             <!-- CARGO -->

@@ -58,7 +58,7 @@
             {% if 'pending' in s_status %}
                 {% set status_cat = 'pending' %}
                 {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>PENDING REVIEW</span>' %}
-                {% set status_sub = 'Submitted ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_sub = 'Created on ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
                 {% set status_note = 'Awaiting office confirmation' %}
             {% elif 'confirm' in s_status or 'booked' in s_status %}
                 {% set status_cat = 'confirmed' %}
@@ -78,19 +78,16 @@
             {% else %}
                 {% set status_cat = 'pending' %}
                 {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ (shipment.status | upper) ~ '</span>' %}
-                {% set status_sub = 'Submitted ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_sub = 'Created on ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
                 {% set status_note = 'Awaiting office confirmation' %}
             {% endif %}
 
-            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else ('BR-2026-' ~ '%05d'|format(shipment.id)) %}
-            {% set parent_quote = shipment.customer_ref if shipment.customer_ref else ('From FTL-QR-' ~ (shipment.id + 540000)) %}
-            {% set po_num = shipment.po_number if (shipment.po_number is defined and shipment.po_number) else ('PO-' ~ (shipment.id + 40000)) %}
-
+            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else '-' %}
+            {% set parent_quote = shipment.customer_ref %}
             <div class="offer-card shipment-card-item"
                  data-status="{{ status_cat }}"
                  data-ref="{{ ref_code | lower }}"
-                 data-parent-quote="{{ parent_quote | lower }}"
-                 data-po="{{ po_num | lower }}"
+                 data-parent-quote="{{ (parent_quote or '') | lower }}"
                  data-route="{{ (shipment.origin ~ ' ' ~ shipment.destination) | lower }}"
                  data-carrier="{{ (shipment.selected_nvocc or '') | lower }}"
                  data-created="{{ shipment.created_at.timestamp() }}"
@@ -104,9 +101,11 @@
                         <div class="ref-eyebrow">
                             <span class="ref-code">{{ ref_code }}</span>
                         </div>
+                        {% if parent_quote %}
                         <div class="parent-quote-badge">
                             📌 {{ parent_quote }}
                         </div>
+                        {% endif %}
                     </div>
 
                     <div class="status-right-col">
@@ -131,24 +130,28 @@
 
                         <!-- Routing Meta Badges -->
                         <div class="routing-meta" style="margin-top: 0.4rem;">
-                            <span class="meta-pill time">📦 {{ shipment.service_type or 'LCL' }}</span>
-                            <span class="meta-pill direct">⚡ Direct Service</span>
-                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name or 'MSC Anna' }} · Voy {{ shipment.voyage_number or '224W' }} · 12 days transit</span>
+                            {% if shipment.service_type %}
+                            <span class="meta-pill time">📦 {{ shipment.service_type }}</span>
+                            {% endif %}
+                            {% if shipment.vessel_name or shipment.voyage_number %}
+                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name if shipment.vessel_name else '-' }} {{ ('· Voy ' ~ shipment.voyage_number) if shipment.voyage_number else '' }}</span>
+                            {% endif %}
                         </div>
 
                         <!-- Logistics Timeline Dates Row: ETD, ETA, Cargo ready, PO -->
                         <div class="timeline-row">
                             <div class="timeline-item">
-                                ETD <strong>{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '2026-07-10' }}</strong>
+                                ETD <strong>{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '-' }}</strong>
                             </div>
                             <div class="timeline-item">
-                                ETA <strong>{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '2026-07-22' }}</strong>
+                                ETA <strong>{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '-' }}</strong>
                             </div>
                             <div class="timeline-item">
-                                Cargo ready <strong>{{ shipment.created_at.strftime('%Y-%m-%d') }}</strong>
+                                Cargo ready <strong>-</strong>
                             </div>
+
                             <div class="timeline-item">
-                                PO <strong>{{ po_num }}</strong>
+                                Ref <strong>{{ shipment.customer_ref if shipment.customer_ref else '-' }}</strong>
                             </div>
                         </div>
                     </div>

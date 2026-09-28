@@ -28,7 +28,8 @@ def get_cached_system_settings():
                     'logo_path': settings.logo_path or 'img/logo.png',
                     'login_banner_path': settings.login_banner_path or 'img/login_hero.png',
                     'default_layout': settings.default_layout or 'sidebar',
-                    'typography': settings.typography or 'Inter'
+                    'typography': settings.typography or 'Inter',
+                    'terms_conditions_url': settings.terms_conditions_url or ''
                 }
             else:
                 _settings_cache['data'] = {
@@ -36,7 +37,8 @@ def get_cached_system_settings():
                     'logo_path': 'img/logo.png',
                     'login_banner_path': 'img/login_hero.png',
                     'default_layout': 'sidebar',
-                    'typography': 'Inter'
+                    'typography': 'Inter',
+                    'terms_conditions_url': ''
                 }
         except Exception:
             return {
@@ -44,7 +46,8 @@ def get_cached_system_settings():
                 'logo_path': 'img/logo.png',
                 'login_banner_path': 'img/login_hero.png',
                 'default_layout': 'sidebar',
-                'typography': 'Inter'
+                'typography': 'Inter',
+                'terms_conditions_url': ''
             }
         _settings_cache['expires_at'] = now + 300 # Cache for 5 minutes
     return _settings_cache['data']
@@ -199,6 +202,7 @@ def create_app(config_class=Config):
         banner = settings_data.get('login_banner_path', 'img/login_hero.png')
         layout = settings_data.get('default_layout', 'sidebar')
         typography = settings_data.get('typography', 'Inter')
+        terms_url = settings_data.get('terms_conditions_url', '')
         
         logo_url = url_for('static', filename=logo)
         banner_url = url_for('static', filename=banner) if banner else url_for('static', filename='img/login_hero.png')
@@ -207,7 +211,8 @@ def create_app(config_class=Config):
             'system_logo_url': logo_url,
             'system_banner_url': banner_url,
             'system_layout': layout,
-            'system_typography': typography
+            'system_typography': typography,
+            'system_terms_url': terms_url
         }
 
     from app.routes.auth import auth

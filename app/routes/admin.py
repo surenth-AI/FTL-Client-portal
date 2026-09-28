@@ -369,6 +369,9 @@ def settings():
                 logo_file.save(save_path)
                 sys_settings.logo_path = 'img/' + filename
                 
+            # Handle Terms & Conditions URL
+            sys_settings.terms_conditions_url = request.form.get('terms_conditions_url') or None
+                
             # Handle Login Panel Banner Upload
             if banner_file and banner_file.filename != '':
                 filename = secure_filename(banner_file.filename)

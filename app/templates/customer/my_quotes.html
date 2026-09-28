@@ -137,7 +137,7 @@
                         let actionHtml = '';
                         if (c_status === 'Booked') {
                             actionHtml = `
-                                <div class="booking-no">Booking No.<br><strong>${q.api_booking_ref || 'BK-FTL-' + q.id}</strong></div>
+                                ${q.api_booking_ref ? `<div class="booking-no">Booking No.<br><strong>${q.api_booking_ref}</strong></div>` : ''}
                                 <a href="#" class="mq-btn mq-btn-view-booking" onclick="alert('View Booking feature pending backend support')">View Booking →</a>
                             `;
                         } else if (c_status === 'Expired') {
@@ -175,14 +175,14 @@
                                 <div class="offer-main">
                                     <div class="offer-price-block">
                                         <div class="price-label">Total</div>
-                                        <div class="price-amount"><span class="currency">${q.currency || 'USD'}</span> ${formatPrice}</div>
+                                        <div class="price-amount">${q.currency ? `<span class="currency">${q.currency}</span> ` : ''}${formatPrice}</div>
                                         ${validText}
                                     </div>
                                     
                                     <div class="offer-details">
                                         <div class="carrier-row">
                                             <div class="carrier-text">
-                                                <div class="carrier-name">${q.selected_nvocc || '—'}</div>
+                                                ${q.selected_nvocc ? `<div class="carrier-name">${q.selected_nvocc}</div>` : ''}
                                                 ${q.service_name ? `<div class="service-name">${q.service_name}</div>` : ''}
                                             </div>
                                         </div>
@@ -214,7 +214,7 @@
                                 
                                 <div class="offer-footer">
                                     <div class="footer-links">
-                                        <a class="terms-link" href="#">📄 Terms &amp; conditions ↗</a>
+                                        <a class="terms-link" href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>📄 Terms &amp; conditions ↗</a>
                                         <span style="color:var(--mq-border-color);">|</span>
                                         <button onclick="toggleQuoteBreakdown('${refCode}', this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
                                         <span style="color:var(--mq-border-color);">|</span>

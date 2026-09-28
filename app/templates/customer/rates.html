@@ -4057,6 +4057,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (rv) rv.textContent = `${savedQuery.origin} → ${savedQuery.destination}`;
             }
 
+            // Restore transport mode (ocean/air) and service type (lcl/fcl)
+            if (savedQuery.transport_mode) {
+                const mode = savedQuery.transport_mode.toLowerCase();
+                if (typeof selectTransportMode === 'function') selectTransportMode(mode);
+            }
+            if (savedQuery.service) {
+                const svc = savedQuery.service.toLowerCase();
+                if (typeof selectCargoType === 'function') selectCargoType(svc);
+            }
+            // Restore movement type
+            if (savedQuery.movement_type) {
+                const movEl = document.getElementById('hidden_movement_type');
+                if (movEl) movEl.value = savedQuery.movement_type;
+            }
+
             if (savedQuery.cargoItems && savedQuery.cargoItems.length > 0) {
                 const container = document.getElementById('cargoItems');
                 if (container) container.innerHTML = '';
@@ -4067,31 +4082,47 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         const el = document.getElementById(itemId);
                         if (el) {
-                            if (item.pieces) {
+                            if (item.pieces !== undefined && item.pieces !== null) {
                                 const qEl = el.querySelector('input[name="item_qty[]"]');
                                 if (qEl) qEl.value = item.pieces;
                             }
-                            if (item.type) {
+                            if (item.type !== undefined && item.type !== null && item.type !== '') {
                                 const tEl = el.querySelector('select[name="item_type[]"]');
-                                if (tEl) tEl.value = item.type;
+                                if (tEl) {
+                                    tEl.value = item.type;
+                                    if (!tEl.value && tEl.options) {
+                                        const typeLower = item.type.toLowerCase();
+                                        let matched = false;
+                                        for (let i = 0; i < tEl.options.length; i++) {
+                                            const opt = tEl.options[i];
+                                            if (opt.value && (opt.text.toLowerCase().includes(typeLower) || opt.value.toLowerCase() === typeLower)) {
+                                                tEl.value = opt.value;
+                                                matched = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!matched) {
+                                            if (typeLower.includes('carton') || typeLower.includes('box') || typeLower.includes('piece') || typeLower.includes('pkg')) tEl.value = 'BX';
+                                            else if (typeLower.includes('pallet') || typeLower.includes('skid')) tEl.value = 'PX';
+                                            else if (tEl.options.length > 1) tEl.value = tEl.options[1].value;
+                                        }
+                                    }
+                                }
                             }
-                            if (item.length) {
-                                const lEl = el.querySelector('input[name="item_length[]"]');
-                                if (lEl) lEl.value = item.length;
+                            if ((item.length && parseFloat(item.length) > 0) || (item.width && parseFloat(item.width) > 0) || (item.height && parseFloat(item.height) > 0)) {
+                                if (typeof addDimension === 'function') addDimension(itemId);
+                                const lEl = el.querySelector(`input[name="dim_length_${itemId}[]"]`);
+                                if (lEl && item.length) lEl.value = item.length;
+                                const wEl = el.querySelector(`input[name="dim_width_${itemId}[]"]`);
+                                if (wEl && item.width) wEl.value = item.width;
+                                const hEl = el.querySelector(`input[name="dim_height_${itemId}[]"]`);
+                                if (hEl && item.height) hEl.value = item.height;
                             }
-                            if (item.width) {
-                                const wEl = el.querySelector('input[name="item_width[]"]');
-                                if (wEl) wEl.value = item.width;
-                            }
-                            if (item.height) {
-                                const hEl = el.querySelector('input[name="item_height[]"]');
-                                if (hEl) hEl.value = item.height;
-                            }
-                            if (item.weight) {
+                            if (item.weight !== undefined && item.weight !== null) {
                                 const wtEl = el.querySelector('input[name="item_weight[]"]');
                                 if (wtEl) wtEl.value = item.weight;
                             }
-                            if (item.volume) {
+                            if (item.volume !== undefined && item.volume !== null) {
                                 const vEl = el.querySelector('input[name="item_volume[]"]');
                                 if (vEl) vEl.value = item.volume;
                             }
@@ -4116,6 +4147,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, 50);
                 });
             }
+            setTimeout(() => {
+                if (typeof togglePanel === 'function') togglePanel('route');
+            }, 100);
         }
     } catch(err) {
         console.warn("Could not restore saved search query:", err);
