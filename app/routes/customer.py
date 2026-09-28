@@ -280,6 +280,22 @@ def api_my_quotes():
         try: customer_id = int(current_user.accounts[0].account_id)
         except: pass
         
+    user_branch_name = ''
+    try:
+        branch_id = None
+        if current_user.branches:
+            branch_id = int(current_user.branches[0].branch_id)
+        
+        if branch_id:
+            b_resp = requests.get("http://realnexus.comit.cloud:5000/api/Branches/Branches", headers={'x-api-key': '1'}, timeout=3)
+            if b_resp.status_code == 200:
+                for b in b_resp.json():
+                    if str(b.get('branchID')) == str(branch_id):
+                        user_branch_name = b.get('name')
+                        break
+    except Exception as e:
+        print("Failed to fetch user branch name:", e)
+        
     quote_data = []
     total_count = 0
     api_success = False
@@ -492,7 +508,7 @@ def api_my_quotes():
                     'destination': destination,
                     'total_cost': total_cost,
                     'currency': quote_currency,
-                    'selected_nvocc': header.get('nvoccName') or header.get('carrierName') or item.get('customerName') or '',
+                    'selected_nvocc': header.get('nvoccName') or header.get('carrierName') or user_branch_name or '',
                     'service_type': "LCL" if "LCL" in str(header.get('freightTransportType') or item.get('freightType') or '').upper() else ("FCL" if "FCL" in str(header.get('freightTransportType') or item.get('freightType') or '').upper() else ""),
                     'service_name': header.get('serviceName') or header.get('serviceLevel') or '',
                     'api_booking_ref': api_booking_ref,

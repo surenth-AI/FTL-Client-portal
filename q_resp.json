@@ -1,0 +1,18 @@
+[
+  {
+    "quotationId": 17268,
+    "customerId": 4294,
+    "customerName": "A. VAN DORST EN ZONEN BV",
+    "quoteNumber": "26-API-17268",
+    "totalAmount": 415.82,
+    "currency": "USD",
+    "customerReference": "",
+    "trafficType": "EX",
+    "polLocation": "Antwerp",
+    "podLocation": "Singapore",
+    "freightType": "10CN",
+    "validFrom": "2026-09-22",
+    "validUntil": "2026-09-22",
+    "createdOn": "2026-09-22T12:18:00"
+  }
+]
