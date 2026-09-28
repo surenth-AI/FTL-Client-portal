@@ -165,9 +165,16 @@
                                  data-route="${q.origin} ${q.destination}" 
                                  data-service="${q.service_type}">
                                 
-                                <div class="offer-badge-row">
-                                    <div class="ref-eyebrow" onclick="copyRef(this)" data-ref="${refCode}">
-                                        📌 Ref: <span class="ref-code">${refCode}</span> ⧉
+                                <div class="offer-badge-row" style="display:flex; align-items:center; flex-wrap:wrap; gap:0.5rem; justify-content:space-between;">
+                                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                        <div class="ref-eyebrow" onclick="copyRef(this)" data-ref="${refCode}">
+                                            📌 Ref: <span class="ref-code">${refCode}</span> ⧉
+                                        </div>
+                                        ${(q.packages > 0 || q.weight > 0 || q.volume > 0) ? `
+                                        <div style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; font-family: var(--mq-font-mono);">
+                                            📦 ${q.packages || 0} pkgs | ${parseFloat(q.weight || 0).toFixed(2)} kgs | ${parseFloat(q.volume || 0).toFixed(2)} cbm
+                                        </div>
+                                        ` : ''}
                                     </div>
                                     ${statusBadge}
                                 </div>

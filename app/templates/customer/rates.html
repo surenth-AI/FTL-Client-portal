@@ -1473,6 +1473,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                         <label class="form-label">Type <span class="required">*</span></label>
                                         <select class="form-select" id="originType"
                                             onchange="handleLocationTypeChange('origin')">
+                                            <option value="" disabled selected>Select type</option>
                                             <option value="door">Door</option>
                                             <option value="port">Port</option>
                                         </select>
@@ -1514,6 +1515,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                         <label class="form-label">Type <span class="required">*</span></label>
                                         <select class="form-select" id="destType"
                                             onchange="handleLocationTypeChange('dest')">
+                                            <option value="" disabled selected>Select type</option>
                                             <option value="door">Door</option>
                                             <option value="port">Port</option>
                                         </select>
@@ -2055,13 +2057,18 @@ function handleLocationTypeChange(locationType, clearInput = true) {
     const type = typeEl.value;
     const label = document.getElementById(locationType + 'LocationLabel');
     const input = document.getElementById(locationType + 'Location');
+    const countryGroup = document.getElementById(locationType + 'Country').closest('.form-group');
 
     if (type === 'door') {
+        if (countryGroup) countryGroup.style.display = 'block';
         if (label) label.innerHTML = 'City <span class="required">*</span>';
         if (input) input.placeholder = 'Search by city name or zip code';
-    } else {
+    } else if (type === 'port') {
+        if (countryGroup) countryGroup.style.display = 'none';
         if (label) label.innerHTML = 'Port <span class="required">*</span>';
         if (input) input.placeholder = 'Search by port name or UN code';
+    } else {
+        if (countryGroup) countryGroup.style.display = 'none';
     }
 
     if (clearInput) {
@@ -2072,7 +2079,6 @@ function handleLocationTypeChange(locationType, clearInput = true) {
     populateCountries(locationType, type);
     updateMovementType();
     
-    // Update incoterms filtering based on new route types
     if (typeof updateAvailableIncoterms === 'function') {
         updateAvailableIncoterms();
     }
@@ -2100,20 +2106,29 @@ function populateCountries(locationType, type) {
 }
 
 async function filterLocations(locationType) {
-    const country = document.getElementById(locationType + 'Country').value;
+    let country = document.getElementById(locationType + 'Country').value;
     const type = document.getElementById(locationType + 'Type').value;
     const inputEl = document.getElementById(locationType + 'Location');
     const searchTerm = inputEl.value.toLowerCase();
     const dropdown = document.getElementById(locationType + 'Dropdown');
 
-    if (!country) {
+    if (type === 'door') {
+        if (!country) {
+            dropdown.classList.remove('show');
+            return;
+        }
         dropdown.classList.remove('show');
+        selectedLocations[locationType] = { name: searchTerm, code: '' };
         return;
     }
 
-    if (type === 'door') {
+    // If type is port, we fetch globally (ignore the country dropdown)
+    if (type === 'port') {
+        country = 'all';
+    }
+
+    if (!country) {
         dropdown.classList.remove('show');
-        selectedLocations[locationType] = { name: searchTerm, code: '' };
         return;
     }
 
@@ -2141,22 +2156,29 @@ async function filterLocations(locationType) {
     const searchWords = searchTerm.replace(/[()]/g, ' ').trim().split(/\s+/).filter(w => w);
     const filtered = locations.filter(loc => {
         if (searchWords.length === 0) return true;
-        const locText = `${loc.name} ${loc.code}`.toLowerCase();
+        const cName = apiCountries.find(c => c.code === loc.country)?.name || loc.country || '';
+        const locText = `${loc.name} ${loc.code} ${cName}`.toLowerCase();
         return searchWords.every(word => locText.includes(word));
-    }).map(loc => ({
-        name: loc.name,
-        code: loc.code
-    }));
+    }).map(loc => {
+        const cName = apiCountries.find(c => c.code === loc.country)?.name || loc.country || '';
+        return {
+            name: loc.name,
+            code: loc.code,
+            countryName: cName
+        };
+    });
 
     if (filtered.length === 0) {
         dropdown.innerHTML = '<div class="dropdown-no-results">*No services listed for now</div>';
     } else {
-        dropdown.innerHTML = filtered.map(loc => `
-            <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\\'")}', '${loc.code}')">
-                <div class="dropdown-item-name">${loc.name}</div>
-                <div class="dropdown-item-code">${loc.code}</div>
+        dropdown.innerHTML = filtered.map(loc => {
+            const displayTitle = loc.countryName ? `${loc.name}(${loc.code}) - ${loc.countryName}` : `${loc.name}(${loc.code})`;
+            return `
+            <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\\'")}', '${loc.code}', '${(loc.countryName || '').replace(/'/g, "\\'")}')">
+                <div class="dropdown-item-name">${displayTitle}</div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 }
 
@@ -2544,9 +2566,11 @@ async function filterLocations(locationType) {
             filterLocations(locationType);
         }
 
-        function selectLocation(locationType, name, code) {
-            selectedLocations[locationType] = { name, code };
-            document.getElementById(locationType + 'Location').value = `${name} (${code})`;
+        function selectLocation(locationType, name, code, countryName = '') {
+            selectedLocations[locationType] = { name, code, countryName };
+            let displayVal = `${name} (${code})`;
+            if (countryName) displayVal += ` - ${countryName}`;
+            document.getElementById(locationType + 'Location').value = displayVal;
             document.getElementById(locationType + 'Dropdown').classList.remove('show');
         }
 
@@ -2574,8 +2598,14 @@ async function filterLocations(locationType) {
                 return;
             }
 
-            const originCountry = document.getElementById('originCountry').selectedOptions[0].text;
-            const destCountry = document.getElementById('destCountry').selectedOptions[0].text;
+            let originCountry = document.getElementById('originCountry').selectedOptions[0].text;
+            if ((!originCountry || originCountry === 'Select country') && selectedLocations.origin.countryName) {
+                originCountry = selectedLocations.origin.countryName;
+            }
+            let destCountry = document.getElementById('destCountry').selectedOptions[0].text;
+            if ((!destCountry || destCountry === 'Select country') && selectedLocations.dest.countryName) {
+                destCountry = selectedLocations.dest.countryName;
+            }
 
             const originText = `${selectedLocations.origin.name}, ${originCountry}`;
             const destText = `${selectedLocations.dest.name}, ${destCountry}`;
@@ -3990,8 +4020,8 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         const savedQuery = {{ query | tojson | safe }};
         if (savedQuery && Object.keys(savedQuery).length > 0) {
-            const orgType = savedQuery.origin_type || savedQuery.originType || 'port';
-            const destType = savedQuery.dest_type || savedQuery.destType || 'port';
+            const orgType = savedQuery.origin_type || savedQuery.originType || '';
+            const destType = savedQuery.dest_type || savedQuery.destType || '';
             
             const origTypeEl = document.getElementById('originType');
             if (origTypeEl) {

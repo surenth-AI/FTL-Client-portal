@@ -1629,7 +1629,7 @@ def rates():
             'dest_country': dest_country,
             'service': request.args.get('service', 'LCL')
         }
-    elif modify_param == '1' or session.get('search_query'):
+    elif modify_param == '1':
         sq = session.get('search_query') or {}
         if sq:
             org_country = _parse_cc(sq.get('origin'), None) if sq.get('origin') else ''
@@ -1756,13 +1756,20 @@ def api_lookups():
     })
 
 
+@customer.route('/api/get-ports/<direction>')
 @customer.route('/api/get-ports/<direction>/<country_code>')
 @login_required
-def api_get_ports(direction, country_code):
+def api_get_ports(direction, country_code=None):
     import requests
     headers = {'accept': '*/*', 'x-api-key': '1'}
     endpoint = 'OriginPorts' if direction.lower() == 'origin' else 'DestinationPorts'
-    url = f"http://realnexus.comit.cloud:5000/api/Ports/{endpoint}/{country_code}"
+    
+    # If no country_code or 'all', fetch all ports
+    if not country_code or country_code.lower() == 'all':
+        url = f"http://realnexus.comit.cloud:5000/api/Ports/{endpoint}"
+    else:
+        url = f"http://realnexus.comit.cloud:5000/api/Ports/{endpoint}/{country_code}"
+        
     try:
         resp = requests.get(url, headers=headers, timeout=5)
         if resp.status_code == 200:
@@ -1770,10 +1777,12 @@ def api_get_ports(direction, country_code):
             valid_ports = []
             for p in ports:
                 if p.get('isActive') and p.get('code'):
+                    # The API might not return countryName directly, but it returns 'country'
+                    c_code = p.get('country', country_code.upper() if country_code and country_code.lower() != 'all' else '')
                     valid_ports.append({
                         'code': p['code'],
                         'name': p.get('name', p['code']),
-                        'country': country_code.upper()
+                        'country': c_code
                     })
             return jsonify(valid_ports)
         return jsonify([])
