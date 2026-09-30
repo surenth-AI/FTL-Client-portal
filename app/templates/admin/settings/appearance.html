@@ -1,0 +1,308 @@
+{% extends 'admin/settings/_layout.html' %}
+{% block page_title %}Appearance{% endblock %}
+{% block page_icon %}bi-palette2{% endblock %}
+{% block page_description %}Navigation layout, accent colour and typography. Changes apply to the whole portal.{% endblock %}
+
+{% block settings_body %}
+{% set swatches = [
+    ('blue',   '#2563EB', 'Blue'),
+    ('purple', '#7C3AED', 'Purple'),
+    ('teal',   '#0D9488', 'Teal'),
+    ('green',  '#059669', 'Green'),
+    ('orange', '#F97316', 'Orange'),
+] %}
+{% set is_custom = settings.theme_color not in ['blue', 'purple', 'teal', 'green', 'orange'] %}
+{% set custom_hex = settings.theme_color if is_custom and settings.theme_color and settings.theme_color.startswith('#') else '#3B82F6' %}
+{% set fonts = [
+    ('Inter', 'Modern sans-serif'),
+    ('Outfit', 'Geometric'),
+    ('Plus Jakarta Sans', 'Clean and friendly'),
+    ('Roboto', 'Neo-grotesque'),
+    ('Lora', 'Editorial serif'),
+] %}
+
+<div class="row g-4">
+    <div class="col-xl-8">
+
+        <!-- Navigation layout -->
+        <section class="settings-card">
+            <div class="settings-card-header">
+                <div>
+                    <h6 class="settings-card-title">Navigation layout</h6>
+                    <p class="settings-card-desc">Where the main menu sits.</p>
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div class="row g-3">
+                    {% for val, label, desc in [('sidebar', 'Sidebar', 'Vertical menu on the left'), ('topbar', 'Top bar', 'Horizontal menu across the top')] %}
+                    <div class="col-sm-6">
+                        <label class="settings-choice">
+                            <input type="radio" name="default_layout" value="{{ val }}" {% if settings.default_layout == val or (val == 'sidebar' and not settings.default_layout) %}checked{% endif %}>
+                            <div class="settings-choice-card p-3">
+                                <div class="layout-thumb {{ val }}">
+                                    <span class="lt-nav"></span>
+                                    <span class="lt-body"><i></i><i></i><i></i></span>
+                                </div>
+                                <div class="d-flex align-items-center mt-3">
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:.85rem;">{{ label }}</div>
+                                        <div class="text-muted" style="font-size:.74rem;">{{ desc }}</div>
+                                    </div>
+                                    <i class="bi bi-check-circle-fill ms-auto choice-check"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Accent colour -->
+        <section class="settings-card">
+            <div class="settings-card-header">
+                <div>
+                    <h6 class="settings-card-title">Accent colour</h6>
+                    <p class="settings-card-desc">Used for buttons, links, active menu items and highlights.</p>
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div class="swatch-grid">
+                    {% for val, hex, label in swatches %}
+                    <label class="settings-choice">
+                        <input type="radio" name="theme_color" value="{{ val }}" data-hex="{{ hex }}" {% if settings.theme_color == val %}checked{% endif %}>
+                        <div class="settings-choice-card swatch-card">
+                            <span class="swatch-dot" style="background:{{ hex }};"><i class="bi bi-check2"></i></span>
+                            <span class="swatch-label">{{ label }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                    <label class="settings-choice">
+                        <input type="radio" name="theme_color" id="customColorRadio" value="{{ custom_hex }}" data-hex="{{ custom_hex }}" {% if is_custom %}checked{% endif %}>
+                        <div class="settings-choice-card swatch-card">
+                            <span class="swatch-dot custom" id="customSwatch" style="background:{{ custom_hex }};">
+                                <i class="bi bi-check2"></i>
+                                <input type="color" id="colorPickerInput" value="{{ custom_hex }}" aria-label="Pick a custom colour">
+                            </span>
+                            <span class="swatch-label">Custom <small id="customHexLabel">{{ custom_hex | upper }}</small></span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section class="settings-card">
+            <div class="settings-card-header">
+                <div>
+                    <h6 class="settings-card-title">Typography</h6>
+                    <p class="settings-card-desc">The typeface used for all text.</p>
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div class="font-grid">
+                    {% for val, desc in fonts %}
+                    <label class="settings-choice">
+                        <input type="radio" name="typography" value="{{ val }}" {% if settings.typography == val or (val == 'Inter' and not settings.typography) %}checked{% endif %}>
+                        <div class="settings-choice-card font-card">
+                            <span class="font-specimen" style="font-family:'{{ val }}', sans-serif;">Aa</span>
+                            <span class="d-flex flex-column" style="min-width:0;">
+                                <span class="fw-semibold text-truncate" style="font-family:'{{ val }}', sans-serif; font-size:.88rem;">{{ val }}</span>
+                                <span class="text-muted" style="font-size:.72rem;">{{ desc }}</span>
+                            </span>
+                            <i class="bi bi-check-circle-fill ms-auto choice-check"></i>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Live preview -->
+    <div class="col-xl-4">
+        <div class="settings-card preview-panel">
+            <div class="settings-card-header">
+                <div>
+                    <h6 class="settings-card-title">Live preview</h6>
+                    <p class="settings-card-desc">Updates as you change options.</p>
+                </div>
+                <span class="settings-pill neutral"><i class="bi bi-eye"></i> Preview</span>
+            </div>
+            <div class="settings-card-body">
+                <div class="pv-app" id="previewApp" data-layout="{{ settings.default_layout or 'sidebar' }}">
+                    <div class="pv-top">
+                        <span class="pv-brand"></span>
+                        <span class="pv-tab active"></span><span class="pv-tab"></span><span class="pv-tab"></span>
+                    </div>
+                    <div class="pv-frame">
+                        <div class="pv-side">
+                            <span class="pv-brand"></span>
+                            <span class="pv-item active"></span><span class="pv-item"></span><span class="pv-item"></span><span class="pv-item"></span>
+                        </div>
+                        <div class="pv-body" id="previewBody">
+                            <div class="pv-title">Portal Dashboard</div>
+                            <div class="pv-sub">12 shipments in transit</div>
+                            <div class="pv-stats">
+                                <div><b>48</b><span>Quotes</span></div>
+                                <div><b>12</b><span>Active</span></div>
+                            </div>
+                            <div class="pv-progress"><span style="width:68%;"></span></div>
+                            <div class="d-flex gap-2 mt-3">
+                                <span class="pv-btn">Book now</span>
+                                <span class="pv-btn ghost">Cancel</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <dl class="pv-summary">
+                    <div><dt>Layout</dt><dd id="sumLayout">—</dd></div>
+                    <div><dt>Accent</dt><dd><span class="sum-dot" id="sumDot"></span><span id="sumAccent">—</span></dd></div>
+                    <div><dt>Font</dt><dd id="sumFont">—</dd></div>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Layout thumbnails */
+.layout-thumb {
+    height: 84px; border-radius: 8px; border: 1px solid var(--st-border);
+    background: var(--st-surface-2); display: flex; overflow: hidden;
+}
+.layout-thumb.topbar { flex-direction: column; }
+.layout-thumb .lt-nav { background: var(--st-surface); border: 0 solid var(--st-border); position: relative; }
+.layout-thumb.sidebar .lt-nav { width: 26%; border-right-width: 1px; }
+.layout-thumb.topbar .lt-nav { height: 20px; border-bottom-width: 1px; }
+.layout-thumb .lt-nav::before {
+    content: ''; position: absolute; background: var(--primary-color); opacity: .75; border-radius: 2px;
+}
+.layout-thumb.sidebar .lt-nav::before { left: 8px; right: 8px; top: 10px; height: 5px; }
+.layout-thumb.topbar .lt-nav::before { left: 8px; top: 7px; width: 22px; height: 5px; }
+.layout-thumb .lt-body { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.layout-thumb .lt-body i { display: block; height: 5px; border-radius: 2px; background: var(--st-border); }
+.layout-thumb .lt-body i:nth-child(1) { width: 45%; height: 7px; }
+.layout-thumb .lt-body i:nth-child(2) { width: 85%; }
+.layout-thumb .lt-body i:nth-child(3) { width: 65%; }
+.settings-choice > input:checked + .settings-choice-card .layout-thumb { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--st-border)); }
+
+/* Swatches */
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: .75rem; }
+.swatch-card { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: .9rem .5rem; text-align: center; }
+.swatch-dot {
+    position: relative; width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+}
+.swatch-dot .bi { color: #fff; font-size: 1.1rem; opacity: 0; transition: opacity .15s; }
+.swatch-dot input[type=color] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: 0; padding: 0; }
+.swatch-dot.custom::after {
+    content: '\F4CA'; font-family: 'bootstrap-icons'; position: absolute; right: -4px; bottom: -4px;
+    width: 16px; height: 16px; border-radius: 50%; font-size: .55rem; line-height: 16px;
+    background: var(--st-surface); color: var(--st-text-2); border: 1px solid var(--st-border);
+}
+.settings-choice > input:checked + .settings-choice-card .swatch-dot .bi { opacity: 1; }
+.swatch-label { font-size: .78rem; font-weight: 600; color: var(--st-text); line-height: 1.2; }
+.swatch-label small { display: block; font-size: .65rem; font-weight: 500; color: var(--st-muted); font-family: ui-monospace, monospace !important; }
+
+/* Fonts */
+.font-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; }
+.font-card { display: flex; align-items: center; gap: .8rem; padding: .75rem .9rem; }
+.font-specimen {
+    width: 42px; height: 42px; flex-shrink: 0; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; font-weight: 700; background: var(--st-surface-2); color: var(--st-text);
+    transition: background .15s, color .15s;
+}
+.settings-choice > input:checked + .settings-choice-card .font-specimen { background: var(--primary-color); color: #fff; }
+
+/* Live preview */
+.preview-panel { position: sticky; top: 6rem; }
+.app-container:not(.sidebar-active) .preview-panel { top: calc(6rem + var(--topbar-height, 64px)); }
+.pv-app {
+    --pv-accent: var(--primary-color);
+    border: 1px solid var(--st-border); border-radius: 10px; overflow: hidden;
+    background: var(--st-surface-2); font-size: 12px;
+}
+.pv-top, .pv-side { background: var(--st-surface); }
+.pv-top { display: none; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--st-border); }
+.pv-frame { display: flex; min-height: 196px; }
+.pv-side { width: 64px; padding: 10px 8px; border-right: 1px solid var(--st-border); display: flex; flex-direction: column; gap: 6px; }
+.pv-app[data-layout="topbar"] .pv-top { display: flex; }
+.pv-app[data-layout="topbar"] .pv-side { display: none; }
+.pv-brand { display: block; width: 26px; height: 8px; border-radius: 2px; background: var(--st-text); opacity: .75; margin-bottom: 4px; }
+.pv-top .pv-brand { margin: 0 6px 0 0; }
+.pv-item { display: block; height: 6px; border-radius: 2px; background: var(--st-border); }
+.pv-item.active { background: var(--pv-accent); }
+.pv-tab { display: block; width: 28px; height: 12px; border-radius: 3px; background: var(--st-border); }
+.pv-tab.active { background: var(--pv-accent); }
+.pv-body { flex: 1; padding: 14px; color: var(--st-text); min-width: 0; }
+.pv-title { font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
+.pv-sub { color: var(--st-text-2); font-size: 11px; margin-bottom: 10px; }
+.pv-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pv-stats > div { background: var(--st-surface); border: 1px solid var(--st-border); border-radius: 6px; padding: 6px 8px; }
+.pv-stats b { display: block; font-size: 14px; color: var(--pv-accent); }
+.pv-stats span { font-size: 10px; color: var(--st-text-2); }
+.pv-progress { height: 5px; border-radius: 3px; background: var(--st-border); margin-top: 10px; overflow: hidden; }
+.pv-progress span { display: block; height: 100%; background: var(--pv-accent); }
+.pv-btn { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 4px 10px; border-radius: 5px; background: var(--pv-accent); color: #fff; }
+.pv-btn.ghost { background: transparent; color: var(--st-text-2); border: 1px solid var(--st-border); }
+.pv-body, .pv-body * { font-family: var(--pv-font, inherit) !important; }
+
+.pv-summary { margin: 1rem 0 0; display: flex; flex-direction: column; gap: .5rem; }
+.pv-summary > div { display: flex; justify-content: space-between; align-items: center; font-size: .78rem; }
+.pv-summary dt { font-weight: 500; color: var(--st-text-2); }
+.pv-summary dd { margin: 0; font-weight: 600; color: var(--st-text); display: flex; align-items: center; gap: .4rem; }
+.sum-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+</style>
+{% endblock %}
+
+{% block settings_scripts %}
+<script>
+(function () {
+    var app = document.getElementById('previewApp');
+    var picker = document.getElementById('colorPickerInput');
+    var customRadio = document.getElementById('customColorRadio');
+    var customSwatch = document.getElementById('customSwatch');
+    var customLabel = document.getElementById('customHexLabel');
+
+    function checked(name) { return document.querySelector('input[name="' + name + '"]:checked'); }
+
+    function refresh() {
+        var layout = checked('default_layout');
+        var color = checked('theme_color');
+        var font = checked('typography');
+
+        if (layout) {
+            app.dataset.layout = layout.value;
+            document.getElementById('sumLayout').textContent = layout.value === 'topbar' ? 'Top bar' : 'Sidebar';
+        }
+        if (color) {
+            var hex = color.dataset.hex;
+            app.style.setProperty('--pv-accent', hex);
+            document.getElementById('sumDot').style.background = hex;
+            document.getElementById('sumAccent').textContent =
+                color === customRadio ? hex.toUpperCase() : color.value.charAt(0).toUpperCase() + color.value.slice(1);
+        }
+        if (font) {
+            app.style.setProperty('--pv-font', "'" + font.value + "', sans-serif");
+            document.getElementById('sumFont').textContent = font.value;
+        }
+    }
+
+    picker.addEventListener('input', function () {
+        var v = picker.value;
+        customRadio.value = v;
+        customRadio.dataset.hex = v;
+        customRadio.checked = true;
+        customSwatch.style.background = v;
+        customLabel.textContent = v.toUpperCase();
+        refresh();
+    });
+
+    document.getElementById('settingsForm').addEventListener('change', refresh);
+    refresh();
+})();
+</script>
+{% endblock %}

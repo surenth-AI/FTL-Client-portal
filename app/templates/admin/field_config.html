@@ -1,0 +1,331 @@
+{% extends 'admin/settings/_layout.html' %}
+{% block page_title %}Field Configuration{% endblock %}
+{% block breadcrumb_root %}Configuration{% endblock %}
+{% block page_icon %}bi-sliders{% endblock %}
+{% block page_description %}Control which options customers see on quote and booking forms, and which are pre-selected.{% endblock %}
+{% block section_tabs %}{% endblock %}
+
+{% block settings_body %}
+<section class="settings-card">
+    <div class="settings-card-header">
+        <div>
+            <h6 class="settings-card-title d-flex align-items-center gap-2">
+                Incoterm rules <span class="settings-pill neutral" id="ruleCount">0 rules</span>
+            </h6>
+            <p class="settings-card-desc">Limit the Incoterms offered for each traffic, origin and destination combination.</p>
+        </div>
+        <button type="button" class="btn btn-settings-outline" onclick="addIncotermRule()">
+            <i class="bi bi-plus-lg"></i> Add rule
+        </button>
+    </div>
+
+    <div class="rules-hint">
+        <i class="bi bi-info-circle"></i>
+        <span>Rules are evaluated live. If multiple rules match the customer's selection, all their allowed Incoterms are combined and shown.</span>
+    </div>
+
+    <input type="hidden" name="incoterm_rules" id="incotermRulesJSON">
+    <div id="incotermRulesContainer" class="rules-list"></div>
+</section>
+
+<style>
+.rules-hint {
+    display: flex; gap: .6rem; align-items: flex-start;
+    margin: 1rem 1.5rem 0; padding: .7rem .9rem; border-radius: 8px;
+    background: var(--st-accent-soft); color: var(--st-text-2); font-size: .76rem; line-height: 1.45;
+}
+.rules-hint .bi { color: var(--primary-color); margin-top: 1px; }
+.rules-list { padding: 1rem 1.5rem 1.5rem; display: flex; flex-direction: column; gap: .75rem; }
+
+.rules-empty {
+    text-align: center; padding: 2.25rem 1rem; border: 1.5px dashed var(--st-border); border-radius: 10px;
+    color: var(--st-text-2); font-size: .82rem;
+}
+.rules-empty .bi { font-size: 1.6rem; color: var(--st-muted); display: block; margin-bottom: .4rem; }
+
+.rule-card { border: 1px solid var(--st-border); border-radius: 10px; background: var(--st-surface); transition: border-color .15s, box-shadow .15s; }
+.rule-card:hover { border-color: color-mix(in srgb, var(--primary-color) 35%, var(--st-border)); }
+.rule-card.editing { border-color: var(--primary-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 12%, transparent); }
+.rule-view { display: flex; align-items: center; gap: 1rem; padding: .85rem 1rem; }
+.rule-index {
+    width: 28px; height: 28px; flex-shrink: 0; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--st-surface-2); color: var(--st-text-2); font-size: .75rem; font-weight: 700;
+}
+.rule-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .4rem; }
+.rule-conditions { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; font-size: .72rem; color: var(--st-muted); }
+.rule-chip {
+    display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 600;
+    padding: .18rem .55rem; border-radius: 6px; background: var(--st-surface-2); color: var(--st-text);
+    border: 1px solid var(--st-border);
+}
+.rule-chip.any { color: var(--st-muted); font-weight: 500; }
+.rule-outcome { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; font-size: .75rem; color: var(--st-text-2); }
+.term-tag { font-size: .7rem; font-weight: 700; padding: .12rem .45rem; border-radius: 5px; background: var(--st-accent-soft); color: var(--primary-color); letter-spacing: .02em; }
+.term-tag.default { background: var(--primary-color); color: #fff; }
+.rule-warn { color: #B45309; font-weight: 600; }
+html[data-color-scheme='dark'] .rule-warn { color: #FBBF24; }
+
+.rule-actions { display: flex; gap: .15rem; flex-shrink: 0; }
+.icon-btn {
+    width: 30px; height: 30px; border-radius: 7px; border: none; background: transparent;
+    color: var(--st-muted); display: inline-flex; align-items: center; justify-content: center;
+}
+.icon-btn:hover:not(:disabled) { background: var(--st-surface-2); color: var(--st-text); }
+.icon-btn.danger:hover { background: rgba(239,68,68,.1); color: #DC2626; }
+.icon-btn:disabled { opacity: .35; }
+
+.rule-editor { padding: 1rem 1.1rem 1.1rem; }
+.rule-editor-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.rule-editor-head h6 { margin: 0; font-size: .85rem; font-weight: 700; color: var(--primary-color); }
+.editor-section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--st-muted); margin-bottom: .5rem; }
+.term-toggle-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
+.term-toggle { position: relative; margin: 0; cursor: pointer; }
+.term-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.term-toggle span {
+    display: inline-block; min-width: 56px; text-align: center; padding: .4rem .7rem; border-radius: 7px;
+    font-size: .78rem; font-weight: 700; letter-spacing: .02em;
+    border: 1.5px solid var(--st-border); background: var(--st-surface); color: var(--st-text-2);
+    transition: all .12s;
+}
+.term-toggle:hover span { border-color: var(--primary-color); color: var(--primary-color); }
+.term-toggle input:checked + span { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+.term-toggle input:focus-visible + span { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.term-links { font-size: .72rem; }
+.term-links button { border: none; background: none; padding: 0; color: var(--primary-color); font-weight: 600; }
+.rule-editor-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--st-border); }
+</style>
+{% endblock %}
+
+{% block settings_scripts %}
+<script>
+const INCOTERM_OPTIONS = ['CFR', 'CIF', 'DAP', 'DDP', 'DPU', 'EXW', 'FCA', 'FOB'];
+const LABELS = {
+    trafficType: { EX: 'Export', IM: 'Import' },
+    originType:  { port: 'Port', door: 'Door' },
+    destType:    { port: 'Port', door: 'Door' },
+};
+
+let rawIncotermConfig = {{ (settings.incoterm_rules | tojson | safe) if settings.incoterm_rules else 'null' }};
+let incotermRulesConfig = { rules: [] };
+
+try {
+    if (typeof rawIncotermConfig === 'string') {
+        incotermRulesConfig = JSON.parse(rawIncotermConfig);
+        if (typeof incotermRulesConfig === 'string') {
+            incotermRulesConfig = JSON.parse(incotermRulesConfig); // Double parse in case it was double stringified
+        }
+    } else if (rawIncotermConfig && typeof rawIncotermConfig === 'object') {
+        incotermRulesConfig = rawIncotermConfig;
+    }
+} catch (e) {
+    console.error('Failed to parse incoterm rules', e);
+}
+if (!incotermRulesConfig || typeof incotermRulesConfig !== 'object' || !Array.isArray(incotermRulesConfig.rules)) {
+    incotermRulesConfig = { rules: [] };
+}
+
+let editingRules = []; // indices of rules in edit mode
+
+function rules() { return incotermRulesConfig.rules; }
+
+function changed() {
+    if (window.markSettingsDirty) window.markSettingsDirty();
+    renderIncotermRules();
+}
+
+function renderIncotermRules() {
+    const container = document.getElementById('incotermRulesContainer');
+    container.innerHTML = '';
+
+    const count = rules().length;
+    document.getElementById('ruleCount').textContent = count + (count === 1 ? ' rule' : ' rules');
+
+    if (count === 0) {
+        container.innerHTML = `
+            <div class="rules-empty">
+                <i class="bi bi-funnel"></i>
+                <div class="fw-semibold mb-1" style="color:var(--st-text);">No rules yet</div>
+                <div>Customers can choose any Incoterm. Add a rule to limit the list.</div>
+            </div>`;
+    } else {
+        rules().forEach((rule, index) => container.appendChild(createRuleCard(rule, index)));
+    }
+
+    document.getElementById('incotermRulesJSON').value = JSON.stringify(incotermRulesConfig);
+}
+
+function conditionChip(field, value, anyLabel) {
+    return value
+        ? `<span class="rule-chip">${LABELS[field][value]}</span>`
+        : `<span class="rule-chip any">${anyLabel}</span>`;
+}
+
+function selectField(index, field, label, options) {
+    const rule = rules()[index];
+    let html = `<label class="form-label">${label}</label>
+        <select class="form-select form-select-sm" onchange="updateIncotermRule(${index}, '${field}', this.value)">
+            <option value="" ${!rule[field] ? 'selected' : ''}>Any</option>`;
+    Object.entries(options).forEach(([val, text]) => {
+        html += `<option value="${val}" ${rule[field] === val ? 'selected' : ''}>${text}</option>`;
+    });
+    return html + '</select>';
+}
+
+function createRuleCard(rule, index) {
+    const card = document.createElement('div');
+    const isEditing = editingRules.includes(index);
+    const allowed = rule.allowed || [];
+    card.className = 'rule-card' + (isEditing ? ' editing' : '');
+
+    if (isEditing) {
+        let terms = '';
+        INCOTERM_OPTIONS.forEach(opt => {
+            terms += `<label class="term-toggle">
+                <input type="checkbox" value="${opt}" ${allowed.includes(opt) ? 'checked' : ''} onchange="toggleIncotermAllowed(${index}, '${opt}', this.checked)">
+                <span>${opt}</span></label>`;
+        });
+        let defaults = '<option value="">No default</option>';
+        allowed.forEach(opt => { defaults += `<option value="${opt}" ${rule.default === opt ? 'selected' : ''}>${opt}</option>`; });
+
+        card.innerHTML = `
+            <div class="rule-editor">
+                <div class="rule-editor-head">
+                    <h6><i class="bi bi-pencil-square me-1"></i> Rule ${index + 1}</h6>
+                    <button type="button" class="icon-btn danger" title="Delete rule" onclick="removeIncotermRule(${index})"><i class="bi bi-trash"></i></button>
+                </div>
+
+                <div class="editor-section-label">When</div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">${selectField(index, 'trafficType', 'Traffic type', { EX: 'Export (EX)', IM: 'Import (IM)' })}</div>
+                    <div class="col-md-4">${selectField(index, 'originType', 'Origin type', LABELS.originType)}</div>
+                    <div class="col-md-4">${selectField(index, 'destType', 'Destination type', LABELS.destType)}</div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="editor-section-label">Allow these Incoterms</div>
+                    <div class="term-links">
+                        <button type="button" onclick="setAllIncoterms(${index}, true)">Select all</button>
+                        <span class="text-muted mx-1">·</span>
+                        <button type="button" onclick="setAllIncoterms(${index}, false)">Clear</button>
+                    </div>
+                </div>
+                <div class="term-toggle-grid">${terms}</div>
+
+                <div class="rule-editor-foot">
+                    <div>
+                        <label class="form-label">Pre-selected Incoterm</label>
+                        <select class="form-select form-select-sm" style="min-width:170px;" ${allowed.length ? '' : 'disabled'} onchange="updateIncotermRule(${index}, 'default', this.value)">${defaults}</select>
+                    </div>
+                    <div>
+                        <label class="form-label">Freight Term</label>
+                        <select class="form-select form-select-sm" style="min-width:170px;" onchange="updateIncotermRule(${index}, 'freightTerm', this.value)">
+                            <option value="" ${!rule.freightTerm ? 'selected' : ''}>Auto (Based on Incoterm)</option>
+                            <option value="prepaid" ${rule.freightTerm === 'prepaid' ? 'selected' : ''}>Prepaid</option>
+                            <option value="collect" ${rule.freightTerm === 'collect' ? 'selected' : ''}>Collect</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-settings-save" onclick="doneIncotermRule(${index})">
+                        <i class="bi bi-check2"></i> Done
+                    </button>
+                </div>
+            </div>`;
+    } else {
+        const outcome = allowed.length
+            ? allowed.map(t => `<span class="term-tag ${rule.default === t ? 'default' : ''}" ${rule.default === t ? 'title="Pre-selected"' : ''}>${t}</span>`).join('')
+            : '<span class="rule-warn"><i class="bi bi-exclamation-triangle me-1"></i>No Incoterms allowed, so customers will see none</span>';
+
+        card.innerHTML = `
+            <div class="rule-view">
+                <div class="rule-index">${index + 1}</div>
+                <div class="rule-main">
+                    <div class="rule-conditions">
+                        ${conditionChip('trafficType', rule.trafficType, 'Any traffic')}
+                        <i class="bi bi-arrow-right"></i>
+                        ${conditionChip('originType', rule.originType, 'Any origin')}
+                        <i class="bi bi-arrow-right"></i>
+                        ${conditionChip('destType', rule.destType, 'Any destination')}
+                    </div>
+                    <div class="rule-outcome">
+                        <span class="me-1">Allows</span>${outcome}
+                        ${rule.default ? `<span class="ms-2 text-muted" style="font-size:.72rem;">· Pre-selects <strong>${rule.default}</strong></span>` : ''}
+                        ${rule.freightTerm ? `<span class="ms-2 text-muted" style="font-size:.72rem;">· Freight: <strong>${rule.freightTerm.charAt(0).toUpperCase() + rule.freightTerm.slice(1)}</strong></span>` : ''}
+                    </div>
+                </div>
+                <div class="rule-actions">
+
+                    <button type="button" class="icon-btn" title="Edit" onclick="editIncotermRule(${index})"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="icon-btn danger" title="Delete" onclick="removeIncotermRule(${index})"><i class="bi bi-trash"></i></button>
+                </div>
+            </div>`;
+    }
+    return card;
+}
+
+function addIncotermRule() {
+    rules().push({ allowed: [] });
+    editingRules.push(rules().length - 1);
+    changed();
+    const cards = document.querySelectorAll('.rule-card');
+    cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function doneIncotermRule(index) {
+    editingRules = editingRules.filter(i => i !== index);
+    renderIncotermRules();
+}
+
+function editIncotermRule(index) {
+    if (!editingRules.includes(index)) editingRules.push(index);
+    renderIncotermRules();
+}
+
+function removeIncotermRule(index) {
+    if (!confirm('Delete rule ' + (index + 1) + '?')) return;
+    rules().splice(index, 1);
+    // Re-map edit state for the rules that shifted up
+    editingRules = editingRules.filter(i => i !== index).map(i => (i > index ? i - 1 : i));
+    changed();
+}
+
+function moveIncotermRule(index, dir) {
+    const target = index + dir;
+    if (target < 0 || target >= rules().length) return;
+    [rules()[index], rules()[target]] = [rules()[target], rules()[index]];
+    editingRules = editingRules.map(i => (i === index ? target : i === target ? index : i));
+    changed();
+}
+
+function updateIncotermRule(index, field, value) {
+    if (value === '') delete rules()[index][field];
+    else rules()[index][field] = value;
+    changed();
+}
+
+function toggleIncotermAllowed(index, option, isChecked) {
+    const rule = rules()[index];
+    let allowed = rule.allowed || [];
+    if (isChecked) {
+        if (!allowed.includes(option)) allowed.push(option);
+        allowed.sort((a, b) => INCOTERM_OPTIONS.indexOf(a) - INCOTERM_OPTIONS.indexOf(b));
+    } else {
+        allowed = allowed.filter(item => item !== option);
+        if (rule.default === option) delete rule.default; // default must stay within allowed
+    }
+    rule.allowed = allowed;
+    changed();
+}
+
+function setAllIncoterms(index, all) {
+    const rule = rules()[index];
+    rule.allowed = all ? INCOTERM_OPTIONS.slice() : [];
+    if (!all) delete rule.default;
+    changed();
+}
+
+document.addEventListener('DOMContentLoaded', renderIncotermRules);
+document.getElementById('settingsForm').addEventListener('submit', function () {
+    document.getElementById('incotermRulesJSON').value = JSON.stringify(incotermRulesConfig);
+});
+</script>
+{% endblock %}

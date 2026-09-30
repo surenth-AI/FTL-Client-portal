@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{#
+    Shared shell for every settings page.
+    Child templates fill: page_title, page_description, page_icon, settings_body,
+    and optionally settings_scripts.
+#}
+{% block title %}{% block page_title %}{% endblock %} · Settings{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+
+    <!-- Page header -->
+    <div class="settings-header">
+        <nav class="settings-breadcrumb" aria-label="breadcrumb">
+            <i class="bi bi-gear"></i>
+            <span>{% block breadcrumb_root %}Settings{% endblock %}</span>
+            <i class="bi bi-chevron-right"></i>
+            <span class="current">{{ self.page_title() }}</span>
+        </nav>
+    </div>
+
+    <!-- Sticky title + save bar: always visible at the top while scrolling -->
+    <div class="settings-sticky-sentinel" id="settingsStickySentinel"></div>
+    <div class="settings-headbar" id="settingsSavebar">
+        <div class="d-flex align-items-start gap-3" style="min-width:0;">
+            <div class="settings-header-icon"><i class="bi {% block page_icon %}bi-gear{% endblock %}"></i></div>
+            <div style="min-width:0;">
+                <h3 class="settings-title">{{ self.page_title() }}</h3>
+                <p class="settings-subtitle">{% block page_description %}{% endblock %}</p>
+            </div>
+        </div>
+        <div class="headbar-actions">
+            <div class="savebar-status">
+                <span class="status-dot"></span>
+                <span class="status-text" data-clean="All changes saved" data-dirty="Unsaved changes">All changes saved</span>
+            </div>
+            <a href="{{ request.path }}" class="btn btn-settings-ghost" id="discardBtn">Discard</a>
+            <button type="submit" form="settingsForm" class="btn btn-primary btn-settings-save" id="settingsSaveBtn">
+                <i class="bi bi-check2"></i> Save changes
+            </button>
+        </div>
+    </div>
+
+    {% block section_tabs %}
+    {% if is_admin %}
+    <!-- Section tabs (mirrors the sidebar submenu; essential in top-bar layout) -->
+    <ul class="settings-tabs" role="tablist">
+        {% for key, label, icon in [('branding', 'Branding', 'bi-image'), ('appearance', 'Appearance', 'bi-palette2'), ('mail', 'Mail Server', 'bi-envelope-at')] %}
+        <li>
+            <a href="{{ url_for('admin.settings', section=key) }}" class="{% if section == key %}active{% endif %}">
+                <i class="bi {{ icon }}"></i> {{ label }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endblock %}
+
+    <form method="POST" enctype="multipart/form-data" id="settingsForm" autocomplete="off" novalidate>
+        {% block settings_body %}{% endblock %}
+    </form>
+</div>
+
+<style>
+/* ── Settings design tokens ── */
+.settings-shell {
+    --st-surface:   var(--glass-bg, #FFFFFF);
+    --st-surface-2: #F8FAFC;
+    --st-border:    var(--glass-border, #E2E8F0);
+    --st-text:      var(--text-primary, #1E293B);
+    --st-text-2:    var(--text-secondary, #64748B);
+    --st-muted:     var(--text-muted, #94A3B8);
+    --st-accent-soft: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+html[data-color-scheme='dark'] .settings-shell {
+    --st-surface-2: #263348;
+}
+
+/* ── Header ── */
+.settings-header { margin-bottom: .25rem; }
+.settings-breadcrumb {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .72rem; font-weight: 600; color: var(--st-muted);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: .9rem;
+}
+.settings-breadcrumb .bi-chevron-right { font-size: .6rem; }
+.settings-breadcrumb .current { color: var(--st-text-2); }
+.settings-header-icon {
+    width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--st-accent-soft); color: var(--primary-color); font-size: 1.2rem;
+}
+.settings-title { font-weight: 700; font-size: 1.4rem; letter-spacing: -.02em; margin: 0 0 .2rem; color: var(--st-text); }
+.settings-subtitle { font-size: .85rem; color: var(--st-text-2); margin: 0; max-width: 620px; }
+
+/* ── Section tabs ── */
+.settings-tabs {
+    list-style: none; padding: 0; margin: 0 0 1.5rem;
+    display: flex; gap: .25rem; box-shadow: inset 0 -1px 0 var(--st-border);
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;            /* Firefox */
+}
+.settings-tabs::-webkit-scrollbar { display: none; }  /* Chrome / Edge / Safari */
+.settings-tabs a {
+    display: flex; align-items: center; gap: .45rem; white-space: nowrap;
+    padding: .65rem 1rem; font-size: .82rem; font-weight: 600;
+    color: var(--st-text-2); text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+}
+.settings-tabs a:hover { color: var(--primary-color); }
+.settings-tabs a.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+/* ── Section cards ── */
+.settings-card {
+    background: var(--st-surface);
+    border: 1px solid var(--st-border);
+    border-radius: 12px;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+}
+.settings-card-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--st-border);
+}
+.settings-card-title { font-weight: 700; font-size: .95rem; color: var(--st-text); margin: 0; }
+.settings-card-desc { font-size: .78rem; color: var(--st-text-2); margin: .15rem 0 0; }
+
+/* A labelled row: description on the left, control on the right */
+.settings-row {
+    display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 1.5rem;
+    padding: 1.35rem 1.5rem; border-bottom: 1px solid var(--st-border);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row-label { font-weight: 600; font-size: .85rem; color: var(--st-text); margin-bottom: .2rem; }
+.settings-row-help { font-size: .76rem; color: var(--st-text-2); line-height: 1.45; margin: 0; }
+.settings-card-body { padding: 1.35rem 1.5rem; }
+@media (max-width: 767.98px) {
+    .settings-row { grid-template-columns: 1fr; gap: .75rem; }
+}
+
+/* ── Inputs ── */
+.settings-shell .form-label { font-size: .78rem; font-weight: 600; color: var(--st-text-2); margin-bottom: .35rem; }
+.settings-shell .form-control,
+.settings-shell .form-select {
+    font-size: .85rem; border-radius: 8px; border-color: var(--st-border);
+    background-color: var(--st-surface); color: var(--st-text);
+}
+.settings-shell .form-control:focus,
+.settings-shell .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+.settings-shell .form-control::placeholder { color: var(--st-muted); }
+.settings-shell .form-text { font-size: .72rem; color: var(--st-muted); }
+
+.settings-input-icon { position: relative; }
+.settings-input-icon > .bi {
+    position: absolute; left: .8rem; top: 50%; transform: translateY(-50%);
+    color: var(--st-muted); font-size: .9rem; pointer-events: none;
+}
+.settings-input-icon > .form-control { padding-left: 2.25rem; }
+.settings-input-icon > .input-action {
+    position: absolute; right: .35rem; top: 50%; transform: translateY(-50%);
+    border: none; background: transparent; color: var(--st-muted);
+    padding: .25rem .5rem; border-radius: 6px;
+}
+.settings-input-icon > .input-action:hover { color: var(--primary-color); background: var(--st-surface-2); }
+
+/* ── Status pills ── */
+.settings-pill {
+    display: inline-flex; align-items: center; gap: .4rem; white-space: nowrap;
+    font-size: .72rem; font-weight: 600; padding: .3rem .7rem; border-radius: 999px;
+}
+.settings-pill.success { background: rgba(16,185,129,.1); color: #059669; }
+.settings-pill.warning { background: rgba(245,158,11,.12); color: #B45309; }
+.settings-pill.neutral { background: var(--st-surface-2); color: var(--st-text-2); }
+html[data-color-scheme='dark'] .settings-pill.success { color: #34D399; }
+html[data-color-scheme='dark'] .settings-pill.warning { color: #FBBF24; }
+
+/* ── Selectable option cards (radio-backed) ── */
+.settings-choice { display: block; cursor: pointer; margin: 0; position: relative; }
+.settings-choice > input { position: absolute; opacity: 0; width: 0; height: 0; }
+.settings-choice-card {
+    border: 1.5px solid var(--st-border); border-radius: 10px;
+    background: var(--st-surface); color: var(--st-text);
+    transition: border-color .15s, box-shadow .15s, background .15s;
+    height: 100%;
+}
+.settings-choice:hover .settings-choice-card { border-color: color-mix(in srgb, var(--primary-color) 50%, var(--st-border)); }
+.settings-choice > input:focus-visible + .settings-choice-card { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.settings-choice > input:checked + .settings-choice-card {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 14%, transparent);
+}
+.settings-choice .choice-check { color: transparent; transition: color .15s; }
+.settings-choice > input:checked + .settings-choice-card .choice-check { color: var(--primary-color); }
+
+/* ── Sticky title + save bar ── */
+.settings-sticky-sentinel { height: 1px; margin-bottom: -1px; }
+.settings-headbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    margin: 0 -1rem 1.5rem; padding: .75rem 1rem;
+    background: var(--midnight-bg, #FFFFFF);
+    border-bottom: 1px solid transparent;
+    transition: border-color .15s, box-shadow .15s, padding .15s;
+}
+/* In top-bar layout the sticky app header sits above us */
+.app-container:not(.sidebar-active) .settings-headbar { top: var(--topbar-height, 64px); }
+.settings-headbar.is-stuck {
+    border-bottom-color: var(--st-border);
+    box-shadow: 0 6px 16px -12px rgba(15,23,42,.25);
+}
+.settings-headbar.is-stuck .settings-subtitle { display: none; }
+.settings-headbar.is-stuck .settings-header-icon { width: 36px; height: 36px; font-size: 1rem; }
+.settings-headbar.is-stuck .settings-title { font-size: 1.1rem; margin: 0; }
+.headbar-actions { display: flex; align-items: center; gap: .5rem; margin-left: auto; }
+.savebar-status { display: flex; align-items: center; gap: .5rem; font-size: .78rem; font-weight: 600; color: var(--st-text-2); margin-right: .35rem; white-space: nowrap; }
+.savebar-status .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10B981; }
+.settings-headbar.is-dirty .status-dot { background: #F59E0B; box-shadow: 0 0 0 4px rgba(245,158,11,.15); }
+.settings-headbar.is-dirty .status-text { color: var(--st-text); }
+.settings-headbar #discardBtn { display: none; }
+.settings-headbar.is-dirty #discardBtn { display: inline-block; }
+@media (max-width: 575.98px) { .savebar-status { display: none; } }
+.btn-settings-save { font-size: .82rem; font-weight: 600; padding: .5rem 1.1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: .35rem; }
+.btn-settings-ghost {
+    font-size: .82rem; font-weight: 600; padding: .5rem 1rem; border-radius: 8px;
+    border: 1px solid var(--st-border); color: var(--st-text-2); background: transparent;
+}
+.btn-settings-ghost:hover { color: var(--st-text); background: var(--st-surface-2); border-color: var(--st-border); }
+.btn-settings-outline {
+    font-size: .8rem; font-weight: 600; padding: .45rem .9rem; border-radius: 8px;
+    border: 1px solid var(--st-border); color: var(--primary-color); background: var(--st-surface);
+    display: inline-flex; align-items: center; gap: .35rem;
+}
+.btn-settings-outline:hover { background: var(--st-accent-soft); border-color: var(--primary-color); color: var(--primary-color); }
+</style>
+
+<script>
+(function () {
+    var form = document.getElementById('settingsForm');
+    var bar = document.getElementById('settingsSavebar');
+    var statusText = bar.querySelector('.status-text');
+    var dirty = false;
+    var submitting = false;
+
+    window.markSettingsDirty = function () {
+        if (dirty) return;
+        dirty = true;
+        bar.classList.add('is-dirty');
+        statusText.textContent = statusText.dataset.dirty;
+    };
+
+    form.addEventListener('input', window.markSettingsDirty);
+    form.addEventListener('change', window.markSettingsDirty);
+    form.addEventListener('submit', function () {
+        submitting = true;
+        var btn = document.getElementById('settingsSaveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving…';
+    });
+    document.getElementById('discardBtn').addEventListener('click', function () { dirty = false; });
+
+    // Compact the bar once it sticks to the top
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+            bar.classList.toggle('is-stuck', !entries[0].isIntersecting);
+        }, { rootMargin: (document.getElementById('appContainer').classList.contains('sidebar-active') ? '0px' : '-64px') + ' 0px 0px 0px' })
+            .observe(document.getElementById('settingsStickySentinel'));
+    }
+    window.addEventListener('beforeunload', function (e) {
+        if (dirty && !submitting) { e.preventDefault(); e.returnValue = ''; }
+    });
+})();
+</script>
+{% block settings_scripts %}{% endblock %}
+{% endblock %}

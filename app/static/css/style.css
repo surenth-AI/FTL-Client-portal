@@ -354,6 +354,52 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--primary-color);
 }
 
+/* Collapsible nav group (e.g. System Settings) */
+.sidebar-nav {
+    overflow-y: auto;
+    min-height: 0;
+}
+.sidebar-nav .nav-group-toggle { cursor: pointer; }
+.sidebar-nav .nav-group-toggle .nav-group-chevron {
+    margin: 0 0 0 auto;
+    font-size: 0.7rem;
+    transition: transform 0.2s ease;
+}
+.sidebar-nav .nav-group-toggle:not(.collapsed) .nav-group-chevron { transform: rotate(180deg); }
+.sidebar-nav .nav-group-toggle.has-active,
+.sidebar-nav .nav-group-toggle.has-active i { color: var(--primary-color) !important; }
+
+.sidebar-subnav {
+    list-style: none;
+    margin: 2px 0 6px 1.5rem;
+    padding: 0 0 0 0.5rem;
+    border-left: 1px solid var(--glass-border);
+}
+.sidebar-subnav .nav-link {
+    padding: 0.45rem 0.75rem !important;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border-radius: 6px;
+    margin-bottom: 1px;
+}
+.sidebar-subnav .nav-link.active {
+    border-left: none;
+    border-radius: 6px;
+    font-weight: 600;
+    background: color-mix(in srgb, var(--primary-color) 9%, transparent);
+    position: relative;
+}
+.sidebar-subnav .nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: calc(-0.5rem - 1px);
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--primary-color);
+}
+
 /* Top Bar Styling - Clean & Minimal */
 .top-bar {
     height: var(--topbar-height);
@@ -701,6 +747,7 @@ html[data-color-scheme='dark'] .sidebar-nav .nav-link:hover   { background: #263
 html[data-color-scheme='dark'] .sidebar-nav .nav-link:hover i { color: var(--primary-color); }
 html[data-color-scheme='dark'] .sidebar-nav .nav-link.active  { background: #263348; color: var(--primary-color) !important; border-left-color: var(--primary-color); }
 html[data-color-scheme='dark'] .sidebar-nav .nav-link.active i{ color: var(--primary-color); }
+html[data-color-scheme='dark'] .sidebar-subnav .nav-link.active { background: color-mix(in srgb, var(--primary-color) 14%, transparent); }
 
 /* --- Top bar --- */
 html[data-color-scheme='dark'] .top-bar                 { background-color: #1E293B; border-bottom-color: #334155; }

@@ -1,0 +1,138 @@
+{% extends 'admin/settings/_layout.html' %}
+{% block page_title %}Mail Server{% endblock %}
+{% block page_icon %}bi-envelope-at{% endblock %}
+{% block page_description %}Outgoing email (SMTP) for password resets and approval notifications.{% endblock %}
+
+{% block settings_body %}
+<!-- SMTP server -->
+<section class="settings-card">
+    <div class="settings-card-header">
+        <div>
+            <h6 class="settings-card-title">SMTP connection</h6>
+            <p class="settings-card-desc">Connection details from your email provider.</p>
+        </div>
+        {% if settings.smtp_server %}
+        <span class="settings-pill success"><i class="bi bi-check-circle-fill"></i> Configured · {{ settings.smtp_server }}:{{ settings.smtp_port }}</span>
+        {% else %}
+        <span class="settings-pill warning"><i class="bi bi-exclamation-triangle-fill"></i> Not configured. Email is disabled.</span>
+        {% endif %}
+    </div>
+
+    <div class="settings-row">
+        <div>
+            <div class="settings-row-label">Server</div>
+            <p class="settings-row-help">Host name and port. Port 587 (STARTTLS) is recommended.</p>
+        </div>
+        <div class="row g-2">
+            <div class="col-sm-8">
+                <label class="form-label" for="smtpServer">Host</label>
+                <div class="settings-input-icon">
+                    <i class="bi bi-hdd-network"></i>
+                    <input type="text" id="smtpServer" name="smtp_server" class="form-control" placeholder="smtp.gmail.com" value="{{ settings.smtp_server or '' }}">
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <label class="form-label" for="smtpPort">Port</label>
+                <div class="settings-input-icon">
+                    <i class="bi bi-hash"></i>
+                    <input type="number" id="smtpPort" name="smtp_port" class="form-control" placeholder="587" min="1" max="65535" value="{{ settings.smtp_port or 587 }}">
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="port-presets">
+                    <span>Common ports:</span>
+                    <button type="button" data-port="587">587 · STARTTLS</button>
+                    <button type="button" data-port="465">465 · SSL</button>
+                    <button type="button" data-port="25">25 · Plain</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-row">
+        <div>
+            <div class="settings-row-label">Authentication</div>
+            <p class="settings-row-help">The sender account. For Gmail or Microsoft 365, use an app password.</p>
+        </div>
+        <div class="row g-2">
+            <div class="col-md-6">
+                <label class="form-label" for="smtpUser">Sender email (username)</label>
+                <div class="settings-input-icon">
+                    <i class="bi bi-at"></i>
+                    <input type="email" id="smtpUser" name="smtp_user" class="form-control" placeholder="noreply@company.com" value="{{ settings.smtp_user or '' }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="smtpPassword">Password</label>
+                <div class="settings-input-icon">
+                    <i class="bi bi-key"></i>
+                    <input type="password" id="smtpPassword" name="smtp_password" class="form-control" style="padding-right:2.5rem;"
+                           placeholder="{{ '••••••••  (saved)' if settings.smtp_password else 'Enter password' }}" autocomplete="new-password">
+                    <button type="button" class="input-action" id="smtpPwToggle" tabindex="-1" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                </div>
+                <div class="form-text">{% if settings.smtp_password %}Leave blank to keep the saved password.{% else %}No password saved yet.{% endif %}</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Notifications -->
+<section class="settings-card">
+    <div class="settings-card-header">
+        <div>
+            <h6 class="settings-card-title">Notifications</h6>
+            <p class="settings-card-desc">Where system alerts are sent inside your organisation.</p>
+        </div>
+    </div>
+    <div class="settings-row">
+        <div>
+            <div class="settings-row-label">Internal receiver</div>
+            <p class="settings-row-help">This inbox gets new registration approval requests.</p>
+        </div>
+        <div>
+            <div class="settings-input-icon">
+                <i class="bi bi-inbox"></i>
+                <input type="email" name="receiver_email" class="form-control" placeholder="operations@company.com" value="{{ settings.receiver_email or '' }}">
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.port-presets { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .72rem; color: var(--st-muted); }
+.port-presets button {
+    border: 1px solid var(--st-border); background: var(--st-surface-2); color: var(--st-text-2);
+    font-size: .7rem; font-weight: 600; padding: .2rem .6rem; border-radius: 999px;
+    transition: border-color .15s, color .15s;
+}
+.port-presets button:hover, .port-presets button.active { border-color: var(--primary-color); color: var(--primary-color); }
+</style>
+{% endblock %}
+
+{% block settings_scripts %}
+<script>
+(function () {
+    var pw = document.getElementById('smtpPassword');
+    var toggle = document.getElementById('smtpPwToggle');
+    toggle.addEventListener('click', function () {
+        var show = pw.type === 'password';
+        pw.type = show ? 'text' : 'password';
+        toggle.innerHTML = '<i class="bi ' + (show ? 'bi-eye-slash' : 'bi-eye') + '"></i>';
+    });
+
+    var port = document.getElementById('smtpPort');
+    var presets = document.querySelectorAll('.port-presets button');
+    function syncPresets() {
+        presets.forEach(function (b) { b.classList.toggle('active', b.dataset.port === port.value); });
+    }
+    presets.forEach(function (b) {
+        b.addEventListener('click', function () {
+            port.value = b.dataset.port;
+            port.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+    port.addEventListener('input', syncPresets);
+    syncPresets();
+})();
+</script>
+{% endblock %}

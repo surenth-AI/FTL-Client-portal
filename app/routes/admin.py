@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
-from app.models.models import Rate, Booking, TrackingEvent, User, Company
+from app.models.models import Booking, TrackingEvent, User, Company
 from app.services.excel_importer import ExcelImporter
 from app.utils import validate_password_strength
 from app import db
@@ -106,7 +106,6 @@ def dashboard():
     total_customers = User.query.filter_by(role='customer', status='active').count()
     total_companies = Company.query.filter_by(status='active').count()
     total_staff = User.query.filter(User.role != 'customer').count()
-    total_rates = Rate.query.count()
     recent_bookings = Booking.query.options(joinedload(Booking.customer).joinedload(User.company)).order_by(Booking.created_at.desc()).limit(10).all()
     all_customers = User.query.filter_by(role='customer', status='active').all()
     
@@ -115,7 +114,6 @@ def dashboard():
                          total_customers=total_customers,
                          total_companies=total_companies,
                          total_staff=total_staff,
-                         total_rates=total_rates,
                          recent_bookings=recent_bookings,
                          all_customers=all_customers)
 
@@ -253,42 +251,6 @@ def shipment_intelligence():
                              'ratio': round(release_ratio, 1)
                          })
 
-@admin.route('/rates')
-@admin_required
-def view_rates():
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    pagination = Rate.query.order_by(Rate.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
-    return render_template('admin/rates.html', pagination=pagination, rates=pagination.items)
-
-@admin.route('/rates/upload', methods=['GET', 'POST'])
-@admin_required
-def upload_rates():
-    if request.method == 'POST':
-        file = request.files.get('file')
-        if not file:
-            flash('No file selected.', 'danger')
-            return redirect(request.url)
-        filename = file.filename.lower()
-        try:
-            if filename.endswith('.xlsx'):
-                result = ExcelImporter.process_file(file.read(), filename)
-                if result['success']:
-                    flash(result['message'], 'success')
-                    return redirect(url_for('admin.view_rates'))
-                flash(f"Excel error: {result['message']}", "danger")
-            else:
-                stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-                csv_input = csv.DictReader(stream)
-                for row in csv_input:
-                    db.session.add(Rate(origin=row['origin'], destination=row['destination'], nvocc_name=row['nvocc_name'], base_rate=float(row['base_rate']), surcharges=float(row['surcharges']), transit_days=int(row['transit_days']), validity_start=datetime.strptime(row['validity_start'], '%Y-%m-%d').date(), validity_end=datetime.strptime(row['validity_end'], '%Y-%m-%d').date()))
-                db.session.commit()
-                flash('Successfully uploaded rates.', 'success')
-                return redirect(url_for('admin.view_rates'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error processing file: {str(e)}', 'danger')
-    return render_template('admin/upload.html')
 
 @admin.route('/booking/<int:booking_id>/update', methods=['GET', 'POST'])
 @admin_required
@@ -309,103 +271,160 @@ def shipment_details(id):
     booking = Booking.query.get_or_404(id)
     return render_template('admin/shipment_details.html', booking=booking)
 
-@admin.route('/rate/delete/<int:rate_id>')
-@admin_required
-def delete_rate(rate_id):
-    db.session.delete(Rate.query.get_or_404(rate_id))
-    db.session.commit()
-    flash('Rate deleted.', 'success')
-    return redirect(url_for('admin.view_rates'))
 
-@admin.route('/rates/clear')
-@admin_required
-def clear_rates():
-    Rate.query.delete()
-    db.session.commit()
-    flash('All rates cleared.', 'success')
-    return redirect(url_for('admin.view_rates'))
+# --- System Settings ---
+
+SETTINGS_SECTIONS = {
+    'branding': 'admin/settings/branding.html',
+    'appearance': 'admin/settings/appearance.html',
+    'mail': 'admin/settings/mail.html',
+}
+ADMIN_ONLY_SECTIONS = {'branding', 'mail'}
+ALLOWED_LOGO_EXTENSIONS = {'png', 'jpg', 'jpeg', 'svg'}
+ALLOWED_BANNER_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 
-@admin.route('/settings', methods=['GET', 'POST'])
-@login_required
-def settings():
+def _is_settings_admin():
+    return current_user.role in ['super_admin', 'admin']
+
+
+def _get_system_settings():
     from app.models.models import SystemSetting
-    import os
-    from werkzeug.utils import secure_filename
-    
     sys_settings = SystemSetting.query.first()
     if not sys_settings:
         sys_settings = SystemSetting(theme_color='blue', logo_path='img/logo.png', default_layout='sidebar', typography='Inter')
         db.session.add(sys_settings)
         db.session.commit()
-        
+    return sys_settings
+
+
+def _commit_settings(message):
+    db.session.commit()
+    # Invalidate system settings cache
+    try:
+        from app import clear_settings_cache
+        clear_settings_cache()
+    except Exception as e:
+        current_app.logger.warning(f"Failed to clear settings cache: {e}")
+    flash(message, 'success')
+
+
+def _save_uploaded_image(file_storage, allowed_extensions):
+    """Save an uploaded image into static/img and return its static-relative path.
+    Returns None when no file was sent; raises ValueError on a disallowed type."""
+    import os
+    from werkzeug.utils import secure_filename
+
+    if not file_storage or file_storage.filename == '':
+        return None
+    filename = secure_filename(file_storage.filename)
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    if ext not in allowed_extensions:
+        raise ValueError(f"Unsupported file type. Allowed: {', '.join(sorted(allowed_extensions)).upper()}")
+
+    static_img_dir = os.path.join(current_app.root_path, 'static', 'img')
+    os.makedirs(static_img_dir, exist_ok=True)
+    file_storage.save(os.path.join(static_img_dir, filename))
+    return 'img/' + filename
+
+
+def _save_appearance(sys_settings):
+    theme_color = request.form.get('theme_color')
+    typography = request.form.get('typography')
+    default_layout = request.form.get('default_layout')
+
+    if theme_color:
+        sys_settings.theme_color = theme_color
+    if typography:
+        sys_settings.typography = typography
+    if default_layout in ('sidebar', 'topbar'):
+        sys_settings.default_layout = default_layout
+
+
+def _save_branding(sys_settings):
+    logo_path = _save_uploaded_image(request.files.get('logo_file'), ALLOWED_LOGO_EXTENSIONS)
+    if logo_path:
+        sys_settings.logo_path = logo_path
+
+    banner_path = _save_uploaded_image(request.files.get('banner_file'), ALLOWED_BANNER_EXTENSIONS)
+    if banner_path:
+        sys_settings.login_banner_path = banner_path
+
+    sys_settings.terms_conditions_url = request.form.get('terms_conditions_url', '').strip() or None
+
+
+def _save_mail(sys_settings):
+    sys_settings.smtp_server = request.form.get('smtp_server', '').strip() or None
+
+    smtp_port = request.form.get('smtp_port', '').strip()
+    sys_settings.smtp_port = int(smtp_port) if smtp_port.isdigit() else 587
+
+    sys_settings.smtp_user = request.form.get('smtp_user', '').strip() or None
+
+    # Only update password if a new one is provided (so we don't overwrite with blanks)
+    smtp_pw = request.form.get('smtp_password')
+    if smtp_pw and smtp_pw.strip() != '':
+        sys_settings.smtp_password = smtp_pw
+
+    sys_settings.receiver_email = request.form.get('receiver_email', '').strip() or None
+
+
+@admin.route('/settings', defaults={'section': None}, methods=['GET', 'POST'])
+@admin.route('/settings/<section>', methods=['GET', 'POST'])
+@login_required
+def settings(section):
+    is_admin = _is_settings_admin()
+    if section not in SETTINGS_SECTIONS or (section in ADMIN_ONLY_SECTIONS and not is_admin):
+        return redirect(url_for('admin.settings', section='branding' if is_admin else 'appearance'))
+
+    sys_settings = _get_system_settings()
+
     if request.method == 'POST':
-        theme_color = request.form.get('theme_color')
-        typography = request.form.get('typography')
-        default_layout = request.form.get('default_layout')
-        
-        if theme_color:
-            sys_settings.theme_color = theme_color
-            
-        if typography:
-            sys_settings.typography = typography
-            
-        if default_layout:
-            sys_settings.default_layout = default_layout
-            
-        # Only allow admin & super_admin to edit branding and SMTP settings
-        if current_user.role in ['super_admin', 'admin']:
-            logo_file = request.files.get('logo_file')
-            banner_file = request.files.get('banner_file')
-                
-            static_img_dir = os.path.join(current_app.root_path, 'static', 'img')
-            if not os.path.exists(static_img_dir):
-                os.makedirs(static_img_dir)
-
-            # Handle Organization Logo Upload
-            if logo_file and logo_file.filename != '':
-                filename = secure_filename(logo_file.filename)
-                save_path = os.path.join(static_img_dir, filename)
-                logo_file.save(save_path)
-                sys_settings.logo_path = 'img/' + filename
-                
-            # Handle Terms & Conditions URL
-            sys_settings.terms_conditions_url = request.form.get('terms_conditions_url') or None
-                
-            # Handle Login Panel Banner Upload
-            if banner_file and banner_file.filename != '':
-                filename = secure_filename(banner_file.filename)
-                save_path = os.path.join(static_img_dir, filename)
-                banner_file.save(save_path)
-                sys_settings.login_banner_path = 'img/' + filename
-                
-            # Handle SMTP Settings
-            sys_settings.smtp_server = request.form.get('smtp_server') or None
-            
-            smtp_port = request.form.get('smtp_port')
-            sys_settings.smtp_port = int(smtp_port) if smtp_port and smtp_port.isdigit() else 587
-            
-            sys_settings.smtp_user = request.form.get('smtp_user') or None
-            
-            # Only update password if a new one is provided (so we don't overwrite with blanks)
-            smtp_pw = request.form.get('smtp_password')
-            if smtp_pw and smtp_pw.strip() != '':
-                sys_settings.smtp_password = smtp_pw
-                
-            sys_settings.receiver_email = request.form.get('receiver_email') or None
-
-        db.session.commit()
-        # Invalidate system settings cache
         try:
-            from app import clear_settings_cache
-            clear_settings_cache()
-        except Exception as e:
-            current_app.logger.warning(f"Failed to clear settings cache: {e}")
-            
-        flash('Settings updated successfully.', 'success')
+            if section == 'appearance':
+                _save_appearance(sys_settings)
+            elif section == 'branding':
+                _save_branding(sys_settings)
+            elif section == 'mail':
+                _save_mail(sys_settings)
+        except ValueError as e:
+            db.session.rollback()
+            flash(str(e), 'danger')
+            return redirect(url_for('admin.settings', section=section))
+
+        _commit_settings('Settings updated successfully.')
+        return redirect(url_for('admin.settings', section=section))
+
+    return render_template(SETTINGS_SECTIONS[section], settings=sys_settings, section=section, is_admin=is_admin)
+
+
+@admin.route('/field-config', methods=['GET', 'POST'])
+@login_required
+def field_config():
+    if not _is_settings_admin():
+        flash('Admin access required.', 'danger')
         return redirect(url_for('admin.settings'))
-        
-    return render_template('admin/settings.html', settings=sys_settings)
 
+    sys_settings = _get_system_settings()
 
+    if request.method == 'POST':
+        import json
+        # Incoterm rules arrive as a JSON string built by the rules editor
+        incoterm_rules_str = request.form.get('incoterm_rules')
+        if incoterm_rules_str:
+            try:
+                rules = json.loads(incoterm_rules_str)
+            except json.JSONDecodeError:
+                flash('Invalid JSON provided for Incoterm Rules.', 'danger')
+                return redirect(url_for('admin.field_config'))
+            if not isinstance(rules, dict) or not isinstance(rules.get('rules', []), list):
+                flash('Invalid structure provided for Incoterm Rules.', 'danger')
+                return redirect(url_for('admin.field_config'))
+            sys_settings.incoterm_rules = rules if rules.get('rules') else None
+        else:
+            sys_settings.incoterm_rules = None
 
+        _commit_settings('Field configuration updated successfully.')
+        return redirect(url_for('admin.field_config'))
+
+    return render_template('admin/field_config.html', settings=sys_settings)

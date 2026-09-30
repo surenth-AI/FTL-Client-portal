@@ -234,20 +234,34 @@
                             <i class="bi bi-shield-lock"></i> User Management
                         </a>
                     </li>
-
+                    {% if current_user.role in ['super_admin', 'admin'] %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">
-                            <i class="bi bi-list-ul"></i> Rates Sheet
+                        <a class="nav-link {% if request.endpoint == 'admin.field_config' %}active{% endif %}" href="{{ url_for('admin.field_config') }}">
+                            <i class="bi bi-sliders"></i> Field Configuration
                         </a>
                     </li>
-
-
-
+                    {% set settings_open = request.endpoint == 'admin.settings' %}
+                    {% set settings_section = request.view_args.get('section') if request.view_args else None %}
+                    <li class="nav-item nav-group">
+                        <a class="nav-link nav-group-toggle {% if settings_open %}has-active{% else %}collapsed{% endif %}" data-bs-toggle="collapse" href="#settingsSubnav" role="button" aria-expanded="{{ 'true' if settings_open else 'false' }}" aria-controls="settingsSubnav">
+                            <i class="bi bi-gear"></i> System Settings
+                            <i class="bi bi-chevron-down nav-group-chevron"></i>
+                        </a>
+                        <div class="collapse {% if settings_open %}show{% endif %}" id="settingsSubnav">
+                            <ul class="sidebar-subnav">
+                                <li><a class="nav-link {% if settings_open and settings_section == 'branding' %}active{% endif %}" href="{{ url_for('admin.settings', section='branding') }}">Branding</a></li>
+                                <li><a class="nav-link {% if settings_open and settings_section == 'appearance' %}active{% endif %}" href="{{ url_for('admin.settings', section='appearance') }}">Appearance</a></li>
+                                <li><a class="nav-link {% if settings_open and settings_section == 'mail' %}active{% endif %}" href="{{ url_for('admin.settings', section='mail') }}">Mail Server</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    {% else %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
-                            <i class="bi bi-gear"></i> {% if current_user.role in ['super_admin', 'admin'] %}System Settings{% else %}Settings{% endif %}
+                            <i class="bi bi-gear"></i> Settings
                         </a>
                     </li>
+                    {% endif %}
                 {% elif current_user.role == 'customer' %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">
@@ -376,10 +390,9 @@
                             <li><a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.shipment_intelligence' %}active{% endif %}" href="{{ url_for('admin.shipment_intelligence') }}">Shipment Intelligence</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" href="{{ url_for('admin.manage_users') }}">Users</a></li>
-
-                            <li><a class="nav-link {% if request.endpoint == 'admin.view_rates' %}active{% endif %}" href="{{ url_for('admin.view_rates') }}">Rates</a></li>
-
-
+                            {% if current_user.role in ['super_admin', 'admin'] %}
+                            <li><a class="nav-link {% if request.endpoint == 'admin.field_config' %}active{% endif %}" href="{{ url_for('admin.field_config') }}">Field Config</a></li>
+                            {% endif %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% elif current_user.role == 'customer' %}
                             <li><a class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}" href="{{ url_for('customer.dashboard') }}">Dashboard</a></li>

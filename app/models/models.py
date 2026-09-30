@@ -406,7 +406,7 @@ class SystemSetting(db.Model):
     default_layout = db.Column(db.String(50), default='sidebar') # sidebar, topbar
     typography = db.Column(db.String(100), default='Inter')
     terms_conditions_url = db.Column(db.String(500), nullable=True)
-
+    incoterm_rules = db.Column(db.JSON, nullable=True)
 
     # SMTP Configuration
     smtp_server = db.Column(db.String(255), nullable=True)

@@ -146,7 +146,8 @@ def create_app(config_class=Config):
                 ('smtp_user', 'VARCHAR(255) NULL'),
                 ('smtp_password', 'VARCHAR(255) NULL'),
                 ('receiver_email', 'VARCHAR(255) NULL'),
-                ('typography', "VARCHAR(100) DEFAULT 'Inter'")
+                ('typography', "VARCHAR(100) DEFAULT 'Inter'"),
+                ('incoterm_rules', 'TEXT NULL')
             ]:
                 try:
                     db.session.execute(db.text(f"ALTER TABLE system_setting ADD {col} {col_type};"))

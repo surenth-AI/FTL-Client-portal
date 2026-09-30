@@ -1698,6 +1698,12 @@ def rates():
             }
 
     freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
+    
+    from app.models.models import SystemSetting
+    sys_settings = SystemSetting.query.first()
+    import json
+    incoterm_rules_json = json.dumps(sys_settings.incoterm_rules) if sys_settings and sys_settings.incoterm_rules else 'null'
+
     return render_template('customer/rates.html',
                          countries=[],
                          incoterms=[],
@@ -1707,7 +1713,8 @@ def rates():
                          weight_uom_json='[]',
                          volume_uom_json='[]',
                          freight_terms=freight_terms,
-                         query=query_data)
+                         query=query_data,
+                         incoterm_rules_json=incoterm_rules_json)
 
 @customer.route('/api/lookups')
 @login_required

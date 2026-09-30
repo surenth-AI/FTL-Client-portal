@@ -1732,6 +1732,20 @@ html[data-color-scheme='dark'] .rates-view-content {
 // Dynamic lists loaded asynchronously with immediate robust fallbacks
 let apiCountries = [];
 let apiIncoterms = [];
+let _rawDynamicRules = {{ incoterm_rules_json | safe }};
+let DYNAMIC_INCOTERM_RULES = null;
+try {
+    if (typeof _rawDynamicRules === 'string') {
+        DYNAMIC_INCOTERM_RULES = JSON.parse(_rawDynamicRules);
+        if (typeof DYNAMIC_INCOTERM_RULES === 'string') {
+            DYNAMIC_INCOTERM_RULES = JSON.parse(DYNAMIC_INCOTERM_RULES);
+        }
+    } else {
+        DYNAMIC_INCOTERM_RULES = _rawDynamicRules;
+    }
+} catch(e) {
+    console.error("Failed to parse incoterm rules:", e);
+}
 let packageTypes = [
     { code: 'PX', name: 'Pallet' },
     { code: 'BX', name: 'Box' },
@@ -2720,7 +2734,10 @@ async function filterLocations(locationType) {
             setTimeout(() => togglePanel('cargo'), 300);
         }
 
+        let currentMatchedRule = null;
+
         function updateAvailableIncoterms() {
+            currentMatchedRule = null;
             const trafficTypeEl = document.getElementById('trafficType');
             const originTypeEl = document.getElementById('originType');
             const destTypeEl = document.getElementById('destType');
@@ -2733,22 +2750,51 @@ async function filterLocations(locationType) {
             const destType = destTypeEl.value;
             const options = incotermSelect.options;
 
-            // Define allowed incoterms based on rules
-            let allowed = [];
-            if (trafficType === 'EX') {
-                if (destType === 'port') {
-                    allowed = ['CFR', 'DPU', 'FOB', 'DAP'];
-                } else if (destType === 'door') {
-                    allowed = ['DAP'];
+            // If no rules are defined, show all options and skip enforcement
+            if (!DYNAMIC_INCOTERM_RULES || !DYNAMIC_INCOTERM_RULES.rules || DYNAMIC_INCOTERM_RULES.rules.length === 0) {
+                for (let i = 0; i < options.length; i++) {
+                    options[i].style.display = '';
                 }
-            } else if (trafficType === 'IM') {
-                if (originType === 'port') {
-                    allowed = ['FOB', 'FCA', 'CFR', 'EXW'];
-                } else if (originType === 'door') {
-                    allowed = ['EXW'];
+                return;
+            }
+
+            // Find matching rules from dynamic configuration
+            let matchedRules = [];
+            for (const rule of DYNAMIC_INCOTERM_RULES.rules) {
+                let match = true;
+                if (rule.trafficType && rule.trafficType !== trafficType) match = false;
+                if (rule.originType && rule.originType !== originType) match = false;
+                if (rule.destType && rule.destType !== destType) match = false;
+                
+                if (match) {
+                    matchedRules.push(rule);
                 }
             }
 
+            // If no rule matches, fallback to allowing all options
+            if (matchedRules.length === 0) {
+                currentMatchedRule = null;
+                for (let i = 0; i < options.length; i++) {
+                    options[i].style.display = '';
+                }
+                return;
+            }
+
+            // Combine allowed options from all matching rules
+            let allowedSet = new Set();
+            let primaryDef = '';
+            
+            for (const rule of matchedRules) {
+                if (rule.allowed) {
+                    rule.allowed.forEach(a => allowedSet.add(a));
+                }
+                if (rule.default && !primaryDef) primaryDef = rule.default;
+            }
+            
+            // Set currentMatchedRule to the first match for freight terms fallback
+            currentMatchedRule = matchedRules[0];
+            
+            const allowed = Array.from(allowedSet);
             let currentSelectionValid = false;
 
             // Show/hide options and check if current selection is still valid
@@ -2766,12 +2812,8 @@ async function filterLocations(locationType) {
             }
 
             if (!currentSelectionValid) {
-                // Set to default based on rules
-                let def = '';
-                if (trafficType === 'EX' && destType === 'port') def = 'CFR';
-                else if (trafficType === 'EX' && destType === 'door') def = 'DAP';
-                else if (trafficType === 'IM' && originType === 'port') def = 'FOB';
-                else if (trafficType === 'IM' && originType === 'door') def = 'EXW';
+                // Set to default based on rule
+                let def = primaryDef;
                 
                 if (def && allowed.includes(def)) {
                     incotermSelect.value = def;
@@ -3344,12 +3386,16 @@ async function filterLocations(locationType) {
                 return;
             }
 
-            // Auto-select Freight terms based on Incoterm
+            // Auto-select Freight terms based on Incoterm or configured rule
             const freightTerms = document.getElementById('freightTerms');
-            if (['CFR', 'DPU', 'DAP'].includes(incoterm)) {
-                freightTerms.value = 'prepaid';
-            } else if (['FOB', 'FCA', 'EXW'].includes(incoterm)) {
-                freightTerms.value = 'collect';
+            if (currentMatchedRule && currentMatchedRule.freightTerm) {
+                freightTerms.value = currentMatchedRule.freightTerm;
+            } else {
+                if (['CFR', 'DPU', 'DAP'].includes(incoterm)) {
+                    freightTerms.value = 'prepaid';
+                } else if (['FOB', 'FCA', 'EXW'].includes(incoterm)) {
+                    freightTerms.value = 'collect';
+                }
             }
 
             // Auto-trigger Door Delivery / Door Pickup services
