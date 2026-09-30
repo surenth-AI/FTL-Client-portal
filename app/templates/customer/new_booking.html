@@ -28,6 +28,38 @@
             --hover-bg: #f1f5f9;
         }
 
+        /* Dark Mode overrides */
+        html[data-color-scheme='dark'] {
+            --primary-blue: #60a5fa;
+            --primary-blue-dark: #93c5fd;
+            --primary-green: #34d399;
+            --primary-green-dark: #6ee7b7;
+            --green-bg: #064e3b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --bg-gray: #0f172a;
+            --bg-white: #1e293b;
+            --success-green: #10b981;
+            --error-red: #f87171;
+            --amber: #fbbf24;
+            --amber-bg: #78350f;
+            --hover-bg: #334155;
+        }
+        
+        html[data-color-scheme='dark'] .location-type-btn.active,
+        html[data-color-scheme='dark'] .vas-item.selected {
+            background: rgba(59, 130, 246, 0.15) !important;
+            border-color: var(--primary-blue) !important;
+            color: #fff !important;
+        }
+
+        html[data-color-scheme='dark'] select option {
+            background: var(--bg-white);
+            color: var(--text-primary);
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-gray);
@@ -1439,6 +1471,19 @@
             }
         }
     
+    html[data-color-scheme='dark'] .custom-alert-box {
+        background: #1e293b !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    html[data-color-scheme='dark'] .custom-alert-message {
+        color: #f8fafc !important;
+    }
+
+    html[data-color-scheme='dark'] .custom-alert-button {
+        background: #3b82f6 !important;
+        color: #ffffff !important;
+    }
 </style>
 
         <div class="page-header">
@@ -2176,31 +2221,40 @@
         }
 
         function showDropdown(locationType) {
-            const countryEl = document.getElementById(locationType + 'Country');
-            const country = countryEl ? countryEl.value : null;
-            if (!country) {
-                alert('Please select a country first');
-                return;
+            const type = document.getElementById(locationType + 'Type').value;
+            if (type !== 'port') {
+                const countryEl = document.getElementById(locationType + 'Country');
+                const country = countryEl ? countryEl.value : null;
+                if (!country) {
+                    alert('Please select a country first');
+                    return;
+                }
             }
             filterLocations(locationType);
         }
 
         async function filterLocations(locationType) {
-            const country = document.getElementById(locationType + 'Country').value;
+            let country = document.getElementById(locationType + 'Country').value;
             const type = document.getElementById(locationType + 'Type').value;
             const inputEl = document.getElementById(locationType + 'Location');
             const searchTerm = inputEl ? inputEl.value.toLowerCase() : '';
             const dropdown = document.getElementById(locationType + 'Dropdown');
             if (!dropdown) return;
 
-            if (!country) {
+            if (type === 'door') {
+                if (!country) {
+                    dropdown.classList.remove('show');
+                    return;
+                }
                 dropdown.classList.remove('show');
+                selectedLocations[locationType] = { name: searchTerm, code: '' };
                 return;
             }
 
-            if (type === 'door') {
+            if (type === 'port') {
+                country = 'all';
+            } else if (!country) {
                 dropdown.classList.remove('show');
-                selectedLocations[locationType] = { name: searchTerm, code: '' };
                 return;
             }
 

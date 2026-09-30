@@ -2008,10 +2008,13 @@
         }
 
         function showDropdown(locationType) {
-            const country = document.getElementById(locationType + 'Country').value;
-            if (!country) {
-                alert('Please select a country first');
-                return;
+            const type = document.getElementById(locationType + 'Type').value;
+            if (type !== 'port') {
+                const country = document.getElementById(locationType + 'Country').value;
+                if (!country) {
+                    alert('Please select a country first');
+                    return;
+                }
             }
             filterLocations(locationType);
         }

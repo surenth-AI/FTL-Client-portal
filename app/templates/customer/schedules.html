@@ -169,15 +169,85 @@
         color: #94a3b8 !important;
     }
 
-    html[data-color-scheme='dark'] .table-schedules th {
+    html[data-color-scheme='dark'] .schedules-list-table th {
         background: #0f172a !important;
         color: #94a3b8 !important;
         border-color: #334155 !important;
     }
 
-    html[data-color-scheme='dark'] .table-schedules td {
+    html[data-color-scheme='dark'] .schedules-list-table td {
         border-color: #334155 !important;
         color: #f8fafc !important;
+    }
+    
+    html[data-color-scheme='dark'] .empty-state-box {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    
+    html[data-color-scheme='dark'] .empty-state-box h4 {
+        color: #f8fafc !important;
+    }
+    
+    html[data-color-scheme='dark'] .empty-state-box p {
+        color: #94a3b8 !important;
+    }
+    
+    html[data-color-scheme='dark'] .view-switcher-pill {
+        background: #0f172a !important;
+        border-color: #334155 !important;
+    }
+    
+    html[data-color-scheme='dark'] .btn-view-toggle {
+        color: #94a3b8 !important;
+    }
+    
+    html[data-color-scheme='dark'] .btn-view-toggle.active {
+        background: #334155 !important;
+        color: #f8fafc !important;
+    }
+    
+    html[data-color-scheme='dark'] .dropdown-locations-box,
+    html[data-color-scheme='dark'] .sailing-details-expansion,
+    html[data-color-scheme='dark'] .sailing-card-item:hover,
+    html[data-color-scheme='dark'] .schedules-list-table tbody tr:hover td {
+        background: #0f172a !important;
+        border-color: #334155 !important;
+    }
+
+    html[data-color-scheme='dark'] .location-suggestion-item:hover,
+    html[data-color-scheme='dark'] .active-suggestion {
+        background: #334155 !important;
+        color: #fff !important;
+    }
+    
+    html[data-color-scheme='dark'] .btn-outline-action {
+        background: transparent !important;
+        border-color: #3b82f6 !important;
+        color: #3b82f6 !important;
+    }
+    
+    html[data-color-scheme='dark'] .btn-outline-action:hover {
+        background: rgba(59, 130, 246, 0.15) !important;
+    }
+    
+    html[data-color-scheme='dark'] .status-badge.on-time {
+        background: rgba(16, 185, 129, 0.2) !important;
+        color: #34d399 !important;
+    }
+
+    html[data-color-scheme='dark'] .status-badge.delayed {
+        background: rgba(245, 158, 11, 0.2) !important;
+        color: #fbbf24 !important;
+    }
+
+    html[data-color-scheme='dark'] .service-tag-badge.lcl {
+        background: rgba(59, 130, 246, 0.2) !important;
+        color: #60a5fa !important;
+    }
+    html[data-color-scheme='dark'] .service-tag-badge.fcl {
+        background: rgba(16, 185, 129, 0.2) !important;
+        color: #34d399 !important;
     }
 
     /* LOCATION AUTOCOMPLETE DROPDOWN */
@@ -965,11 +1035,11 @@
                 // Ensure standard property names for API keys
                 s.pol = s.pol || s.portOfLoading || oLocode;
                 s.pod = s.pod || s.portOfDischarge || dLocode;
-                s.vessel = s.vessel || s.vesselName || 'Vessel';
+                s.vessel = s.vessel || s.vesselName || '';
                 s.voyage = s.voyage || s.voyageNumber || '';
-                s.service = s.product || s.service || 'LCL';
-                s.routing = s.routing || (s.transshipmentPort ? `VIA ${s.transshipmentPort}` : 'DIRECT');
-                s.via = s.transshipmentPort || s.via || '—';
+                s.service = s.product || s.service || '';
+                s.routing = s.routing || (s.transshipmentPort ? `VIA ${s.transshipmentPort}` : '');
+                s.via = s.transshipmentPort || s.via || '';
                 s.closingLCL = s.closingLCL || s.lclClosingDate || null;
                 s.closingDoc = s.closingDoc || s.docClosingDate || null;
             });
@@ -1096,8 +1166,13 @@
                     </div>
                 </div>` : '<div class="cutoff-dates-block"></div>';
 
-            const isDirect = (s.routing || 'DIRECT').toUpperCase().includes('DIRECT');
-            const viaText = s.via && s.via !== '—' ? `VIA ${s.via.toUpperCase()}` : 'DIRECT';
+            const isDirect = (s.routing || '').toUpperCase().includes('DIRECT');
+            let viaText = '';
+            if (s.via) {
+                viaText = `VIA ${s.via.toUpperCase()}`;
+            } else if (s.routing) {
+                viaText = s.routing.toUpperCase();
+            }
 
             const quoteUrl = `/customer/rates?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
             const bookUrl = `/customer/new_booking?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
@@ -1118,7 +1193,7 @@
                             <div class="timeline-center-graphic">
                                 <div class="transit-duration-label">${s.transitDays > 0 ? s.transitDays + ' days' : 'N/A'}</div>
                                 <div class="timeline-graphic-bar"></div>
-                                <span class="route-status-tag ${isDirect ? 'direct' : 'via'}">${viaText}</span>
+                                ${viaText ? `<span class="route-status-tag ${isDirect ? 'direct' : 'via'}">${viaText}</span>` : ''}
                             </div>
 
                             <div class="port-detail-box" style="text-align: right;">
@@ -1130,10 +1205,10 @@
 
                         <!-- Middle Vessel Details -->
                         <div class="vessel-details-block">
-                            <div class="vessel-name-heading">${s.vessel || 'Vessel'}</div>
-                            <div class="voyage-sub-code">Voyage ${s.voyage || ''}</div>
+                            <div class="vessel-name-heading">${s.vessel || ''}</div>
+                            ${s.voyage ? `<div class="voyage-sub-code">Voyage ${s.voyage}</div>` : ''}
                             <div class="service-tags-row">
-                                <span class="service-tag-badge ${s.service === 'FCL' ? 'fcl' : 'lcl'}">${s.service || 'LCL'}</span>
+                                ${s.service ? `<span class="service-tag-badge ${s.service === 'FCL' ? 'fcl' : 'lcl'}">${s.service}</span>` : ''}
                                 ${s.carrier ? `<span class="service-tag-badge">${s.carrier}</span>` : ''}
                             </div>
                         </div>
@@ -1180,7 +1255,7 @@
             const isFastest = minTransit > 0 && s.transitDays === minTransit;
             const etdStr = s.etd ? s.etd.substring(0, 10) : 'TBD';
             const etaStr = s.eta ? s.eta.substring(0, 10) : 'TBD';
-            const isDirect = (s.routing || 'DIRECT').toUpperCase().includes('DIRECT');
+            const isDirect = (s.routing || '').toUpperCase().includes('DIRECT');
 
             const quoteUrl = `/customer/rates?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
             const bookUrl = `/customer/new_booking?origin=${encodeURIComponent(s.pol)}&destination=${encodeURIComponent(s.pod)}`;
@@ -1192,10 +1267,10 @@
                     <td>${etdStr}</td>
                     <td>${etaStr}</td>
                     <td><strong>${s.transitDays > 0 ? s.transitDays + ' days' : 'N/A'}</strong></td>
-                    <td><strong>${s.vessel || 'Vessel'}</strong><br><span style="font-size:0.75rem; color:#64748b;">Voy. ${s.voyage || ''}</span></td>
-                    <td><span class="service-tag-badge ${s.service === 'FCL' ? 'fcl' : 'lcl'}">${s.service || 'LCL'}</span></td>
-                    <td><span class="route-status-tag ${isDirect ? 'direct' : 'via'}">${isDirect ? 'DIRECT' : 'TRANSSHIPMENT'}</span></td>
-                    <td>${s.via || '—'}</td>
+                    <td><strong>${s.vessel || ''}</strong>${s.voyage ? `<br><span style="font-size:0.75rem; color:#64748b;">Voy. ${s.voyage}</span>` : ''}</td>
+                    <td>${s.service ? `<span class="service-tag-badge ${s.service === 'FCL' ? 'fcl' : 'lcl'}">${s.service}</span>` : ''}</td>
+                    <td>${s.routing ? `<span class="route-status-tag ${isDirect ? 'direct' : 'via'}">${isDirect ? 'DIRECT' : 'TRANSSHIPMENT'}</span>` : ''}</td>
+                    <td>${s.via || ''}</td>
                     <td>
                         <div style="display: flex; gap: 0.4rem;">
                             <a href="${quoteUrl}" class="btn-quote-outline py-1 px-2" style="font-size:0.75rem;">Get a Quote</a>

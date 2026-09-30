@@ -1395,6 +1395,19 @@ html[data-color-scheme='dark'] .rates-view-content {
     background: var(--success-green) !important;
     color: #ffffff !important;
 }
+    html[data-color-scheme='dark'] .custom-alert-box {
+        background: #1e293b !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    html[data-color-scheme='dark'] .custom-alert-message {
+        color: #f8fafc !important;
+    }
+
+    html[data-color-scheme='dark'] .custom-alert-button {
+        background: #3b82f6 !important;
+        color: #ffffff !important;
+    }
 </style>
 {% endblock %}
 
@@ -2572,10 +2585,13 @@ async function filterLocations(locationType) {
         }
 
         function showDropdown(locationType) {
-            const country = document.getElementById(locationType + 'Country').value;
-            if (!country) {
-                alert('Please select a country first');
-                return;
+            const type = document.getElementById(locationType + 'Type').value;
+            if (type !== 'port') {
+                const country = document.getElementById(locationType + 'Country').value;
+                if (!country) {
+                    alert('Please select a country first');
+                    return;
+                }
             }
             filterLocations(locationType);
         }

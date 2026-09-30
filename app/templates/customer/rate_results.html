@@ -906,7 +906,7 @@
                             <div class="carrier-logo">🚢</div>
                             <div class="carrier-text">
                                 <div class="carrier-name">{{ res.rate.nvocc_name }}</div>
-                                <div class="service-name">{{ res.carrier or 'Standard Carrier' }}</div>
+                                <div class="service-name">{{ res.carrier or '' }}</div>
                             </div>
                         </div>
                         <div class="route-line">
@@ -956,7 +956,7 @@
                 </div>
                 <div class="offer-footer">
                     <div class="footer-links">
-                        <a class="terms-link" href="#">📄 View terms &amp; conditions ↗</a>
+                        <a class="terms-link" href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>📄 View terms &amp; conditions ↗</a>
                     </div>
                     <button class="breakdown-toggle" onclick="toggleBreakdown(this, 'bd-{{ loop.index }}')">View rate
                         breakdown <span class="chev">▾</span></button>
@@ -1029,7 +1029,7 @@
                 {% for res in results %}
                 <tr onclick="toggleTableBreakdown('table-bd-{{ loop.index }}')" style="cursor: pointer;">
                     <td class="carrier-cell">
-                        <div class="carrier-logo">FTL</div>{{ res.carrier or 'Standard Carrier' }}
+                        <div class="carrier-logo">🚢</div>{{ res.carrier or '' }}
                         <span class="meta-pill service" style="margin-left:0.4rem;">{{ query.get('service_type', 'LCL')
                             }}</span>
                     </td>
