@@ -402,6 +402,9 @@ class SystemSetting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     theme_color = db.Column(db.String(50), default='blue') # blue, green, teal, purple, orange
     logo_path = db.Column(db.String(255), default='img/logo.png')
+    company_name = db.Column(db.String(255), default='FAST TRANSIT LINE')
+    company_address = db.Column(db.Text, default='SCHOUWKENSSTRAAT 1, 2030 ANTWERPEN, BELGIUM')
+    company_phone = db.Column(db.String(100), default='+32 (0)3 5419676')
     login_banner_path = db.Column(db.String(255), default='img/login_hero.png')
     default_layout = db.Column(db.String(50), default='sidebar') # sidebar, topbar
     typography = db.Column(db.String(100), default='Inter')

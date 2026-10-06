@@ -29,7 +29,10 @@ def get_cached_system_settings():
                     'login_banner_path': settings.login_banner_path or 'img/login_hero.png',
                     'default_layout': settings.default_layout or 'sidebar',
                     'typography': settings.typography or 'Inter',
-                    'terms_conditions_url': settings.terms_conditions_url or ''
+                    'terms_conditions_url': settings.terms_conditions_url or '',
+                    'company_name': settings.company_name or 'FAST TRANSIT LINE',
+                    'company_address': settings.company_address or 'SCHOUWKENSSTRAAT 1, 2030 ANTWERPEN, BELGIUM',
+                    'company_phone': settings.company_phone or '+32 (0)3 5419676'
                 }
             else:
                 _settings_cache['data'] = {
@@ -38,7 +41,10 @@ def get_cached_system_settings():
                     'login_banner_path': 'img/login_hero.png',
                     'default_layout': 'sidebar',
                     'typography': 'Inter',
-                    'terms_conditions_url': ''
+                    'terms_conditions_url': '',
+                    'company_name': 'FAST TRANSIT LINE',
+                    'company_address': 'SCHOUWKENSSTRAAT 1, 2030 ANTWERPEN, BELGIUM',
+                    'company_phone': '+32 (0)3 5419676'
                 }
         except Exception:
             return {
@@ -47,7 +53,10 @@ def get_cached_system_settings():
                 'login_banner_path': 'img/login_hero.png',
                 'default_layout': 'sidebar',
                 'typography': 'Inter',
-                'terms_conditions_url': ''
+                'terms_conditions_url': '',
+                'company_name': 'FAST TRANSIT LINE',
+                'company_address': 'SCHOUWKENSSTRAAT 1, 2030 ANTWERPEN, BELGIUM',
+                'company_phone': '+32 (0)3 5419676'
             }
         _settings_cache['expires_at'] = now + 300 # Cache for 5 minutes
     return _settings_cache['data']

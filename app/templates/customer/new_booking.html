@@ -1550,12 +1550,8 @@
                     {% endif %}
                                 </div>
                 <!-- Pagination Controls -->
-                <div class="d-flex align-items-center justify-content-center mt-3 mb-2 flex-wrap gap-3 pagination-container" id="pickerPagination">
-                    <nav aria-label="Pagination">
-                        <ul class="pagination d-flex align-items-center m-0" style="gap: 0.25rem;" id="pickerPaginationList">
-                            <!-- Injected by JS -->
-                        </ul>
-                    </nav>
+                <div id="pickerPagination">
+                    <!-- Pagination injected by JS -->
                 </div>
                 <div class="form-help" style="margin-top:0.6rem;">Only Active and Expiring quotes can be converted to a booking. Booked or expired quotes won't appear here.</div>
             </div>
@@ -2177,11 +2173,14 @@
             const type = document.getElementById(locationType + 'Type').value;
             const label = document.getElementById(locationType + 'LocationLabel');
             const input = document.getElementById(locationType + 'Location');
+            const countryGroup = document.getElementById(locationType + 'Country').closest('.form-group');
 
             if (type === 'door') {
+                if (countryGroup) countryGroup.style.display = 'block';
                 if (label) label.innerHTML = 'City <span class="required">*</span>';
                 if (input) input.placeholder = 'Search by city name or zip code';
             } else {
+                if (countryGroup) countryGroup.style.display = 'none';
                 if (label) label.innerHTML = 'Port <span class="required">*</span>';
                 if (input) input.placeholder = 'Search by port name or UN code';
             }
@@ -2282,30 +2281,41 @@
             const searchWords = searchTerm.replace(/[()]/g, ' ').trim().split(/\s+/).filter(w => w);
             const filtered = locations.filter(loc => {
                 if (searchWords.length === 0) return true;
-                const locText = `${loc.name} ${loc.code}`.toLowerCase();
+                const cName = apiCountries.find(c => c.code === loc.country)?.name || loc.country || '';
+                const locText = `${loc.name} ${loc.code} ${cName}`.toLowerCase();
                 return searchWords.every(word => locText.includes(word));
-            }).map(loc => ({
-                name: loc.name,
-                code: loc.code
-            }));
+            }).map(loc => {
+                const cName = apiCountries.find(c => c.code === loc.country)?.name || loc.country || '';
+                return {
+                    name: loc.name,
+                    code: loc.code,
+                    countryName: cName
+                };
+            });
 
             if (filtered.length === 0) {
                 dropdown.innerHTML = '<div class="dropdown-no-results">*No services listed for now</div>';
             } else {
-                dropdown.innerHTML = filtered.map(loc => `
-                    <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\\'")}', '${loc.code}')">
-                        <div class="dropdown-item-name">${loc.name}</div>
+                dropdown.innerHTML = filtered.map(loc => {
+                    const displayTitle = loc.countryName && type === 'port' ? `${loc.name} - ${loc.countryName}` : loc.name;
+                    return `
+                    <div class="dropdown-item" onclick="selectLocation('${locationType}', '${loc.name.replace(/'/g, "\\'")}', '${loc.code}', '${(loc.countryName || '').replace(/'/g, "\\'")}')">
+                        <div class="dropdown-item-name">${displayTitle}</div>
                         <div class="dropdown-item-code">${loc.code}</div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
             dropdown.classList.add('show');
         }
 
-        function selectLocation(locationType, name, code) {
-            selectedLocations[locationType] = { name, code };
+        function selectLocation(locationType, name, code, countryName = '') {
+            selectedLocations[locationType] = { name, code, countryName };
+            const type = document.getElementById(locationType + 'Type').value;
+            let displayVal = `${name} (${code})`;
+            if (type === 'port' && countryName) displayVal = `${name} - ${countryName} (${code})`;
             const input = document.getElementById(locationType + 'Location');
-            if (input) input.value = `${name} (${code})`;
+            if (input) input.value = displayVal;
             const dropdown = document.getElementById(locationType + 'Dropdown');
             if (dropdown) dropdown.classList.remove('show');
             
@@ -2324,8 +2334,8 @@
         
         // Initialize dynamic countries & default dates on load
         document.addEventListener('DOMContentLoaded', async function() {
-            populateCountries('origin', 'port');
-            populateCountries('dest', 'port');
+            handleLocationTypeChange('origin');
+            handleLocationTypeChange('dest');
 
             // Default Cargo Ready Date to current date
             const cargoReadyInput = document.getElementById('cargoReadyDate');
@@ -2737,27 +2747,46 @@
             visibleCards.slice(startIdx, endIdx).forEach(card => card.style.display = ''); // show paginated
             
             // Render Pagination UI matching pagination.html
-            const paginationList = document.getElementById('pickerPaginationList');
-            if (!paginationList) return;
+            const paginationContainer = document.getElementById('pickerPagination');
+            if (!paginationContainer) return;
             
-            let html = '';
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+            
+            const totalResults = visibleCards.length;
+            const startDisplay = startIdx + 1;
+            const endDisplay = Math.min(startIdx + pickerItemsPerPage, totalResults);
+            
+            let html = `
+            <div class="d-flex align-items-center justify-content-between mt-4 mb-2 flex-wrap gap-3 pagination-container">
+                <div class="text-muted small fw-medium">
+                    Showing <span class="fw-bold text-dark">${startDisplay}</span>
+                    to <span class="fw-bold text-dark">${endDisplay}</span>
+                    of <span class="fw-bold text-dark">${totalResults}</span> results
+                </div>
+                <nav aria-label="Pagination">
+                    <ul class="pagination d-flex align-items-center m-0" style="gap: 0.25rem;">
+            `;
             
             // Prev Button
             const prevDisabled = pickerCurrentPage === 1 ? 'disabled' : '';
             html += `<li class="page-item ${prevDisabled} m-0">
                         <a class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2" 
                            href="javascript:void(0)" onclick="if(${pickerCurrentPage} > 1) { pickerCurrentPage--; filterPicker(); }">
-                             Previous
+                             <i class="bi bi-chevron-left"></i> Previous
                         </a>
                     </li>`;
             
-            html += `<div class="d-flex" style="gap: 0.25rem;">`;
+            html += `<div class="d-none d-md-flex" style="gap: 0.25rem;">`;
             for (let i = 1; i <= totalPages; i++) {
                 const activeClass = i === pickerCurrentPage ? 'active' : '';
                 const linkClass = i === pickerCurrentPage ? 'bg-primary text-white fw-bold' : 'bg-white text-dark';
                 html += `<li class="page-item ${activeClass}">
                             <a class="page-link shadow-sm rounded border-0 ${linkClass}" 
-                               href="javascript:void(0)" onclick="pickerCurrentPage = ${i}; filterPicker();">${i}</a>
+                               href="javascript:void(0)" onclick="pickerCurrentPage = ${i}; filterPicker();"
+                               style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;">${i}</a>
                         </li>`;
             }
             html += `</div>`;
@@ -2767,11 +2796,14 @@
             html += `<li class="page-item ${nextDisabled} m-0">
                         <a class="page-link shadow-sm rounded border-0 bg-white text-dark px-3 py-2" 
                            href="javascript:void(0)" onclick="if(${pickerCurrentPage} < ${totalPages}) { pickerCurrentPage++; filterPicker(); }">
-                            Next 
+                            Next <i class="bi bi-chevron-right"></i>
                         </a>
-                    </li>`;
+                    </li>
+                </ul>
+            </nav>
+        </div>`;
             
-            paginationList.innerHTML = html;
+            paginationContainer.innerHTML = html;
         }
 
 

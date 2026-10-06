@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Quotation 26-API-017264 – Fast Transit Line</title>
+    <style>
+        :root {
+            --ink: #111;
+            --muted: #555;
+            --line: #222;
+            --rule: #bbb;
+            --band: #e0e0e0;
+            --tariff-bg: #eef4fb;
+            --brand: #2b3c97;
+            --brand-light: #1a73c9;
+            --bar: #000;
+            --page-bg: #f2f2f2;
+            --paper: #fff;
+            --gap: clamp(.5rem, 1.5vw, 1rem);
+            --fs: clamp(.8rem, .72rem + .35vw, .95rem);
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            margin: 0
+        }
+
+        body {
+            background: var(--page-bg);
+            color: var(--ink);
+            font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+            font-size: var(--fs);
+            line-height: 1.35;
+            padding: clamp(.5rem, 3vw, 2rem);
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto clamp(1rem, 3vw, 2rem);
+            background: var(--paper);
+            padding: clamp(.75rem, 3vw, 2.5rem);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
+        }
+
+        /* ---------- Header ---------- */
+        .header {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+            border: 1px solid var(--line);
+        }
+
+        .header>div {
+            padding: .5rem .75rem
+        }
+
+        .meta {
+            border-right: 1px solid var(--line)
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: max-content 1fr;
+            column-gap: 1.25rem;
+            row-gap: .1rem
+        }
+
+        .kv dt {
+            font-weight: 700;
+            font-size: .85em
+        }
+
+        .kv dd {
+            margin: 0
+        }
+
+        .meta .kv+.kv {
+            border-top: 1px solid var(--line);
+            margin: .5rem -.75rem 0;
+            padding: .5rem .75rem 0
+        }
+
+        .company {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--gap)
+        }
+
+        .logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1
+        }
+
+        .logo-mark {
+            font: italic 900 clamp(2rem, 5vw, 3rem)/1 "Arial Black", Arial, sans-serif;
+            color: var(--brand-light);
+            letter-spacing: -.04em
+        }
+
+        .logo-text {
+            font: 700 clamp(.95rem, 2.2vw, 1.35rem)/1.1 "Arial Narrow", Arial, sans-serif;
+            color: var(--brand)
+        }
+
+        .address {
+            color: var(--muted);
+            font-size: .8em;
+            text-transform: uppercase;
+            line-height: 1.3
+        }
+
+        .title-bar {
+            margin: 1rem 0 .75rem;
+            border-top: 5px solid var(--brand-light);
+            border-bottom: 5px solid var(--brand-light);
+            padding: 3px 0
+        }
+
+        .title-bar h1 {
+            margin: 0;
+            background: var(--bar);
+            color: #fff;
+            text-align: center;
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            padding: .2rem
+        }
+
+        /* ---------- Body box ---------- */
+        .body {
+            border: 1px solid var(--line)
+        }
+
+        .intro {
+            padding: .75rem;
+            font-size: .85em
+        }
+
+        .intro p {
+            margin: 0
+        }
+
+        .band {
+            background: var(--band);
+            font-weight: 700;
+            padding: .2rem .4rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .band.sub {
+            font-size: .8em
+        }
+
+        .section {
+            padding: .4rem .75rem .6rem
+        }
+
+        .routing {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+            gap: .1rem 1rem;
+        }
+
+        .routing .kv dt {
+            font-size: .9em
+        }
+
+        /* ---------- Tables ---------- */
+        .table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        th {
+            text-align: left;
+            font-size: .8em;
+            padding: .35rem .4rem;
+            white-space: nowrap
+        }
+
+        td {
+            padding: .2rem .4rem;
+            vertical-align: top
+        }
+
+        .num {
+            text-align: right;
+            white-space: nowrap
+        }
+
+        .cargo thead th {
+            border-bottom: 1px solid var(--line)
+        }
+
+        .cargo {
+            min-width: 520px
+        }
+
+        .dims {
+            border: 1px solid var(--rule);
+            width: min(100%, 260px);
+            font-size: .85em
+        }
+
+        .dims th {
+            text-align: center;
+            font-weight: 400;
+            border-bottom: 1px solid var(--rule)
+        }
+
+        .dims td {
+            height: 1.3em
+        }
+
+        .totals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem 2.5rem;
+            border-top: 1px solid var(--line);
+            margin-top: 1.5rem;
+            padding-top: .5rem;
+        }
+
+        .totals b {
+            margin-right: .75rem
+        }
+
+        .haz {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem 3rem;
+            font-size: .8em;
+            padding: .3rem .75rem .6rem
+        }
+
+        .tariff-box {
+            background: var(--tariff-bg);
+            margin: .6rem .75rem;
+            padding: .4rem .5rem
+        }
+
+        .tariff {
+            min-width: 640px;
+            font-size: .85em
+        }
+
+        .tariff thead th {
+            border-bottom: 1px solid var(--line);
+            padding-bottom: .4rem
+        }
+
+        .tariff tbody.group td:first-child {
+            padding-left: .4rem
+        }
+
+        .tariff .spacer td {
+            height: 1rem
+        }
+
+        .tariff .subtotal td {
+            font-weight: 700
+        }
+
+        .tariff .subtotal td.rule {
+            border-top: 1px solid var(--line)
+        }
+
+        .tariff .grand td {
+            border-top: 1px solid var(--line);
+            font-weight: 700;
+            font-size: 1.15em;
+            padding-top: .6rem
+        }
+
+        .note {
+            padding: .3rem .75rem .5rem;
+            font-size: .9em
+        }
+
+        .note p {
+            margin: 0 0 .15rem
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-top: 1rem;
+            font-size: .85em
+        }
+
+        .footer b {
+            font-size: .9em
+        }
+
+        .schedule {
+            min-width: 600px;
+            font-size: .85em
+        }
+
+        .schedule thead th {
+            border-bottom: 1px solid var(--line)
+        }
+
+        .schedule td {
+            height: 1.6em
+        }
+
+        @media (max-width:640px) {
+            .meta {
+                border-right: 0;
+                border-bottom: 1px solid var(--line)
+            }
+
+            .company {
+                justify-content: flex-start
+            }
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0
+            }
+
+            .page {
+                box-shadow: none;
+                max-width: none;
+                margin: 0;
+                padding: 0;
+                page-break-after: always
+            }
+
+            .page:last-child {
+                page-break-after: auto
+            }
+
+            .table-wrap {
+                overflow: visible
+            }
+
+            .band,
+            .tariff-box,
+            .title-bar h1 {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =================== PAGE 1 =================== -->
+    <section class="page">
+
+        <header class="header">
+            <div class="meta">
+                <dl class="kv">
+                    <dt>Quotation No.:</dt>
+                    <dd>26-API-017264</dd>
+                    <dt>Print Date:</dt>
+                    <dd>3/10/2026</dd>
+                    <dt>To:</dt>
+                    <dd>A. VAN DORST EN ZONEN BV</dd>
+                    <dt>Attn.:</dt>
+                    <dd>MARTIJN VANDORST</dd>
+                </dl>
+                <dl class="kv">
+                    <dt>From:</dt>
+                    <dd>&nbsp;</dd>
+                    <dt>Email:</dt>
+                    <dd>&nbsp;</dd>
+                    <dt>Phone:</dt>
+                    <dd>&nbsp;</dd>
+                </dl>
+            </div>
+            <div class="company">
+                <!-- Replace this block with <img src="logo.png" alt="Fast Transit Line"> -->
+                <div class="logo" aria-label="Fast Transit Line logo">
+                    <span class="logo-mark">FTL</span>
+                    <span class="logo-text">Fast Transit Line</span>
+                </div>
+                <address class="address" style="font-style:normal">
+                    Fast Transit Line<br>
+                    Schouwkensstraat 1<br>
+                    2030 Antwerpen<br>
+                    Belgium<br>
+                    Phone: +32 (0)3 5419676
+                </address>
+            </div>
+        </header>
+
+        <div class="title-bar">
+            <h1>*** QUOTATION ***</h1>
+        </div>
+
+        <div class="body">
+            <div class="intro">
+                <p>Dear ,</p>
+                <p>we thank you for your request. Please find herewith our rate and tentative sailing schedule. With
+                    future correspondence in regard to this rate offer, please refer to above mentioned quotation ID nr.
+                    If you have any further questions, please do not hesitate to contact us.</p>
+            </div>
+
+            <!-- Routing -->
+            <div class="band"><span>ROUTING</span><span>INCO TERM: CFR</span></div>
+            <div class="section routing">
+                <dl class="kv">
+                    <dt>PLACE OF RECEIPT:</dt>
+                    <dd>Antwerp</dd>
+                    <dt>PORT OF LOADING:</dt>
+                    <dd>Antwerp</dd>
+                    <dt>PORT OF DISCHARGE:</dt>
+                    <dd>Singapore</dd>
+                </dl>
+                <dl class="kv" style="align-self:end">
+                    <dt>FINAL DESTINATION:</dt>
+                    <dd>Singapore</dd>
+                </dl>
+            </div>
+
+            <!-- Cargo -->
+            <div class="band"><span>CARGO DETAILS</span></div>
+            <div class="section">
+                <div class="table-wrap">
+                    <table class="cargo">
+                        <thead>
+                            <tr>
+                                <th>No. and kind of packages</th>
+                                <th>Description</th>
+                                <th class="num">Weight (kgs)</th>
+                                <th class="num">Volume (m³)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1 BX</td>
+                                <td style="width:50%">General Cargo</td>
+                                <td class="num">1.200,00</td>
+                                <td class="num">1,50</td>
+                            </tr>
+                            <tr>
+                                <td style="padding-top:1rem">Dimensions</td>
+                                <td colspan="3" style="padding-top:1rem">
+                                    <table class="dims">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>L</th>
+                                                <th>W</th>
+                                                <th>H</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="totals">
+                    <span><b>TOTAL #:</b>1</span>
+                    <span><b>TOTAL WEIGHT:</b>1.200,00</span>
+                    <span><b>TOTAL VOLUME:</b>1,50</span>
+                </div>
+            </div>
+
+            <div class="band sub"><span>HAZARDOUS INFORMATION:</span></div>
+            <div class="haz"><span>UN:</span><span>CLASS:</span><span>PG:</span></div>
+
+            <!-- Tariff -->
+            <div class="band"><span>TARIFF</span></div>
+            <div class="tariff-box table-wrap">
+                <table class="tariff">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="num">Price</th>
+                            <th class="num">Minimum</th>
+                            <th class="num">Qty</th>
+                            <th>CalcCode</th>
+                            <th>Curr.</th>
+                            <th class="num">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="group">
+                        <tr class="spacer">
+                            <td colspan="7"></td>
+                        </tr>
+                        <tr>
+                            <td>ADMIN FEE</td>
+                            <td class="num">30,00</td>
+                            <td class="num">30,00</td>
+                            <td class="num">1,000</td>
+                            <td>LUMPSUM</td>
+                            <td>EUR</td>
+                            <td class="num">30,00</td>
+                        </tr>
+                        <tr>
+                            <td>SOLAS ADMINISTRATION FEE</td>
+                            <td class="num">22,00</td>
+                            <td class="num">22,00</td>
+                            <td class="num">1,000</td>
+                            <td>LUMPSUM</td>
+                            <td>EUR</td>
+                            <td class="num">22,00</td>
+                        </tr>
+                        <tr>
+                            <td>ISPS SURCHARGE</td>
+                            <td class="num">12,00</td>
+                            <td class="num">12,00</td>
+                            <td class="num">1,000</td>
+                            <td>LUMPSUM</td>
+                            <td>EUR</td>
+                            <td class="num">12,00</td>
+                        </tr>
+                        <tr>
+                            <td>ECS - EMERGENCY CONGESTION SURCHARGE</td>
+                            <td class="num">5,00</td>
+                            <td class="num"></td>
+                            <td class="num">1,761</td>
+                            <td>W/M</td>
+                            <td>EUR</td>
+                            <td class="num">8,81</td>
+                        </tr>
+                        <tr class="subtotal">
+                            <td colspan="5" class="rule"></td>
+                            <td class="rule">EUR</td>
+                            <td class="num rule">72,81</td>
+                        </tr>
+                        <tr class="subtotal">
+                            <td colspan="5" class="num">=</td>
+                            <td>USD</td>
+                            <td class="num">145,61</td>
+                        </tr>
+                    </tbody>
+                    <tbody class="group">
+                        <tr class="spacer">
+                            <td colspan="7"></td>
+                        </tr>
+                        <tr>
+                            <td>OCEAN FREIGHT</td>
+                            <td class="num">17,00</td>
+                            <td class="num">12,00</td>
+                            <td class="num">1,761</td>
+                            <td>W/M</td>
+                            <td>USD</td>
+                            <td class="num">29,94</td>
+                        </tr>
+                        <tr>
+                            <td>LOW SULPHUR FUEL SURCHARGE</td>
+                            <td class="num">3,00</td>
+                            <td class="num">3,00</td>
+                            <td class="num">1,761</td>
+                            <td>W/M</td>
+                            <td>USD</td>
+                            <td class="num">5,28</td>
+                        </tr>
+                        <tr>
+                            <td>ETS</td>
+                            <td class="num">3,00</td>
+                            <td class="num">3,00</td>
+                            <td class="num">1,761</td>
+                            <td>W/M</td>
+                            <td>USD</td>
+                            <td class="num">5,28</td>
+                        </tr>
+                        <tr class="subtotal">
+                            <td colspan="5" class="rule"></td>
+                            <td class="rule">USD</td>
+                            <td class="num rule">40,50</td>
+                        </tr>
+                    </tbody>
+                    <tbody>
+                        <tr class="grand">
+                            <td colspan="5"></td>
+                            <td>USD</td>
+                            <td class="num">186,11</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="band"><span>TOTAL OVERALL</span></div>
+            <div class="note">
+                <p>The applied rate of exchange (R.O.E.) is an estimate and subject to change without advance notice,
+                    the total amount might differ at the time. EUR = 1. USD = 2.00</p>
+            </div>
+
+            <div class="band"><span>REMARKS</span></div>
+            <div class="note">
+                <p>The OceanFreight has a validity from <b>08/09/2026</b> up and until <b>08/09/2026</b></p>
+                <p>Surcharges + Fuel are <b>V</b>alid <b>A</b>t <b>T</b>ime <b>O</b>f <b>S</b>hipment</p>
+            </div>
+
+            <div class="band"><span>PICK UP</span></div>
+            <div class="note">
+                <p>Please note that the free time for pick up is limited to 30 Minutes.</p>
+            </div>
+
+            <div class="band"><span>REMARKS</span></div>
+            <div class="note" style="min-height:2.5rem"></div>
+        </div>
+
+        <footer class="footer">
+            <span><b>Quotation ID:</b> 26-API-017264</span>
+            <span>Pagina 1 van 2</span>
+        </footer>
+    </section>
+
+    <!-- =================== PAGE 2 =================== -->
+    <section class="page">
+        <div class="body">
+            <div class="band"><span>REMARKS FOR Singapore</span></div>
+            <div class="note" style="min-height:2rem"></div>
+
+            <div class="band"><span>TERMS AND CONDITIONS</span></div>
+            <div class="note">
+                <p>Quotation valid for standard, harmless cargo.</p>
+                <p>DAP CHARGES: Offers based on commercial deliveries.</p>
+                <p>In case of personal effects/domestic delivery please contact us</p>
+                <p>Long lenght surcharge applicable as from 5m90.</p>
+                <p>High cube surcharge applicable as from 2m25.</p>
+            </div>
+
+            <div class="band"><span>SAILING SCHEDULE FOR Singapore</span></div>
+            <div class="section table-wrap">
+                <table class="schedule">
+                    <thead>
+                        <tr>
+                            <th>Vessel</th>
+                            <th>Closing</th>
+                            <th>ETD</th>
+                            <th>Voyage</th>
+                            <th>POL</th>
+                            <th>ETA DESTINATION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <span><b>Quotation ID:</b> 26-API-017264</span>
+            <span>Pagina 2 van 2</span>
+        </footer>
+    </section>
+
+</body>
+
+</html>

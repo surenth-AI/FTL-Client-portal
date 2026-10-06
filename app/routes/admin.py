@@ -350,6 +350,10 @@ def _save_branding(sys_settings):
     if banner_path:
         sys_settings.login_banner_path = banner_path
 
+    sys_settings.company_name = request.form.get('company_name', '').strip() or 'FAST TRANSIT LINE'
+    sys_settings.company_address = request.form.get('company_address', '').strip() or 'SCHOUWKENSSTRAAT 1, 2030 ANTWERPEN, BELGIUM'
+    sys_settings.company_phone = request.form.get('company_phone', '').strip() or '+32 (0)3 5419676'
+
     sys_settings.terms_conditions_url = request.form.get('terms_conditions_url', '').strip() or None
 
 

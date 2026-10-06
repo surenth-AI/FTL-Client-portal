@@ -6,160 +6,417 @@
     <style>
         @page {
             size: a4 portrait;
-            @frame header_frame {           
-                -pdf-frame-content: header_content;
-                left: 50pt; width: 512pt; top: 50pt; height: 40pt;
-            }
-            @frame content_frame {          
-                left: 50pt; width: 512pt; top: 90pt; height: 632pt;
-            }
+            margin: 10mm;
             @frame footer_frame {           
                 -pdf-frame-content: footer_content;
-                left: 50pt; width: 512pt; top: 772pt; height: 20pt;
+                left: 10mm; width: 190mm; top: 280mm; height: 10mm;
             }
         }
         body {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 11pt;
-            color: #333333;
-        }
-        h1 {
-            font-size: 18pt;
+            font-size: 8.5pt;
             color: #000;
-            margin-bottom: 0;
-            padding-bottom: 0;
         }
-        h2 {
-            font-size: 14pt;
-            color: #444;
-            margin-bottom: 5px;
+        .container {
+            width: 100%;
         }
-        .text-right {
-            text-align: right;
+        .border-box {
+            border: 1px solid #000;
         }
-        .text-center {
-            text-align: center;
+        .border-top-none {
+            border-top: none;
+        }
+        .border-bottom-none {
+            border-bottom: none;
+        }
+        .border-left-none {
+            border-left: none;
+        }
+        .border-right-none {
+            border-right: none;
         }
         .header-table {
             width: 100%;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #0056b3;
-            padding-bottom: 10px;
-        }
-        .info-table {
-            width: 100%;
-            margin-bottom: 20px;
             border-collapse: collapse;
+            border: 1.5px solid #000;
         }
-        .info-table td {
-            padding: 5px;
+        .header-table td {
+            padding: 2px 4px;
+        }
+        .header-left {
+            width: 50%;
+            border-right: 1.5px solid #000;
             vertical-align: top;
         }
-        .info-label {
-            font-weight: bold;
-            color: #555;
-            width: 120px;
+        .header-left-inner {
+            width: 100%;
         }
-        .breakdown-table {
+        .header-left-inner td {
+            padding: 1px 2px;
+        }
+        .header-right {
+            width: 50%;
+            vertical-align: top;
+            padding: 5px;
+        }
+        .logo-text {
+            color: #777;
+            font-size: 7.5pt;
+            line-height: 1.2;
+            padding-left: 10px;
+        }
+        .divider {
+            border-top: 1px solid #000;
+            margin: 2px 0;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .blue-line {
+            height: 3px;
+            background-color: #0056b3;
+            margin-top: 4px;
+            margin-bottom: 0px;
+        }
+        .black-bar {
+            background-color: #000;
+            color: #fff;
+            text-align: center;
+            font-weight: bold;
+            font-size: 11pt;
+            padding: 3px;
+            margin: 1px 0;
+        }
+        .section-header {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            padding: 3px 5px;
+            border-bottom: 1px solid #000;
+        }
+        .section-header.no-border-bottom {
+            border-bottom: none;
+        }
+        .content-area {
+            padding: 4px;
+        }
+        .routing-table, .cargo-table, .tariff-table, .schedule-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
         }
-        .breakdown-table th {
-            background-color: #f2f2f2;
-            color: #333;
+        .routing-table td {
+            padding: 2px 4px;
+        }
+        .cargo-table th, .tariff-table th, .schedule-table th {
             font-weight: bold;
-            padding: 8px;
-            border: 1px solid #ddd;
             text-align: left;
+            padding: 2px 4px;
+            border-bottom: 1px solid #000;
+            font-size: 8pt;
         }
-        .breakdown-table td {
-            padding: 8px;
-            border: 1px solid #ddd;
+        .cargo-table td, .tariff-table td, .schedule-table td {
+            padding: 2px 4px;
+            font-size: 8pt;
+        }
+        .dim-table {
+            width: auto;
+            border-collapse: collapse;
+            margin: 2px 4px;
+        }
+        .dim-table th, .dim-table td {
+            border: 1px solid #ccc;
+            padding: 1px 10px;
+            text-align: center;
+            font-size: 7pt;
         }
         .total-row td {
+            border-top: 1px solid #000;
             font-weight: bold;
-            background-color: #f9f9f9;
+            padding-top: 4px;
         }
-        .total-amount {
-            font-size: 14pt;
-            color: #28a745;
+        .right {
+            text-align: right;
+        }
+        .center {
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="header_content">
+    <div class="container">
+        <!-- HEADER -->
         <table class="header-table">
             <tr>
-                <td>
-                    <h1>QUOTATION</h1>
-                    <p style="margin:0; color:#666;">Ref: {{ quote.api_booking_ref or ('QUO-' ~ quote.id) }}</p>
+                <td class="header-left">
+                    <table class="header-left-inner">
+                        <tr><td class="bold" style="width: 80px;">Quotation No.:</td><td>{{ quote.api_booking_ref or ('QUO-' ~ quote.id) }}</td></tr>
+                        <tr><td class="bold">Print Date:</td><td>{{ quote.created_at.strftime('%m/%d/%Y') }}</td></tr>
+                        <tr><td class="bold">To:</td><td>{{ quote.client_name|default('A. VAN DORST EN ZONEN BV') }}</td></tr>
+                        <tr><td class="bold">Attn.:</td><td>{{ quote.client_attn|default('MARTIJN VANDORST') }}</td></tr>
+                        <tr><td colspan="2"><div class="divider"></div></td></tr>
+                        <tr><td class="bold">From:</td><td>{{ quote.from_name|default('') }}</td></tr>
+                        <tr><td class="bold">Email:</td><td>{{ quote.from_email|default('') }}</td></tr>
+                        <tr><td class="bold">Phone:</td><td>{{ quote.from_phone|default('') }}</td></tr>
+                    </table>
                 </td>
-                <td class="text-right">
-                    <h2 style="margin:0;">AxeGlobal Logistics</h2>
-                    <p style="margin:0; color:#666;">Date: {{ quote.created_at.strftime('%B %d, %Y') }}</p>
+                <td class="header-right">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="width: 40%; text-align: center; vertical-align: middle;">
+                                <div style="font-size: 32pt; font-weight: 900; color: #1e5a9c; font-style: italic;">F+L</div>
+                                <div style="font-size: 12pt; color: #1e204c; margin-top: -5px; white-space: nowrap;">Fast Transit Line</div>
+                            </td>
+                            <td class="logo-text" style="width: 60%; vertical-align: middle;">
+                                FAST TRANSIT LINE<br>
+                                SCHOUWKENSSTRAAT 1<br>
+                                2030 ANTWERPEN<br>
+                                BELGIUM<br>
+                                PHONE: +32 (0)3 5419676
+                            </td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
         </table>
+
+        <!-- BANNERS -->
+        <div class="blue-line"></div>
+        <div class="black-bar">*** QUOTATION ***</div>
+        <div class="blue-line" style="margin-bottom: 10px;"></div>
+
+        <!-- MAIN BODY BORDERED BOX -->
+        <div class="border-box">
+            <!-- DEAR SECTION -->
+            <div class="content-area">
+                Dear {{ quote.client_attn|default('') }},<br>
+                we thank you for your request. Please find herewith our rate and tentative sailing schedule. With future correspondence in regard to this rate offer, please refer to above mentioned quotation ID nr. If you have any further questions, please do not hesitate to contact us.
+            </div>
+
+            <!-- ROUTING SECTION -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">
+                    <table style="width: 100%;"><tr>
+                        <td class="bold" style="font-size: 9pt;">ROUTING</td>
+                        <td class="right bold" style="font-size: 9pt;">INCO TERM: CFR</td>
+                    </tr></table>
+                </div>
+                <div class="content-area">
+                    <table class="routing-table">
+                        <tr><td class="bold" style="width: 150px;">PLACE OF RECEIPT:</td><td>{{ quote.origin }}</td><td></td><td></td></tr>
+                        <tr><td class="bold">PORT OF LOADING:</td><td>{{ quote.origin }}</td><td></td><td></td></tr>
+                        <tr><td class="bold">PORT OF DISCHARGE:</td><td>{{ quote.destination }}</td><td class="bold right" style="width: 150px;">FINAL DESTINATION:</td><td>{{ quote.destination }}</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CARGO DETAILS SECTION -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">CARGO DETAILS</div>
+                <div class="content-area" style="padding: 0;">
+                    <table class="cargo-table">
+                        <thead>
+                            <tr>
+                                <th>No. and kind of packages</th>
+                                <th>Description</th>
+                                <th class="right">Weight (kgs)</th>
+                                <th class="right">Volume (m³)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1 BX</td>
+                                <td>General Cargo</td>
+                                <td class="right">1.200,00</td>
+                                <td class="right">{{ quote.volume|default('1,50') }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" style="padding-top: 5px;">
+                                    <table style="width:100%;">
+                                        <tr>
+                                            <td style="width: 120px;">Dimensions</td>
+                                            <td>
+                                                <table class="dim-table">
+                                                    <tr><th>#</th><th>L</th><th>W</th><th>H</th></tr>
+                                                    <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="total-row">
+                                <td><span class="bold">TOTAL #:</span> 1</td>
+                                <td colspan="3"><span class="bold">TOTAL WEIGHT:</span> 1.200,00 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="bold">TOTAL VOLUME:</span> {{ quote.volume|default('1,50') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- HAZARDOUS SECTION -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">HAZARDOUS INFORMATION:</div>
+                <div class="content-area" style="font-size: 8pt;">
+                    UN: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CLASS: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PG:
+                </div>
+            </div>
+
+            <!-- TARIFF SECTION -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">TARIFF</div>
+                <div class="content-area" style="padding: 0; background-color: #f7fbff;">
+                    <table class="tariff-table" style="background-color: transparent;">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th class="right">Price</th>
+                                <th class="right">Minimum</th>
+                                <th class="right">Qty</th>
+                                <th>CalcCode</th>
+                                <th>Curr.</th>
+                                <th class="right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if breakdown %}
+                                {% for item in breakdown %}
+                                <tr>
+                                    <td>{{ item.description|default(item.chargeCode) }}</td>
+                                    <td class="right">{{ "{:,.2f}".format(item.amount) }}</td>
+                                    <td class="right">{{ "{:,.2f}".format(item.amount) }}</td>
+                                    <td class="right">1,000</td>
+                                    <td>LUMPSUM</td>
+                                    <td>{{ item.currency|default('EUR') }}</td>
+                                    <td class="right">{{ "{:,.2f}".format(item.amount) }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td>ADMIN FEE</td><td class="right">30,00</td><td class="right">30,00</td><td class="right">1,000</td><td>LUMPSUM</td><td>EUR</td><td class="right">30,00</td>
+                                </tr>
+                                <tr>
+                                    <td>OCEAN FREIGHT</td><td class="right">17,00</td><td class="right">12,00</td><td class="right">1,761</td><td>W/M</td><td>USD</td><td class="right">29,94</td>
+                                </tr>
+                            {% endif %}
+                            
+                            <tr><td colspan="7" style="border-bottom: 1px solid #ccc; padding: 2px;"></td></tr>
+                            
+                            <tr>
+                                <td colspan="5"></td>
+                                <td class="bold">USD</td>
+                                <td class="bold right">{{ "{:,.2f}".format(quote.total_cost) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TOTAL OVERALL SECTION -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">TOTAL OVERALL</div>
+                <div class="content-area">
+                    The applied rate of exchange (R.O.E.) is an estimate and subject to change without advance notice, the total amount might differ at the time. EUR = 1. USD = 2.00
+                </div>
+            </div>
+
+            <!-- REMARKS 1 -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">REMARKS</div>
+                <div class="content-area">
+                    The OceanFreight has a validity from <span class="bold">08/09/2026</span> up and until <span class="bold">08/09/2026</span><br>
+                    Surcharges + Fuel are <span class="bold">Valid At Time Of Shipment</span>
+                </div>
+            </div>
+
+            <!-- PICK UP -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">PICK UP</div>
+                <div class="content-area">
+                    Please note that the free time for pick up is limited to 30 Minutes.
+                </div>
+            </div>
+
+            <!-- REMARKS 2 -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">REMARKS FOR {{ quote.destination }}</div>
+                <div class="content-area" style="padding-bottom: 15px;"></div>
+            </div>
+
+            <!-- TERMS AND CONDITIONS -->
+            <div class="border-box border-bottom-none border-left-none border-right-none">
+                <div class="section-header">TERMS AND CONDITIONS</div>
+                <div class="content-area" style="font-size: 7.5pt; line-height: 1.2;">
+                    Quotation valid for standard, harmless cargo.<br>
+                    DAP CHARGES: Offers based on commercial deliveries.<br>
+                    In case of personal effects/domestic delivery please contact us<br>
+                    Long lenght surcharge applicable as from 5m90.<br>
+                    High cube surcharge applicable as from 2m25.
+                </div>
+            </div>
+
+            <!-- SAILING SCHEDULE -->
+            <div class="border-box border-left-none border-right-none border-bottom-none">
+                <div class="section-header no-border-bottom">SAILING SCHEDULE FOR {{ quote.destination }}</div>
+                <div class="content-area" style="padding: 0 10px 10px 10px;">
+                    <table class="schedule-table" style="margin-top: 5px;">
+                        <thead>
+                            <tr>
+                                <th style="border-top: 1px solid #000; border-right: 1px solid #000; border-left: 1px solid #000;">Vessel</th>
+                                <th style="border-top: 1px solid #000; border-right: 1px solid #000;">Voyage</th>
+                                <th style="border-top: 1px solid #000; border-right: 1px solid #000;">POL</th>
+                                <th style="border-top: 1px solid #000; border-right: 1px solid #000;">Closing</th>
+                                <th style="border-top: 1px solid #000; border-right: 1px solid #000;">ETD</th>
+                                <th style="border-top: 1px solid #000; border-right: 1px solid #000;">ETA</th>
+                                <th style="border-top: 1px solid #000; border-right: 1px solid #000;">DESTINATION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if schedules %}
+                                {% for sched in schedules %}
+                                <tr>
+                                    <td style="border-right: 1px solid #000; border-left: 1px solid #000; border-bottom: 1px solid #000;">{{ sched.vessel }}</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ sched.voyage }}</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ sched.pol }}</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ sched.closing }}</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ sched.etd }}</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ sched.eta }}</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ sched.destination }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td style="border-right: 1px solid #000; border-left: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="border-right: 1px solid #000; border-left: 1px solid #000; border-bottom: 1px solid #000;">&nbsp;</td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                    <td style="border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> <!-- end main border box -->
     </div>
     
-    <div id="footer_content" class="text-center" style="font-size: 9pt; color: #888; border-top: 1px solid #ccc; padding-top: 5px;">
-        Page <pdf:pagenumber> of <pdf:pagecount> | AxeGlobal Logistics
-    </div>
-
-    <div>
-        <h2>Quote Summary</h2>
-        <table class="info-table">
+    <div id="footer_content">
+        <table style="width: 100%;">
             <tr>
-                <td class="info-label">Routing:</td>
-                <td>{{ quote.origin }} &rarr; {{ quote.destination }}</td>
-                <td class="info-label">Carrier:</td>
-                <td>{{ quote.selected_nvocc }}</td>
-            </tr>
-            <tr>
-                <td class="info-label">Service:</td>
-                <td>{{ quote.service_type }}</td>
-                <td class="info-label">Total Volume:</td>
-                <td>{{ quote.volume }} CBM</td>
-            </tr>
-            <tr>
-                <td class="info-label">Total Cost:</td>
-                <td colspan="3"><span class="total-amount">${{ "{:,.2f}".format(quote.total_cost) }}</span></td>
+                <td style="width: 50%; font-size: 8pt; font-weight: bold;">Quotation ID: {{ quote.api_booking_ref or ('QUO-' ~ quote.id) }}</td>
+                <td style="width: 50%; text-align: right; font-size: 8pt;">Pagina <pdf:pagenumber> van <pdf:pagecount></td>
             </tr>
         </table>
-
-        <h2>Tariff Breakdown</h2>
-        {% if breakdown %}
-        <table class="breakdown-table">
-            <thead>
-                <tr>
-                    <th>Charge Type</th>
-                    <th>Description</th>
-                    <th class="text-right">Amount</th>
-                    <th class="text-center">Currency</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in breakdown %}
-                <tr>
-                    <td>{{ item.chargeCode }}</td>
-                    <td>{{ item.description or 'Standard Charge' }}</td>
-                    <td class="text-right">${{ "{:,.2f}".format(item.amount) }}</td>
-                    <td class="text-center">{{ item.currency or 'USD' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="2" class="text-right">Total:</td>
-                    <td class="text-right total-amount">${{ "{:,.2f}".format(quote.total_cost) }}</td>
-                    <td class="text-center">USD</td>
-                </tr>
-            </tfoot>
-        </table>
-        {% else %}
-        <p style="color: #666; font-style: italic;">No detailed breakdown available for this quotation.</p>
-        {% endif %}
     </div>
 </body>
 </html>

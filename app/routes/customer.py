@@ -1148,7 +1148,10 @@ def download_pdf(quote_id=None):
         exchange_rate_val=exchange_rate_val,
         from_curr=from_curr,
         to_curr=to_curr,
-        transit_port=transit_port
+        transit_port=transit_port,
+        sys_company_name=settings_data.get('company_name', 'FAST TRANSIT LINE'),
+        sys_company_address=settings_data.get('company_address', 'SCHOUWKENSSTRAAT 1\n2030 ANTWERPEN\nBELGIUM'),
+        sys_company_phone=settings_data.get('company_phone', '+32 (0)3 5419676')
     )
     
     pdf = BytesIO()

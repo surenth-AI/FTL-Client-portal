@@ -50,6 +50,46 @@
     </div>
 </section>
 
+<!-- Company Profile -->
+<section class="settings-card">
+    <div class="settings-card-header">
+        <div>
+            <h6 class="settings-card-title">Company Profile</h6>
+            <p class="settings-card-desc">Information used on generated PDFs (Quotes, etc.).</p>
+        </div>
+    </div>
+
+    <div class="settings-row">
+        <div>
+            <div class="settings-row-label">Company Name</div>
+            <p class="settings-row-help">The official company name shown in headers.</p>
+        </div>
+        <div>
+            <input type="text" name="company_name" class="form-control" placeholder="FAST TRANSIT LINE" value="{{ settings.company_name or 'FAST TRANSIT LINE' }}">
+        </div>
+    </div>
+
+    <div class="settings-row">
+        <div>
+            <div class="settings-row-label">Company Address</div>
+            <p class="settings-row-help">The address block displayed on PDFs. You can use multiple lines.</p>
+        </div>
+        <div>
+            <textarea name="company_address" class="form-control" rows="3" placeholder="SCHOUWKENSSTRAAT 1&#10;2030 ANTWERPEN&#10;BELGIUM">{{ settings.company_address or 'SCHOUWKENSSTRAAT 1, 2030 ANTWERPEN, BELGIUM' }}</textarea>
+        </div>
+    </div>
+
+    <div class="settings-row">
+        <div>
+            <div class="settings-row-label">Company Phone</div>
+            <p class="settings-row-help">Contact number shown on documents.</p>
+        </div>
+        <div>
+            <input type="text" name="company_phone" class="form-control" placeholder="+32 (0)3 5419676" value="{{ settings.company_phone or '+32 (0)3 5419676' }}">
+        </div>
+    </div>
+</section>
+
 <!-- Legal -->
 <section class="settings-card">
     <div class="settings-card-header">
