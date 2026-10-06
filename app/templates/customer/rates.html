@@ -1491,7 +1491,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                             <option value="port">Port</option>
                                         </select>
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" style="display: none;">
                                         <label class="form-label">Country <span class="required">*</span></label>
                                         <select class="form-select" id="originCountry"
                                             onchange="handleCountryChange('origin')">
@@ -1533,7 +1533,7 @@ html[data-color-scheme='dark'] .rates-view-content {
                                             <option value="port">Port</option>
                                         </select>
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" style="display: none;">
                                         <label class="form-label">Country <span class="required">*</span></label>
                                         <select class="form-select" id="destCountry"
                                             onchange="handleCountryChange('dest')">
@@ -2289,6 +2289,8 @@ async function filterLocations(locationType) {
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function () {
+            handleLocationTypeChange('origin', false);
+            handleLocationTypeChange('dest', false);
             populateCountries('origin', document.getElementById('originType').value);
             populateCountries('dest', document.getElementById('destType').value);
             updateMovementType();
@@ -3789,6 +3791,8 @@ document.getElementById('wizardSearchForm').submit();
 
         // --- History Management ---
         document.addEventListener('DOMContentLoaded', function () {
+            handleLocationTypeChange('origin', false);
+            handleLocationTypeChange('dest', false);
             populateCountries('origin', document.getElementById('originType').value);
             populateCountries('dest', document.getElementById('destType').value);
             updateMovementType();
