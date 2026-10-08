@@ -5,9 +5,6 @@ that ID see those values; any field left empty falls back to the super admin's v
 """
 from types import SimpleNamespace
 
-from flask import current_app
-from sqlalchemy.exc import OperationalError, ProgrammingError
-
 from app import db
 from app.access import group_ids, is_super_admin
 from app.models.models import CustomerSetting, SystemSetting
@@ -38,17 +35,7 @@ def customer_setting_for(user, create=False):
     ids = sorted(group_ids(user))
     if not ids:
         return None
-    try:
-        rows = {r.group_id: r for r in CustomerSetting.query.filter(CustomerSetting.group_id.in_(ids)).all()}
-    except (ProgrammingError, OperationalError):
-        # Table not created yet on this database: behave as if no customer has overrides
-        db.session.rollback()
-        current_app.logger.warning('customer_setting table is missing; using system settings. '
-                                   'Create it with `flask init-db`.')
-        if create:
-            raise RuntimeError('Customer settings are not set up on this database yet. '
-                               'Ask the system administrator to create the customer_setting table.')
-        return None
+    rows = {r.group_id: r for r in CustomerSetting.query.filter(CustomerSetting.group_id.in_(ids)).all()}
     for gid in ids:
         if gid in rows:
             return rows[gid]

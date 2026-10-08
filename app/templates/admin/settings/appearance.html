@@ -39,7 +39,7 @@
                         <label class="settings-choice">
                             <input type="radio" name="default_layout" value="{{ val }}" {% if settings.default_layout == val or (val == 'sidebar' and not settings.default_layout) %}checked{% endif %}>
                             <div class="settings-choice-card p-3">
-                                <div class="layout-thumb {{ val }}">
+                                <div class="layout-thumb layout-{{ val }}">
                                     <span class="lt-nav"></span>
                                     <span class="lt-body"><i></i><i></i><i></i></span>
                                 </div>
@@ -171,15 +171,15 @@
     height: 84px; border-radius: 8px; border: 1px solid var(--st-border);
     background: var(--st-surface-2); display: flex; overflow: hidden;
 }
-.layout-thumb.topbar { flex-direction: column; }
+.layout-thumb.layout-topbar { flex-direction: column; }
 .layout-thumb .lt-nav { background: var(--st-surface); border: 0 solid var(--st-border); position: relative; }
-.layout-thumb.sidebar .lt-nav { width: 26%; border-right-width: 1px; }
-.layout-thumb.topbar .lt-nav { height: 20px; border-bottom-width: 1px; }
+.layout-thumb.layout-sidebar .lt-nav { width: 26%; border-right-width: 1px; }
+.layout-thumb.layout-topbar .lt-nav { height: 20px; border-bottom-width: 1px; }
 .layout-thumb .lt-nav::before {
     content: ''; position: absolute; background: var(--primary-color); opacity: .75; border-radius: 2px;
 }
-.layout-thumb.sidebar .lt-nav::before { left: 8px; right: 8px; top: 10px; height: 5px; }
-.layout-thumb.topbar .lt-nav::before { left: 8px; top: 7px; width: 22px; height: 5px; }
+.layout-thumb.layout-sidebar .lt-nav::before { left: 8px; right: 8px; top: 10px; height: 5px; }
+.layout-thumb.layout-topbar .lt-nav::before { left: 8px; top: 7px; width: 22px; height: 5px; }
 .layout-thumb .lt-body { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
 .layout-thumb .lt-body i { display: block; height: 5px; border-radius: 2px; background: var(--st-border); }
 .layout-thumb .lt-body i:nth-child(1) { width: 45%; height: 7px; }
