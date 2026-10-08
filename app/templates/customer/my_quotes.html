@@ -225,7 +225,7 @@
                                         <button onclick="toggleQuoteBreakdown('${refCode}', this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
                                         <span style="color:var(--mq-border-color);">|</span>
                                         <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="download-link">📄 Download PDF</a>
-                                        <button class="download-link" onclick="alert('Email Quote feature coming soon!')">✉ Email Quote</button>
+                                        <button class="download-link" onclick="emailQuote('${encodeURIComponent(refCode)}', this)">✉ Email Quote</button>
                                     </div>
                                 </div>
                                 
@@ -406,6 +406,38 @@
             el.classList.remove('copied');
             el.innerHTML = original;
         }, 1200);
+    }
+
+    function emailQuote(quoteId, btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Sending...';
+        btn.disabled = true;
+        
+        fetch(`/customer/quote/${quoteId}/email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                btn.innerHTML = '✓ Sent!';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            } else {
+                alert(data.message || 'Failed to email quote');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert('An error occurred while emailing the quote.');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
     }
 
     function filterStatus(status, chip) {

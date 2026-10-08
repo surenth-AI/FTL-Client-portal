@@ -47,7 +47,6 @@ CREATE TABLE [user] (
     password_reset_token_expiry DATETIME NULL,
     deactivation_reason NVARCHAR(MAX) NULL,
     rejection_reason NVARCHAR(MAX) NULL,
-    department VARCHAR(50) NULL, 
     status VARCHAR(20) NULL DEFAULT 'pending_verification', -- Starts as pending email verification
     company_id INTEGER NULL, 
     created_at DATETIME NULL DEFAULT GETDATE(), 
@@ -75,6 +74,28 @@ CREATE TABLE user_branch_mapping (
     CONSTRAINT UC_User_Branch UNIQUE (user_id, branch_id)
 );
 
+-- 6. PER-CUSTOMER SETTINGS (overrides system_setting; NULL = use the system value)
+CREATE TABLE customer_setting (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    group_id VARCHAR(50) NOT NULL UNIQUE, -- ERP customer ID (user_account_mapping.account_id)
+    theme_color VARCHAR(50) NULL,
+    logo_path VARCHAR(255) NULL,
+    company_name VARCHAR(255) NULL,
+    company_address NVARCHAR(MAX) NULL,
+    company_phone VARCHAR(100) NULL,
+    default_layout VARCHAR(50) NULL,
+    typography VARCHAR(100) NULL,
+    terms_conditions_url VARCHAR(500) NULL,
+    incoterm_rules NVARCHAR(MAX) NULL,
+    smtp_server VARCHAR(255) NULL,
+    smtp_port INT NULL,
+    smtp_user VARCHAR(255) NULL,
+    smtp_sender_name VARCHAR(255) NULL,
+    smtp_password VARCHAR(255) NULL,
+    receiver_email VARCHAR(255) NULL,
+    updated_at DATETIME DEFAULT GETDATE()
+);
+
 -- =======================================================
 -- ADD MUTUALLY DEPENDENT FOREIGN KEYS
 -- =======================================================
@@ -87,6 +108,6 @@ ALTER TABLE [user] ADD CONSTRAINT FK_user_company FOREIGN KEY(company_id) REFERE
 INSERT INTO system_setting (theme_color, logo_path, login_banner_path, default_layout) 
 VALUES ('blue', 'img/logo.png', 'img/login_hero.png', 'sidebar');
 
--- Default Administrator login (admin@axeglobal.com / password)
+-- Default customer admin login (admin@axeglobal.com / password)
 INSERT INTO [user] (name, email, password_hash, role, status, email_verified) 
-VALUES ('System Admin', 'admin@axeglobal.com', 'scrypt:32768:8:1$WI14wtAhpo8Zhi3W$088b52add19b754420e7376c5c72dafe11ca877e2ff30365d46ccea237a6b05991df3019d57595c682c214f60fc321af53dc9d7a9671dbc43eeaef5d244525b2', 'admin', 'active', 1);
+VALUES ('System Admin', 'admin@axeglobal.com', 'scrypt:32768:8:1$WI14wtAhpo8Zhi3W$088b52add19b754420e7376c5c72dafe11ca877e2ff30365d46ccea237a6b05991df3019d57595c682c214f60fc321af53dc9d7a9671dbc43eeaef5d244525b2', 'customer_admin', 'active', 1);

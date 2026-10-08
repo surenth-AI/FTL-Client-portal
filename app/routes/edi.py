@@ -5,6 +5,7 @@ from app.models.models import EdiPreAlert, Booking, ArrivalNotice
 from app import db
 from app.services.email_service import EmailService
 from app.services.notification_service import NotificationService
+from app.access import is_super_admin
 import os
 
 edi = Blueprint('edi', __name__)
@@ -28,7 +29,7 @@ def dashboard():
     """
     Admin view to see all incoming EDI pre-alerts.
     """
-    if current_user.role != 'admin':
+    if not is_super_admin(current_user):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
     
@@ -39,7 +40,7 @@ def dashboard():
 @edi.route('/admin/sync')
 @login_required
 def sync_email():
-    if current_user.role != 'admin':
+    if not is_super_admin(current_user):
         flash('Unauthorized', 'danger')
         return redirect(url_for('index'))
     
@@ -53,7 +54,7 @@ def sync_email():
 @edi.route('/send-notices/<int:id>')
 @login_required
 def send_notices(id):
-    if current_user.role != 'admin':
+    if not is_super_admin(current_user):
         flash('Unauthorized', 'danger')
         return redirect(url_for('index'))
     
@@ -70,7 +71,7 @@ def retry(id):
     """
     Retry parsing/booking creation for a quarantined EDI.
     """
-    if current_user.role != 'admin':
+    if not is_super_admin(current_user):
         return jsonify({"success": False, "message": "Unauthorized"}), 403
         
     pre_alert = EdiPreAlert.query.get_or_404(id)

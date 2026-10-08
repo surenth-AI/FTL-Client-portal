@@ -56,6 +56,20 @@
     {% endif %}
     {% endblock %}
 
+    {% if customer_scope is not none %}
+    <div class="alert {{ 'alert-info' if customer_scope else 'alert-warning' }} d-flex align-items-start gap-2 small" role="note">
+        <i class="bi {{ 'bi-building' if customer_scope else 'bi-exclamation-triangle' }} mt-1"></i>
+        <div>
+            {% if customer_scope %}
+            These settings apply only to users with ERP customer ID <strong>{{ customer_scope }}</strong>.
+            Anything you leave empty or unchanged keeps following the system defaults set by the Super Admin.
+            {% else %}
+            Your account has no ERP customer ID yet, so there are no customer settings to change. Ask the Super Admin to assign one.
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <form method="POST" enctype="multipart/form-data" id="settingsForm" autocomplete="off" novalidate>
         {% block settings_body %}{% endblock %}
     </form>

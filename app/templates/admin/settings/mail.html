@@ -14,7 +14,11 @@
         {% if settings.smtp_server %}
         <span class="settings-pill success"><i class="bi bi-check-circle-fill"></i> Configured · {{ settings.smtp_server }}:{{ settings.smtp_port }}</span>
         {% else %}
+        {% if customer_scope is not none %}
+        <span class="settings-pill"><i class="bi bi-info-circle"></i> Using the system mail server. Fill in a host to send from your own.</span>
+        {% else %}
         <span class="settings-pill warning"><i class="bi bi-exclamation-triangle-fill"></i> Not configured. Email is disabled.</span>
+        {% endif %}
         {% endif %}
     </div>
 
@@ -56,13 +60,20 @@
         </div>
         <div class="row g-2">
             <div class="col-md-6">
-                <label class="form-label" for="smtpUser">Sender email (username)</label>
+                <label class="form-label" for="smtpSenderName">Sender Name</label>
+                <div class="settings-input-icon">
+                    <i class="bi bi-person"></i>
+                    <input type="text" id="smtpSenderName" name="smtp_sender_name" class="form-control" placeholder="Company Name" value="{{ settings.smtp_sender_name or '' }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="smtpUser">Sender Email</label>
                 <div class="settings-input-icon">
                     <i class="bi bi-at"></i>
                     <input type="email" id="smtpUser" name="smtp_user" class="form-control" placeholder="noreply@company.com" value="{{ settings.smtp_user or '' }}">
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-12 mt-2">
                 <label class="form-label" for="smtpPassword">Password</label>
                 <div class="settings-input-icon">
                     <i class="bi bi-key"></i>

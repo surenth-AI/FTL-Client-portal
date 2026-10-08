@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, flash, redirect, url_for, send_fil
 from flask_login import login_required, current_user
 from app.models.models import Booking, ArrivalNotice
 from app.services.notice_service import NoticeService
+from app.access import can_access_booking, is_staff
 import os
 
 notices = Blueprint('notices', __name__)
@@ -12,11 +13,11 @@ def generate(booking_id):
     """
     Trigger Arrival Notice generation for a booking.
     """
-    if current_user.role != 'admin':
+    booking = Booking.query.get_or_404(booking_id)
+    if not is_staff(current_user) or not can_access_booking(current_user, booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
-    
-    booking = Booking.query.get_or_404(booking_id)
+
     results = NoticeService.send_multi_party_notices(booking)
     
     success_count = sum(1 for r in results if r['success'])
@@ -31,8 +32,8 @@ def view_pdf(notice_id):
     """
     notice = ArrivalNotice.query.get_or_404(notice_id)
     
-    # Permission check: Admin or the customer who owns the booking
-    if current_user.role != 'admin' and notice.booking.user_id != current_user.id:
+    # Permission check: the booking owner or staff responsible for that customer
+    if not can_access_booking(current_user, notice.booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
     

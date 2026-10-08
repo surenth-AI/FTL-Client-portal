@@ -16,7 +16,7 @@ _settings_cache = {
     'expires_at': 0
 }
 
-def get_cached_system_settings():
+def _get_cached_global_settings():
     now = time.time()
     if _settings_cache['data'] is None or now > _settings_cache['expires_at']:
         from app.models.models import SystemSetting
@@ -65,6 +65,41 @@ def clear_settings_cache():
     global _settings_cache
     _settings_cache['data'] = None
     _settings_cache['expires_at'] = 0
+    _group_settings_cache.clear()
+
+
+# Customer overrides, cached per customer ID: {group_id: (expires_at, {field: value})}
+_group_settings_cache = {}
+_GROUP_DISPLAY_FIELDS = ('theme_color', 'logo_path', 'default_layout', 'typography', 'terms_conditions_url',
+                         'company_name', 'company_address', 'company_phone')
+
+
+def get_cached_system_settings(user=None):
+    """Display settings; for a logged-in customer or customer admin, their customer's overrides win."""
+    data = _get_cached_global_settings()
+    if user is None or not getattr(user, 'is_authenticated', False) or user.role == 'super_admin':
+        return data
+    try:
+        from app.access import group_ids
+        ids = sorted(group_ids(user))
+        if not ids:
+            return data
+        now = time.time()
+        overrides = None
+        for gid in ids:
+            cached = _group_settings_cache.get(gid)
+            if cached and now < cached[0]:
+                overrides = cached[1]
+            else:
+                from app.models.models import CustomerSetting
+                row = CustomerSetting.query.filter_by(group_id=gid).first()
+                overrides = {f: getattr(row, f) for f in _GROUP_DISPLAY_FIELDS if getattr(row, f)} if row else None
+                _group_settings_cache[gid] = (now + 300, overrides)
+            if overrides is not None:
+                break
+        return {**data, **overrides} if overrides else data
+    except Exception:
+        return data
 
 
 db = SQLAlchemy()
@@ -180,6 +215,20 @@ def create_app(config_class=Config):
                 except Exception:
                     db.session.rollback()
 
+            # The old 'admin' role is now 'customer_admin'
+            try:
+                db.session.execute(db.text("UPDATE [user] SET role = 'customer_admin' WHERE role = 'admin';"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            # Drop the retired user.department column
+            try:
+                db.session.execute(db.text("ALTER TABLE [user] DROP COLUMN department;"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
             # Safe self-healing for booking columns
             try:
                 db.session.execute(db.text("ALTER TABLE [booking] ADD uuid VARCHAR(100) NULL;"))
@@ -205,7 +254,8 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_system_settings():
         from flask import url_for
-        settings_data = get_cached_system_settings()
+        from flask_login import current_user
+        settings_data = get_cached_system_settings(current_user)
         
         theme = settings_data.get('theme_color', 'blue')
         logo = settings_data.get('logo_path', 'img/logo.png')
@@ -232,7 +282,6 @@ def create_app(config_class=Config):
     from app.routes.edi import edi
     from app.routes.notices import notices
     from app.routes.billing import billing
-    from app.routes.agent import agent_bp
     from app.routes.soa import soa_bp
     from app.routes.ap_invoices import ap_invoices_bp
     from app.routes.api import api_bp
@@ -244,7 +293,6 @@ def create_app(config_class=Config):
     app.register_blueprint(edi, url_prefix='/edi')
     app.register_blueprint(notices, url_prefix='/notices')
     app.register_blueprint(billing, url_prefix='/billing')
-    app.register_blueprint(agent_bp, url_prefix='/agent')
     app.register_blueprint(soa_bp, url_prefix='/soa')
     app.register_blueprint(ap_invoices_bp, url_prefix='/ap-invoices')
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -266,10 +314,8 @@ def create_app(config_class=Config):
     @app.route('/')
     def index():
         if current_user.is_authenticated:
-            if current_user.role == 'admin':
+            if current_user.role in ('super_admin', 'customer_admin'):
                 return redirect(url_for('admin.dashboard'))
-            elif current_user.role == 'agent':
-                return redirect(url_for('agent.dashboard'))
             return redirect(url_for('customer.dashboard'))
         return redirect(url_for('auth.login'))
 
@@ -283,8 +329,7 @@ def create_app(config_class=Config):
     @app.route('/dashboard')
     def legacy_dashboard():
         if current_user.is_authenticated:
-            if current_user.role == 'admin': return redirect(url_for('admin.dashboard'))
-            if current_user.role == 'agent': return redirect(url_for('agent.dashboard'))
+            if current_user.role in ('super_admin', 'customer_admin'): return redirect(url_for('admin.dashboard'))
             return redirect(url_for('customer.dashboard'))
         return redirect(url_for('auth.login'))
 
@@ -315,7 +360,7 @@ def seed_admin():
             name='System Admin',
             email='admin@axeglobal.com',
             password_hash=generate_password_hash('Admin@123456!'),
-            role='admin',
+            role='customer_admin',
             status='active'
         )
         db.session.add(admin_user)
@@ -346,6 +391,9 @@ def seed_admin():
     # Ensure account 4294 is mapped
     if not UserAccountMapping.query.filter_by(user_id=demo_customer.id, account_id='4294').first():
         db.session.add(UserAccountMapping(user_id=demo_customer.id, account_id='4294'))
+    # The demo customer admin manages customer ID 4294
+    if not UserAccountMapping.query.filter_by(user_id=admin_user.id, account_id='4294').first():
+        db.session.add(UserAccountMapping(user_id=admin_user.id, account_id='4294'))
     db.session.commit()
     print("Demo customer mappings seeded/verified.")
 

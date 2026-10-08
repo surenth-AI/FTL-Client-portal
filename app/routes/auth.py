@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app.models.models import User, Company
 from app import db
 from app.services.email_service import EmailService, SystemMailer
+from app.access import STAFF_ROLES, is_staff
 import os
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
@@ -194,10 +195,8 @@ def query_with_retry(query_fn, retries=5, delay=4):
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        if current_user.role in ['super_admin', 'admin', 'operation_executive']:
+        if is_staff(current_user):
             return redirect(url_for('admin.dashboard'))
-        elif current_user.role == 'agent':
-            return redirect(url_for('agent.dashboard'))
         return redirect(url_for('customer.dashboard'))
     
     login_form = LoginForm(prefix="login")
@@ -210,7 +209,7 @@ def login():
         from sqlalchemy.orm import joinedload
         user = query_with_retry(lambda: User.query.options(joinedload(User.company), joinedload(User.accounts)).filter_by(email=login_form.email.data).first())
         if user and check_password_hash(user.password_hash, login_form.password.data):
-            if user.role not in ['super_admin', 'admin']:
+            if user.role != 'super_admin':
                 if user.status not in ['active', 'activated']:
                     flash(f'Your account is {user.status.replace("_", " ")}. Please wait for approval.', 'warning')
                     return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab='login')
@@ -220,10 +219,8 @@ def login():
             
             login_user(user)
             next_page = request.args.get('next')
-            if user.role in ['super_admin', 'admin', 'operation_executive']:
+            if user.role in STAFF_ROLES:
                 return redirect(next_page) if next_page else redirect(url_for('admin.dashboard'))
-            elif user.role == 'agent':
-                return redirect(next_page) if next_page else redirect(url_for('agent.dashboard'))
             return redirect(next_page) if next_page else redirect(url_for('customer.dashboard'))
         else:
             flash('Login unsuccessful. Check email and password.', 'danger')
@@ -324,10 +321,8 @@ def logout():
 @auth.route('/profile')
 @login_required
 def profile():
-    if current_user.role in ['super_admin', 'admin', 'operation_executive']:
+    if is_staff(current_user):
         return render_template('profile/admin.html')
-    elif current_user.role == 'agent':
-        return render_template('profile/agent.html')
     else:
         return render_template('profile/customer.html')
 
@@ -420,9 +415,7 @@ def callback():
     if not user:
         # Default new Google users to 'customer' unless they match a specific domain
         role = 'customer'
-        if email.endswith('@axeglobal.com'):
-             role = 'admin'
-             
+
         user = User(
             name=name,
             email=email,
@@ -443,8 +436,6 @@ def callback():
     login_user(user)
     flash(f'Logged in as {user.name}', 'success')
     
-    if user.role == 'admin':
+    if user.role in STAFF_ROLES:
         return redirect(url_for('admin.dashboard'))
-    elif user.role == 'agent':
-        return redirect(url_for('agent.dashboard'))
     return redirect(url_for('customer.dashboard'))

@@ -5,7 +5,7 @@
 <div class="mb-4 d-flex justify-content-between align-items-end intel-fade-in">
     <div>
         <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">Organization Registry</h3>
-        <p class="text-muted small mb-0">Authoritative management of directory roles, access, and department mappings.</p>
+        <p class="text-muted small mb-0">Authoritative management of directory roles and access.</p>
     </div>
 </div>
 
@@ -30,7 +30,6 @@
                             <th class="ps-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Descriptor</th>
                             <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Email</th>
                             <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Privilege Logic</th>
-                            <th class="text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Domain</th>
                             <th class="text-end pe-4 text-muted fw-bold border-bottom py-3" style="font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;">Operations</th>
                         </tr>
                     </thead>
@@ -54,17 +53,10 @@
                             <td class="py-3">
                                 {% if user.role == 'super_admin' %}
                                     <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #FEF2F2; color: #B91C1C; border: 1px solid #FEE2E2; font-size: 0.6rem;">SUPER ADMIN</span>
-                                {% elif user.role == 'admin' %}
-                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #DBEAFE; font-size: 0.6rem;">SYSTEM ADMIN</span>
+                                {% elif user.role == 'customer_admin' %}
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #DBEAFE; font-size: 0.6rem;">CUSTOMER ADMIN</span>
                                 {% else %}
-                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #ECFDF5; color: #047857; border: 1px solid #D1FAE5; font-size: 0.6rem;">OPERATIONS</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3">
-                                {% if user.department %}
-                                    <span class="badge text-secondary bg-light border rounded-1 px-2 fw-bold text-uppercase" style="font-size: 0.625rem;">{{ user.department }}</span>
-                                {% else %}
-                                    <span class="text-muted opacity-50" style="font-size: 0.75rem; font-style: italic;">Global</span>
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #ECFDF5; color: #047857; border: 1px solid #D1FAE5; font-size: 0.6rem;">{{ user.role | replace('_', ' ') | upper }}</span>
                                 {% endif %}
                             </td>
                             <td class="text-end pe-4 py-3">

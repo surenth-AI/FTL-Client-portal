@@ -510,7 +510,6 @@ def get_active_users():
             "email": user.email,
             "mobile": user.mobile,
             "role": user.role,
-            "department": user.department,
             "status": user.status,
             "erp_customer_code": user.erp_customer_code,
             "registration_id": user.registration_id,

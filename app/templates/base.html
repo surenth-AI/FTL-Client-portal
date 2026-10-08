@@ -218,23 +218,25 @@
 
             
             <ul class="sidebar-nav">
-                {% if current_user.role in ['super_admin', 'admin', 'operation_executive'] %}
+                {% if current_user.role in ['super_admin', 'customer_admin'] %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
                             <i class="bi bi-grid-fill"></i> Admin Dashboard
                         </a>
                     </li>
+                    {% if current_user.role != 'super_admin' %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.shipment_intelligence' %}active{% endif %}" href="{{ url_for('admin.shipment_intelligence') }}">
                             <i class="bi bi-bar-chart-line"></i> Shipment Intelligence
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" href="{{ url_for('admin.manage_users') }}">
                             <i class="bi bi-shield-lock"></i> User Management
                         </a>
                     </li>
-                    {% if current_user.role in ['super_admin', 'admin'] %}
+                    {% if current_user.role in ['super_admin', 'customer_admin'] %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'admin.field_config' %}active{% endif %}" href="{{ url_for('admin.field_config') }}">
                             <i class="bi bi-sliders"></i> Field Configuration
@@ -305,22 +307,6 @@
                         </a>
                     </li>
 
-                {% elif current_user.role == 'agent' %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'agent.dashboard' %}active{% endif %}" href="{{ url_for('agent.dashboard') }}">
-                            <i class="bi bi-grid-fill"></i> Agent Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'agent.upload_edi' %}active{% endif %}" href="{{ url_for('agent.upload_edi') }}">
-                            <i class="bi bi-upload"></i> Upload EDI
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
-                            <i class="bi bi-gear"></i> Settings
-                        </a>
-                    </li>
                 {% endif %}
             </ul>
 
@@ -386,11 +372,13 @@
                     <!-- Topbar Navigation (Visible only in topbar mode) -->
                     {% if current_user.is_authenticated %}
                     <ul class="topbar-nav ms-4 mb-0">
-                        {% if current_user.role in ['super_admin', 'admin', 'operation_executive'] %}
+                        {% if current_user.role in ['super_admin', 'customer_admin'] %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
+                            {% if current_user.role != 'super_admin' %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.shipment_intelligence' %}active{% endif %}" href="{{ url_for('admin.shipment_intelligence') }}">Shipment Intelligence</a></li>
+                            {% endif %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" href="{{ url_for('admin.manage_users') }}">Users</a></li>
-                            {% if current_user.role in ['super_admin', 'admin'] %}
+                            {% if current_user.role in ['super_admin', 'customer_admin'] %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.field_config' %}active{% endif %}" href="{{ url_for('admin.field_config') }}">Field Config</a></li>
                             {% endif %}
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
@@ -402,10 +390,6 @@
 
                             <li><a class="nav-link {% if request.endpoint == 'customer.my_shipments' %}active{% endif %}" href="{{ url_for('customer.my_shipments') }}">Shipments</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'customer.new_booking' %}active{% endif %}" href="{{ url_for('customer.new_booking') }}">New Booking</a></li>
-                            <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
-                        {% elif current_user.role == 'agent' %}
-                            <li><a class="nav-link {% if request.endpoint == 'agent.dashboard' %}active{% endif %}" href="{{ url_for('agent.dashboard') }}">Agent Dashboard</a></li>
-                            <li><a class="nav-link {% if request.endpoint == 'agent.upload_edi' %}active{% endif %}" href="{{ url_for('agent.upload_edi') }}">Upload EDI</a></li>
                             <li><a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">Settings</a></li>
                         {% endif %}
                     </ul>

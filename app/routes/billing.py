@@ -4,6 +4,7 @@ from app.models.models import Booking, ProformaInvoice, Invoice
 from app.services.billing_service import BillingService
 from app.services.notification_service import NotificationService
 from app import db
+from app.access import can_access_booking, is_staff, scope_bookings
 import os
 
 billing = Blueprint('billing', __name__)
@@ -14,12 +15,13 @@ def manage():
     """
     Admin view for managing all invoices and payments.
     """
-    if current_user.role != 'admin':
+    if not is_staff(current_user):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
-    
-    unpaid_proformas = ProformaInvoice.query.filter_by(payment_status='UNPAID').all() or []
-    recent_invoices = Invoice.query.order_by(Invoice.issued_at.desc()).limit(20).all() or []
+
+    booking_ids = scope_bookings(Booking.query, current_user).with_entities(Booking.id)
+    unpaid_proformas = ProformaInvoice.query.filter_by(payment_status='UNPAID').filter(ProformaInvoice.booking_id.in_(booking_ids)).all() or []
+    recent_invoices = Invoice.query.filter(Invoice.booking_id.in_(booking_ids)).order_by(Invoice.issued_at.desc()).limit(20).all() or []
     
     # Pre-calculate totals for the dashboard with safety defaults
     total_unpaid = sum(float(p.total_amount or 0) for p in unpaid_proformas)
@@ -37,11 +39,11 @@ def issue_proforma(booking_id):
     """
     Issue a new Proforma Invoice for a booking.
     """
-    if current_user.role != 'admin':
+    booking = Booking.query.get_or_404(booking_id)
+    if not is_staff(current_user) or not can_access_booking(current_user, booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
-    
-    booking = Booking.query.get_or_404(booking_id)
+
     result = BillingService.create_proforma(booking)
     
     if result['success']:
@@ -57,11 +59,11 @@ def confirm_payment(proforma_id):
     """
     Admin confirms receipt of payment.
     """
-    if current_user.role != 'admin':
+    proforma = ProformaInvoice.query.get_or_404(proforma_id)
+    if not is_staff(current_user) or not can_access_booking(current_user, proforma.booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
-    
-    proforma = ProformaInvoice.query.get_or_404(proforma_id)
+
     payment_ref = request.form.get('payment_ref')
     
     if not payment_ref:
@@ -84,7 +86,7 @@ def view_proforma(id):
     View Proforma details (and potentially render PDF).
     """
     proforma = ProformaInvoice.query.get_or_404(id)
-    if current_user.role != 'admin' and proforma.booking.user_id != current_user.id:
+    if not can_access_booking(current_user, proforma.booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
         
@@ -97,7 +99,7 @@ def view_invoice(id):
     View Final Tax Invoice details.
     """
     invoice = Invoice.query.get_or_404(id)
-    if current_user.role != 'admin' and invoice.booking.user_id != current_user.id:
+    if not can_access_booking(current_user, invoice.booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
         
@@ -110,7 +112,7 @@ def download_invoice(id):
     Generate and download a professional Tax Invoice PDF.
     """
     invoice = Invoice.query.get_or_404(id)
-    if current_user.role != 'admin' and invoice.booking.user_id != current_user.id:
+    if not can_access_booking(current_user, invoice.booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
     
@@ -128,7 +130,7 @@ def download_proforma(id):
     Generate and download a professional Proforma PDF.
     """
     proforma = ProformaInvoice.query.get_or_404(id)
-    if current_user.role != 'admin' and proforma.booking.user_id != current_user.id:
+    if not can_access_booking(current_user, proforma.booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
     
@@ -146,7 +148,7 @@ def download_do(booking_id):
     Generate and download the Delivery Order (Cargo Release).
     """
     booking = Booking.query.get_or_404(booking_id)
-    if current_user.role != 'admin' and booking.user_id != current_user.id:
+    if not can_access_booking(current_user, booking):
         flash('Access denied.', 'danger')
         return redirect(url_for('index'))
     

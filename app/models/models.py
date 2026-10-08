@@ -42,7 +42,7 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='customer') # super_admin, admin, operation_executive, customer
+    role = db.Column(db.String(20), nullable=False, default='customer') # super_admin, customer_admin, customer
     email_token = db.Column(db.String(256), nullable=True) # Stores the JSON serialized token
     email_verified = db.Column(db.Boolean, default=False, nullable=False)
     email_token_expiry = db.Column(db.DateTime, nullable=True)
@@ -51,7 +51,6 @@ class User(db.Model, UserMixin):
     deactivation_reason = db.Column(db.String(1000), nullable=True)
     rejection_reason = db.Column(db.String(1000), nullable=True)
     mobile = db.Column(db.String(20))
-    department = db.Column(db.String(50)) # export, import, warehouse, finance
     status = db.Column(db.String(20), default='pending_verification') # pending_verification, pending_approval, activated, rejected, deactivated
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
     erp_customer_code = db.Column(db.String(100), nullable=True) # Atlas ERP erpCustomerCode sent on activation
@@ -415,8 +414,31 @@ class SystemSetting(db.Model):
     smtp_server = db.Column(db.String(255), nullable=True)
     smtp_port = db.Column(db.Integer, default=587)
     smtp_user = db.Column(db.String(255), nullable=True)
+    smtp_sender_name = db.Column(db.String(255), nullable=True)
     smtp_password = db.Column(db.String(255), nullable=True)
     receiver_email = db.Column(db.String(255), nullable=True)
+
+class CustomerSetting(db.Model):
+    """Per-customer overrides of SystemSetting, keyed by ERP customer ID. NULL = use the system value."""
+    __tablename__ = 'customer_setting'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.String(50), unique=True, nullable=False)  # user_account_mapping.account_id
+    theme_color = db.Column(db.String(50))
+    logo_path = db.Column(db.String(255))
+    company_name = db.Column(db.String(255))
+    company_address = db.Column(db.Text)
+    company_phone = db.Column(db.String(100))
+    default_layout = db.Column(db.String(50))
+    typography = db.Column(db.String(100))
+    terms_conditions_url = db.Column(db.String(500))
+    incoterm_rules = db.Column(db.JSON)
+    smtp_server = db.Column(db.String(255))
+    smtp_port = db.Column(db.Integer)
+    smtp_user = db.Column(db.String(255))
+    smtp_sender_name = db.Column(db.String(255))
+    smtp_password = db.Column(db.String(255))
+    receiver_email = db.Column(db.String(255))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Registration(db.Model):
     """Pending company registration request."""

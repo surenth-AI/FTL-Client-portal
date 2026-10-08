@@ -216,7 +216,7 @@ def post_booking_to_api(booking_id):
 @customer.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'admin':
+    if current_user.role in ('super_admin', 'customer_admin'):
         return redirect(url_for('admin.dashboard'))
 
     return render_template('customer/dashboard.html', today=datetime.now())
@@ -261,7 +261,7 @@ def api_dashboard_stats():
 @customer.route('/my_quotes')
 @login_required
 def my_quotes():
-    if current_user.role not in ['customer', 'agent']:
+    if current_user.role != 'customer':
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     return render_template('customer/my_quotes.html')
@@ -601,7 +601,7 @@ def api_my_quotes():
 @customer.route('/save-quote', methods=['POST'])
 @login_required
 def save_quote():
-    if current_user.role not in ['customer', 'agent']:
+    if current_user.role != 'customer':
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     
@@ -742,7 +742,7 @@ def save_quote():
 @customer.route('/quote/<int:quote_id>')
 @login_required
 def quote_detail(quote_id):
-    if current_user.role not in ['customer', 'agent']:
+    if current_user.role != 'customer':
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     
@@ -811,7 +811,7 @@ def quote_detail(quote_id):
 @customer.route('/api/quote/<int:quote_id>/breakdown')
 @login_required
 def api_quote_breakdown(quote_id):
-    if current_user.role not in ['customer', 'agent']:
+    if current_user.role != 'customer':
         return jsonify({'error': 'Unauthorized'}), 403
     
     ref = str(quote_id).strip()
@@ -963,12 +963,59 @@ def api_quote_details(quote_id):
     return jsonify(result)
 
 
+@customer.route('/quote/<quote_id>/email', methods=['POST'])
+@login_required
+def email_quote(quote_id):
+    from flask import jsonify
+    try:
+        if current_user.role != 'customer':
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+            
+        response = download_pdf(quote_id=quote_id)
+        if response.status_code == 302:
+            return jsonify({'success': False, 'message': 'Quote not found or failed to generate PDF.'})
+            
+        pdf_data = response.get_data()
+        
+        subject = f"Your Quotation - {quote_id}"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; color: #1a1a2e; background: #f9fafb; border-radius: 10px;">
+            <h2 style="color: #0d47a1; margin-bottom: 20px;">Quotation {quote_id}</h2>
+            <p style="font-size: 1rem;">Dear {current_user.name},</p>
+            <p style="font-size: 0.95rem; line-height: 1.6;">
+                Please find attached your requested quotation <strong>{quote_id}</strong>.
+            </p>
+            <p style="font-size: 0.95rem; margin-top: 30px;">
+                Thank you for choosing Fast Transit Line.
+            </p>
+        </div>
+        """
+        
+        from app.services.email_service import SystemMailer
+        success = SystemMailer.send_email(
+            current_user.email, 
+            subject, 
+            html, 
+            attachment_data=pdf_data, 
+            attachment_filename=f"Quotation_{quote_id}.pdf"
+        )
+        
+        if success:
+            return jsonify({'success': True, 'message': 'Quote emailed successfully!'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to send email. Please check mail settings.'})
+    except Exception as e:
+        import traceback
+        trace = traceback.format_exc()
+        print("EMAIL QUOTE ERROR:", trace)
+        return jsonify({'success': False, 'message': f'Server Error: {str(e)}'}), 500
+
 @customer.route('/quote/<quote_id>/download_pdf')
 @customer.route('/quote/<int:quote_id>/download_pdf')
 @customer.route('/download_pdf')
 @login_required
 def download_pdf(quote_id=None):
-    if current_user.role not in ['customer', 'agent']:
+    if current_user.role != 'customer':
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     
@@ -1095,7 +1142,7 @@ def download_pdf(quote_id=None):
 
     import os
     from app import get_cached_system_settings
-    settings_data = get_cached_system_settings()
+    settings_data = get_cached_system_settings(current_user)
     logo_rel = settings_data.get('logo_path', 'img/logo.png')
     logo_abs_path = os.path.join(current_app.root_path, 'static', logo_rel)
     if not os.path.exists(logo_abs_path):
@@ -1168,7 +1215,7 @@ def download_pdf(quote_id=None):
 @customer.route('/rates', methods=['GET', 'POST'])
 @login_required
 def rates():
-    if current_user.role not in ['customer', 'agent']:
+    if current_user.role != 'customer':
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     if request.method == 'POST':
@@ -1700,8 +1747,8 @@ def rates():
 
     freight_terms = [{'code': 'prepaid', 'name': 'Prepaid'}, {'code': 'collect', 'name': 'Collect'}]
     
-    from app.models.models import SystemSetting
-    sys_settings = SystemSetting.query.first()
+    from app.services.customer_settings import effective_settings
+    sys_settings = effective_settings(current_user)
     import json
     incoterm_rules_json = json.dumps(sys_settings.incoterm_rules) if sys_settings and sys_settings.incoterm_rules else 'null'
 
@@ -1879,7 +1926,7 @@ def api_get_schedules():
 @customer.route('/new-booking', methods=['GET', 'POST'])
 @login_required
 def new_booking():
-    if current_user.role not in ['customer', 'agent']:
+    if current_user.role != 'customer':
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('index'))
     if request.method == 'POST':
@@ -2345,7 +2392,7 @@ def finalize_booking():
         flash('Please start a rate search to place a booking.', 'info')
         return redirect(url_for('customer.new_booking'))
     if current_user.role != 'customer':
-        flash('Agents and Administrators cannot place bookings directly.', 'warning')
+        flash('Administrators cannot place bookings directly.', 'warning')
         return redirect(url_for('customer.rate_results'))
     rate_id = request.form.get('rate_id')
     raw_volume = request.form.get('volume')

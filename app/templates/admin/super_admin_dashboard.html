@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}Super Admin Dashboard{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-5">
+    <div>
+        <h2 class="text-dark fw-bold mb-1 tracking-tight">System Control</h2>
+        <p class="text-secondary mb-0 small d-flex align-items-center"><i class="bi bi-shield-lock-fill text-danger me-2"></i> Super Admin overview of users, access and configuration</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('admin.create_user') }}" class="btn btn-white border shadow-sm rounded-3 px-3 fw-bold smaller text-secondary d-flex align-items-center">
+            <i class="bi bi-person-plus me-2 text-primary"></i> Create User
+        </a>
+        <a href="{{ url_for('admin.manage_users') }}" class="btn btn-white border shadow-sm rounded-3 px-3 fw-bold smaller text-secondary d-flex align-items-center">
+            <i class="bi bi-people me-2 text-primary"></i> Manage Users
+        </a>
+        <a href="{{ url_for('admin.settings', section='branding') }}" class="btn btn-white border shadow-sm rounded-3 px-3 fw-bold smaller text-secondary d-flex align-items-center">
+            <i class="bi bi-gear me-2 text-primary"></i> Settings
+        </a>
+    </div>
+</div>
+
+<!-- Metrics -->
+<div class="row g-3 mb-4">
+    {% set cards = [
+        ('Total Users', stats.total_users, stats.active_users ~ ' active', 'text-success'),
+        ('Pending Approval', stats.pending_users, 'awaiting activation', 'text-warning' if stats.pending_users else 'text-muted'),
+        ('Companies', stats.total_companies, stats.active_companies ~ ' active / ' ~ stats.pending_companies ~ ' pending', 'text-muted'),
+        ('Bookings', stats.total_bookings, 'all time', 'text-muted'),
+    ] %}
+    {% for label, value, note, note_class in cards %}
+    <div class="col-6 col-lg-3">
+        <div class="bg-white border h-100" style="border-radius: 4px;">
+            <div class="p-3">
+                <span class="text-muted fw-bold text-uppercase d-block mb-1" style="font-size: 0.6rem; letter-spacing: 0.06em;">{{ label }}</span>
+                <h3 class="fw-bold text-dark mb-1" style="font-size: 1.75rem; letter-spacing: -0.02em;">{{ value }}</h3>
+                <span class="{{ note_class }} fw-bold" style="font-size: 0.65rem;">{{ note }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Roles + Data integrity -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="bg-white border h-100" style="border-radius: 4px;">
+            <div class="p-3 border-bottom">
+                <h6 class="fw-bold text-dark text-uppercase mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Users by Role</h6>
+            </div>
+            <div class="p-3">
+                {% set roles = [
+                    ('Super Admin', stats.super_admins, '#B91C1C'),
+                    ('Customer Admin', stats.customer_admins, '#1D4ED8'),
+                    ('Customer', stats.customers, '#047857'),
+                ] %}
+                {% for name, count, color in roles %}
+                {% set pct = (count / stats.total_users * 100) if stats.total_users else 0 %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1" style="font-size: 0.75rem;">
+                        <span class="fw-bold text-dark">{{ name }}</span>
+                        <span class="text-muted font-monospace">{{ count }}</span>
+                    </div>
+                    <div class="bg-light" style="height: 6px; border-radius: 3px; overflow: hidden;">
+                        <div style="width: {{ pct|round(1) }}%; height: 100%; background: {{ color }};"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="bg-white border h-100" style="border-radius: 4px;">
+            <div class="p-3 border-bottom">
+                <h6 class="fw-bold text-dark text-uppercase mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Needs Attention</h6>
+            </div>
+            <ul class="list-unstyled mb-0">
+                {% set issues = [
+                    ('Active customers without ERP customer ID', stats.no_account_mapping, 'They fall back to customer ID 1 when talking to the ERP.'),
+                    ('Active customers without ERP branch ID', stats.no_branch_mapping, 'They fall back to a default branch.'),
+                    ('Users with a retired role', legacy_role_users|length, 'Old Admin / Agent / Operation Executive accounts that need a new role.'),
+                    ('Rejected or deactivated users', stats.blocked_users, 'Cannot log in.'),
+                ] %}
+                {% for label, count, hint in issues %}
+                <li class="d-flex justify-content-between align-items-center px-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size: 0.75rem;">{{ label }}</div>
+                        <div class="text-muted" style="font-size: 0.65rem;">{{ hint }}</div>
+                    </div>
+                    {% if count %}
+                    <span class="badge rounded-pill fw-bold" style="background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; font-size: 0.7rem;">{{ count }}</span>
+                    {% else %}
+                    <span class="badge rounded-pill fw-bold" style="background: #ECFDF5; color: #047857; border: 1px solid #D1FAE5; font-size: 0.7rem;"><i class="bi bi-check-lg"></i></span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Pending registrations -->
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-dark text-uppercase mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;"><i class="bi bi-hourglass-split text-warning me-1"></i> Pending Registrations</h6>
+            <a href="{{ url_for('admin.manage_users') }}" class="text-primary fw-bold text-decoration-none" style="font-size: 0.7rem;">All users <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div class="bg-white border overflow-hidden mb-3" style="border-radius: 4px;">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle text-nowrap" style="font-size: 0.75rem;">
+                    <thead style="background-color: #F8FAFC;">
+                        <tr>
+                            <th class="ps-3 py-2 text-uppercase fw-bold text-muted" style="font-size: 0.6rem;">User</th>
+                            <th class="py-2 text-uppercase fw-bold text-muted" style="font-size: 0.6rem;">Company</th>
+                            <th class="py-2 text-uppercase fw-bold text-muted" style="font-size: 0.6rem;">Status</th>
+                            <th class="pe-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in pending_users %}
+                        <tr style="border-bottom: 1px solid #F1F5F9;">
+                            <td class="ps-3 py-2">
+                                <div class="fw-bold text-dark">{{ u.name }}</div>
+                                <div class="text-muted font-monospace" style="font-size: 0.65rem;">{{ u.email }}</div>
+                            </td>
+                            <td class="py-2 text-secondary">{{ u.company.name if u.company else '—' }}</td>
+                            <td class="py-2">
+                                <span class="badge fw-bold text-uppercase" style="background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; font-size: 0.6rem;">{{ u.status.replace('_', ' ') }}</span>
+                            </td>
+                            <td class="pe-3 py-2 text-end">
+                                <a href="{{ url_for('admin.edit_user', user_id=u.id) }}" class="text-dark fw-bold text-decoration-none" style="font-size: 0.65rem;">Review <i class="bi bi-chevron-right"></i></a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="p-4 text-center text-muted">No registrations waiting for approval.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if legacy_role_users %}
+        <h6 class="fw-bold text-dark text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.05em;"><i class="bi bi-exclamation-triangle text-danger me-1"></i> Users With Retired Roles</h6>
+        <div class="bg-white border overflow-hidden" style="border-radius: 4px;">
+            <table class="table mb-0 align-middle" style="font-size: 0.75rem;">
+                <tbody>
+                    {% for u in legacy_role_users %}
+                    <tr style="border-bottom: 1px solid #F1F5F9;">
+                        <td class="ps-3 py-2"><span class="fw-bold text-dark">{{ u.name }}</span> <span class="text-muted font-monospace ms-1" style="font-size: 0.65rem;">{{ u.email }}</span></td>
+                        <td class="py-2 text-muted text-uppercase" style="font-size: 0.65rem;">{{ u.role.replace('_', ' ') }}</td>
+                        <td class="pe-3 py-2 text-end"><a href="{{ url_for('admin.edit_user', user_id=u.id) }}" class="text-dark fw-bold text-decoration-none" style="font-size: 0.65rem;">Reassign <i class="bi bi-chevron-right"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right column -->
+    <div class="col-lg-4">
+        <h6 class="fw-bold text-dark text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.05em;">System Configuration</h6>
+        <div class="bg-white border mb-3" style="border-radius: 4px;">
+            <ul class="list-unstyled mb-0">
+                {% for label, ok, section in health %}
+                <li class="d-flex justify-content-between align-items-center px-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+                    <span class="fw-bold text-dark" style="font-size: 0.75rem;">
+                        <i class="bi {{ 'bi-check-circle-fill text-success' if ok else 'bi-x-circle-fill text-danger' }} me-2"></i>{{ label }}
+                    </span>
+                    {% if not ok %}
+                    <a href="{{ url_for('admin.settings', section=section) }}" class="text-primary fw-bold text-decoration-none" style="font-size: 0.65rem;">Set up</a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-dark text-uppercase mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Administrators</h6>
+            <a href="{{ url_for('admin.create_user') }}" class="text-dark fw-bold text-decoration-none" style="font-size: 0.7rem;">+ NEW</a>
+        </div>
+        <div class="bg-white border" style="border-radius: 4px;">
+            <ul class="list-unstyled mb-0">
+                {% for u in staff %}
+                <li class="d-flex align-items-center px-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+                    <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width: 24px; height: 24px; font-size: 0.6rem; background: {{ '#B91C1C' if u.role == 'super_admin' else '#1D4ED8' }};">{{ u.name[:1].upper() }}</div>
+                    <div class="ms-2 flex-grow-1" style="min-width: 0;">
+                        <div class="fw-bold text-dark text-truncate" style="font-size: 0.75rem;">{{ u.name }}{% if u.id == current_user.id %} <span class="text-muted fw-normal">(you)</span>{% endif %}</div>
+                        <div class="text-muted text-truncate" style="font-size: 0.6rem;">{{ u.email }}</div>
+                    </div>
+                    <span class="fw-bold text-uppercase ms-2 text-end" style="font-size: 0.55rem; color: {{ '#B91C1C' if u.role == 'super_admin' else '#1D4ED8' }};">{{ 'Super' if u.role == 'super_admin' else 'Customer Admin' }}{% if u.role == 'customer_admin' %}<br><span class="text-muted font-monospace">{{ u.accounts | map(attribute='account_id') | join(', ') or 'no ID' }}</span>{% endif %}</span>
+                    {% if u.id != current_user.id %}
+                    <a href="{{ url_for('admin.edit_user', user_id=u.id) }}" class="text-muted ms-2" title="Edit"><i class="bi bi-pencil"></i></a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+.smaller { font-size: 0.75rem; }
+.btn-white { background: #fff; color: #212529; border: 1px solid #e2e8f0; }
+.btn-white:hover { background: #f8fafc; }
+</style>
+{% endblock %}

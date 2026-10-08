@@ -90,19 +90,30 @@ from app.models.models import SystemSetting
 
 class SystemMailer:
     @staticmethod
-    def send_email(to_email, subject, html_content):
-        # Fetch settings
-        settings = SystemSetting.query.first()
+    def send_email(to_email, subject, html_content, attachment_data=None, attachment_filename=None, user=None):
+        # Use the recipient's customer mail settings when they have their own SMTP server
+        from app.models.models import User
+        from app.services.customer_settings import effective_settings
+        if user is None:
+            user = User.query.filter_by(email=to_email).first()
+        settings = effective_settings(user)
         if not settings or not settings.smtp_server or not settings.smtp_user or not settings.smtp_password:
             print("SystemMailer Error: SMTP settings are incomplete in the Admin Dashboard.")
             return False
 
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = f"AxeGlobal Portal <{settings.smtp_user}>"
+        sender_name = getattr(settings, 'smtp_sender_name', None) or getattr(settings, 'company_name', None) or 'Admin'
+        msg['From'] = f"{sender_name} <{settings.smtp_user}>"
         msg['To'] = to_email
 
         msg.attach(MIMEText(html_content, 'html'))
+        
+        if attachment_data and attachment_filename:
+            from email.mime.application import MIMEApplication
+            part = MIMEApplication(attachment_data, Name=attachment_filename)
+            part['Content-Disposition'] = f'attachment; filename="{attachment_filename}"'
+            msg.attach(part)
 
         try:
             server = smtplib.SMTP(settings.smtp_server, int(settings.smtp_port or 587))
