@@ -167,13 +167,11 @@
                                  data-service="${q.service_type}">
                                 
                                 <div class="offer-badge-row" style="display:flex; align-items:center; flex-wrap:wrap; gap:0.5rem; justify-content:space-between;">
-                                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                                        <div class="ref-eyebrow">
-                                            <span class="ref-code">${q.offering_branch || refCode}</span>
-                                        </div>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                                        <div class="info-pill clickable" data-ref="${refCode}" onclick="copyRef(this)">📌 Ref: <span class="ref-code">${refCode}</span> <span class="copy-icon">⧉</span></div>
                                         ${(q.packages || q.weight || q.volume) ? `
-                                        <div style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; font-family: var(--mq-font-mono);">
-                                            📦 ${q.packages || '0 pkgs'} | ${q.weight || 0} kgs | ${q.volume || 0} cbm
+                                        <div class="info-pill">
+                                            📦 ${q.packages || 0} pcs &middot; ${q.weight || 0} kg &middot; ${q.volume || 0} m&sup3;
                                         </div>
                                         ` : ''}
                                     </div>

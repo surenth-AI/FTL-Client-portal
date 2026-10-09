@@ -861,8 +861,11 @@
             {% for res in results %}
             <div class="offer-card {% if loop.first %}best{% endif %}" data-price="{{ res.total_cost }}"
                 data-transit="{{ res.transit_days }}" data-closing="{{ res.next_closing }}">
-                <div class="offer-badge-row" style="justify-content: space-between; align-items: center; width: 100%;">
-                    <div style="display: flex; gap: 0.4rem;">
+                <div class="offer-badge-row" style="justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                        <div class="info-pill clickable" style="display: none;" id="quoteIdDisplay-card-{{ loop.index }}" onclick="copyRef(this)"></div>
+                        <div class="info-pill">📦 {{ res.cargo_details.packages or query.get('quantity', 0) }} pcs &middot; {{ "%.2f"|format((res.cargo_details.weight or query.get('weight', 0))|float) }} kg &middot; {{ "%.2f"|format((res.cargo_details.volume or query.get('volume', 0))|float) }} m&sup3;</div>
+                        
                         {% if results|length == 1 %}
                         <span class="offer-tag cheapest">💲 Cheapest</span>
                         <span class="offer-tag recommended">★ Recommended</span>
@@ -921,18 +924,7 @@
                             {% else %}
                             <span class="meta-pill service">📦 FCL</span>
                             {% endif %}
-                            {% if res.cargo_details.volume and res.cargo_details.volume > 0 %}
-                            <span class="meta-pill" style="background: rgba(14, 165, 233, 0.08); color: var(--primary-color); border: 1px solid rgba(14, 165, 233, 0.2); font-weight: 600;">📐 {{ "%.2f"|format(res.cargo_details.volume) }} CBM</span>
-                            {% endif %}
-                            {% if res.cargo_details.weight and res.cargo_details.weight > 0 %}
-                            <span class="meta-pill" style="background: rgba(99, 102, 241, 0.08); color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.2); font-weight: 600;">⚖️ {{ "%.2f"|format(res.cargo_details.weight) }} KG</span>
-                            {% endif %}
-                            {% if res.cargo_details.packages %}
-                            <span class="meta-pill" style="background: rgba(245, 158, 11, 0.08); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.2); font-weight: 600;">🧩 {{ res.cargo_details.packages }}</span>
-                            {% endif %}
-                            {% if res.cargo_details.commodity %}
-                            <span class="meta-pill" style="background: var(--hover-bg); color: var(--text-dark); border: 1px solid var(--border-color);">🏷️ {{ res.cargo_details.commodity }}</span>
-                            {% endif %}
+
                         </div>
                         <div class="charges-row">
                             <span class="charge-pill {% if res.has_origin_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Origin Port Charges</span>
@@ -951,7 +943,6 @@
                             {% endif %}
                         </div>
                         <a href="{{ url_for('customer.new_booking') }}" class="btn btn-book w-100" style="text-decoration:none; display:inline-block; text-align:center; padding:0.6rem;">Book →</a>
-                        <div class="quote-ref" id="quoteIdDisplay-card-{{ loop.index }}" onclick="copyRef(this)"></div>
                     </div>
                 </div>
                 <div class="offer-footer">

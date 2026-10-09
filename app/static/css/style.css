@@ -971,3 +971,26 @@ html[data-color-scheme='dark'] .milestone-list li.completed .bi-check-circle-fil
     text-decoration: underline;
 }
 
+
+/* Shared Pill Style for Quotes/Shipments/Rates */
+.info-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: #1e3a8a; /* var(--primary-blue-dark) */
+    background: #eff6ff;
+    border: 1px dashed #bfdbfe;
+    border-radius: 6px;
+    padding: 0.35rem 0.55rem;
+    font-weight: 600;
+    width: fit-content;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+.info-pill:hover { background: #dbeafe; }
+.info-pill.clickable { cursor: pointer; }
+.info-pill .ref-code { font-weight: 700; font-variant-numeric: tabular-nums; }
+.info-pill .copy-icon { font-size: 0.7rem; color: #64748b; }
+.info-pill.copied { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+
