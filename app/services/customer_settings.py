@@ -10,7 +10,7 @@ from app.access import group_ids, is_super_admin
 from app.models.models import CustomerSetting, SystemSetting
 
 BRANDING_FIELDS = ('theme_color', 'logo_path', 'company_name', 'company_address', 'company_phone',
-                   'default_layout', 'typography', 'terms_conditions_url', 'incoterm_rules')
+                   'default_layout', 'typography', 'terms_conditions_url', 'incoterm_rules', 'door_countries')
 SMTP_FIELDS = ('smtp_server', 'smtp_port', 'smtp_user', 'smtp_sender_name', 'smtp_password')
 SYSTEM_ONLY_FIELDS = ('login_banner_path',)  # the sign-in page is shown before we know the customer
 

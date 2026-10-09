@@ -1741,6 +1741,7 @@ html[data-color-scheme='dark'] .rates-view-content {
 </div>
 
 <script>
+const systemDoorCountries = {{ (system_door_countries | tojson | safe) if system_door_countries else 'null' }};
 
 // Dynamic lists loaded asynchronously with immediate robust fallbacks
 let apiCountries = [];
@@ -2120,15 +2121,21 @@ function populateCountries(locationType, type) {
         countrySelect.innerHTML = '<option value="">Select country</option>';
         const sorted = [...apiCountries].filter(c => c.code && c.name).sort((a, b) => a.name.localeCompare(b.name));
         sorted.forEach(c => {
+            const upperCode = c.code.toUpperCase();
+            if (type === 'door' && systemDoorCountries && systemDoorCountries.length > 0 && !systemDoorCountries.includes(upperCode)) {
+                return;
+            }
             const option = document.createElement('option');
-            option.value = c.code.toUpperCase();
+            option.value = upperCode;
             option.textContent = c.name;
             countrySelect.appendChild(option);
         });
     }
     
-    if (currentValue) {
+    if (currentValue && Array.from(countrySelect.options).some(o => o.value === currentValue)) {
         ensureCountryOption(countrySelect, currentValue);
+    } else {
+        countrySelect.value = '';
     }
 }
 

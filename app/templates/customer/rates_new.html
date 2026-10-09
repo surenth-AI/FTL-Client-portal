@@ -1705,6 +1705,9 @@
 {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+        // System settings for field config
+        const systemDoorCountries = {{ (system_door_countries | tojson | safe) if system_door_countries else 'null' }};
+        const systemIncotermRules = {{ (system_incoterm_rules | tojson | safe) if system_incoterm_rules else 'null' }};
 
         // Custom alert function for sandboxed environments
         function showAlert(message) {
@@ -1999,12 +2002,20 @@
             // Clear selection
             selectedLocations[locationType] = null;
             input.value = '';
+            
+            // Re-evaluate restrictions in case changing one type affects the other
+            if (!window._isEnforcingRestrictions) {
+                window._isEnforcingRestrictions = true;
+                enforceMoveTypeRestrictions();
+                window._isEnforcingRestrictions = false;
+            }
         }
 
         function handleCountryChange(locationType) {
             // Clear location when country changes
             selectedLocations[locationType] = null;
             document.getElementById(locationType + 'Location').value = '';
+            enforceMoveTypeRestrictions();
         }
 
         function showDropdown(locationType) {
@@ -2111,47 +2122,118 @@
             setTimeout(() => togglePanel('cargo'), 300);
         }
 
+        function getValidIncoterms(originType, destType) {
+            if (!systemIncotermRules || !systemIncotermRules.rules || systemIncotermRules.rules.length === 0) {
+                // Fallback to original logic if no rules are configured
+                let allowed = ['FCA', 'FOB', 'CFR'];
+                if (originType === 'door') allowed.push('EXW');
+                if (destType === 'door') allowed.push('DAP', 'DPU');
+                return allowed;
+            }
+            
+            let allowed = new Set();
+            systemIncotermRules.rules.forEach(rule => {
+                const originMatch = !rule.originType || rule.originType === originType;
+                const destMatch = !rule.destType || rule.destType === destType;
+                if (originMatch && destMatch && rule.allowed) {
+                    rule.allowed.forEach(t => allowed.add(t));
+                }
+            });
+            return Array.from(allowed).sort();
+        }
+
+        function enforceMoveTypeRestrictions() {
+            ['origin', 'dest'].forEach(loc => {
+                const countrySelect = document.getElementById(loc + 'Country');
+                const typeSelect = document.getElementById(loc + 'Type');
+                const doorOption = typeSelect.querySelector('option[value="door"]');
+                const currentCountry = countrySelect.value;
+                const currentType = typeSelect.value;
+                
+                if (doorOption) {
+                    let doorAllowed = true;
+                    
+                    // 1. Check door countries
+                    if (systemDoorCountries && currentCountry && !systemDoorCountries.includes(currentCountry)) {
+                        doorAllowed = false;
+                    }
+
+                    // 2. Check incoterm rules for door validity
+                    if (doorAllowed && systemIncotermRules && systemIncotermRules.rules && systemIncotermRules.rules.length > 0) {
+                        const testOrigin = loc === 'origin' ? 'door' : document.getElementById('originType').value;
+                        const testDest = loc === 'dest' ? 'door' : document.getElementById('destType').value;
+                        const validIncoterms = getValidIncoterms(testOrigin, testDest);
+                        if (validIncoterms.length === 0) {
+                            doorAllowed = false;
+                        }
+                    }
+
+                    doorOption.disabled = !doorAllowed;
+                    if (!doorAllowed && currentType === 'door') {
+                        typeSelect.value = 'port';
+                        handleLocationTypeChange(loc);
+                    }
+                }
+
+                // Filter Country options based on type
+                if (systemDoorCountries && systemDoorCountries.length > 0) {
+                    if (!countrySelect.dataset.originalOptions) {
+                        countrySelect.dataset.originalOptions = Array.from(countrySelect.options).map(o => o.outerHTML).join('');
+                    }
+                    countrySelect.innerHTML = countrySelect.dataset.originalOptions;
+                    
+                    if (typeSelect.value === 'door') {
+                        Array.from(countrySelect.options).forEach(opt => {
+                            if (opt.value !== '' && !systemDoorCountries.includes(opt.value)) {
+                                opt.remove();
+                            }
+                        });
+                    }
+                    
+                    if (currentCountry && !countrySelect.querySelector(`option[value="${currentCountry}"]`)) {
+                        countrySelect.value = '';
+                        handleCountryChange(loc);
+                    } else {
+                        countrySelect.value = currentCountry;
+                    }
+                }
+            });
+        }
+
         function updateAvailableIncoterms() {
             const originType = document.getElementById('originType').value;
             const destType = document.getElementById('destType').value;
             const incotermSelect = document.getElementById('incoterm');
+            const currentValue = incotermSelect.value;
 
             // Clear existing options except the first placeholder
             incotermSelect.innerHTML = '<option value="">Select incoterm</option>';
 
-            // Always available options
-            const alwaysAvailable = [
-                { value: 'FCA', text: 'FCA - Free Carrier' },
-                { value: 'FOB', text: 'FOB - Free On Board' },
-                { value: 'CFR', text: 'CFR - Cost and Freight' }
-            ];
+            const validIncoterms = getValidIncoterms(originType, destType);
+            const incotermLabels = {
+                'EXW': 'EXW - Ex Works',
+                'FCA': 'FCA - Free Carrier',
+                'FAS': 'FAS - Free Alongside Ship',
+                'FOB': 'FOB - Free On Board',
+                'CFR': 'CFR - Cost and Freight',
+                'CIF': 'CIF - Cost, Insurance and Freight',
+                'CPT': 'CPT - Carriage Paid To',
+                'CIP': 'CIP - Carriage and Insurance Paid To',
+                'DAP': 'DAP - Delivered At Place',
+                'DPU': 'DPU - Delivered at Place Unloaded',
+                'DDP': 'DDP - Delivered Duty Paid'
+            };
 
-            alwaysAvailable.forEach(opt => {
+            validIncoterms.forEach(val => {
                 const option = document.createElement('option');
-                option.value = opt.value;
-                option.textContent = opt.text;
+                option.value = val;
+                option.textContent = incotermLabels[val] || val;
+                if (val === currentValue) option.selected = true;
                 incotermSelect.appendChild(option);
             });
-
-            // EXW only if origin is door
-            if (originType === 'door') {
-                const option = document.createElement('option');
-                option.value = 'EXW';
-                option.textContent = 'EXW - Ex Works';
-                incotermSelect.appendChild(option);
-            }
-
-            // DAP/DPU only if destination is door
-            if (destType === 'door') {
-                const dapOption = document.createElement('option');
-                dapOption.value = 'DAP';
-                dapOption.textContent = 'DAP - Delivered At Place';
-                incotermSelect.appendChild(dapOption);
-
-                const dpuOption = document.createElement('option');
-                dpuOption.value = 'DPU';
-                dpuOption.textContent = 'DPU - Delivered at Place Unloaded';
-                incotermSelect.appendChild(dpuOption);
+            
+            if (currentValue && !validIncoterms.includes(currentValue)) {
+                incotermSelect.value = '';
             }
         }
 
@@ -3046,6 +3128,9 @@
         if (cargoReadyInput && !cargoReadyInput.value) {
             cargoReadyInput.value = new Date().toISOString().split('T')[0];
         }
+
+        // Enforce initial door restrictions
+        enforceMoveTypeRestrictions();
     });
 
 </script>

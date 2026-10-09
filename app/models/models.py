@@ -409,6 +409,7 @@ class SystemSetting(db.Model):
     typography = db.Column(db.String(100), default='Inter')
     terms_conditions_url = db.Column(db.String(500), nullable=True)
     incoterm_rules = db.Column(db.JSON, nullable=True)
+    door_countries = db.Column(db.JSON, nullable=True)  # List of country codes where 'door' moves are allowed
 
     # SMTP Configuration
     smtp_server = db.Column(db.String(255), nullable=True)
@@ -432,6 +433,7 @@ class CustomerSetting(db.Model):
     typography = db.Column(db.String(100))
     terms_conditions_url = db.Column(db.String(500))
     incoterm_rules = db.Column(db.JSON)
+    door_countries = db.Column(db.JSON, nullable=True)
     smtp_server = db.Column(db.String(255))
     smtp_port = db.Column(db.Integer)
     smtp_user = db.Column(db.String(255))

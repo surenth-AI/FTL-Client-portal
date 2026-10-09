@@ -544,7 +544,19 @@ def field_config():
             _assign(target, 'incoterm_rules', rules if rules.get('rules') else None, system)
         else:
             _assign(target, 'incoterm_rules', None, system)
-
+            
+        # Door Countries configuration
+        door_countries_list = request.form.getlist('door_countries')
+        if door_countries_list is not None and len(door_countries_list) > 0:
+            # Check if it was submitted as a single comma-separated string (fallback) or an array
+            if len(door_countries_list) == 1 and ',' in door_countries_list[0]:
+                countries_list = [c.strip().upper() for c in door_countries_list[0].split(',') if c.strip()]
+            else:
+                countries_list = [c.strip().upper() for c in door_countries_list if c.strip()]
+            _assign(target, 'door_countries', countries_list if countries_list else None, system)
+        elif 'door_countries' in request.form: # Empty selection
+            _assign(target, 'door_countries', None, system)
+            
         _commit_settings('Field configuration updated successfully.')
         return redirect(url_for('admin.field_config'))
 

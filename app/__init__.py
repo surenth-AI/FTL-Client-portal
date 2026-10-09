@@ -71,7 +71,7 @@ def clear_settings_cache():
 # Customer overrides, cached per customer ID: {group_id: (expires_at, {field: value})}
 _group_settings_cache = {}
 _GROUP_DISPLAY_FIELDS = ('theme_color', 'logo_path', 'default_layout', 'typography', 'terms_conditions_url',
-                         'company_name', 'company_address', 'company_phone')
+                         'company_name', 'company_address', 'company_phone', 'incoterm_rules', 'door_countries')
 
 
 def get_cached_system_settings(user=None):
@@ -263,6 +263,8 @@ def create_app(config_class=Config):
         layout = settings_data.get('default_layout', 'sidebar')
         typography = settings_data.get('typography', 'Inter')
         terms_url = settings_data.get('terms_conditions_url', '')
+        incoterm_rules = settings_data.get('incoterm_rules')
+        door_countries = settings_data.get('door_countries')
         
         logo_url = url_for('static', filename=logo)
         banner_url = url_for('static', filename=banner) if banner else url_for('static', filename='img/login_hero.png')
@@ -272,7 +274,9 @@ def create_app(config_class=Config):
             'system_banner_url': banner_url,
             'system_layout': layout,
             'system_typography': typography,
-            'system_terms_url': terms_url
+            'system_terms_url': terms_url,
+            'system_incoterm_rules': incoterm_rules,
+            'system_door_countries': door_countries
         }
 
     from app.routes.auth import auth

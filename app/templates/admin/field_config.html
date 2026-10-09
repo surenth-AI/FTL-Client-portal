@@ -28,6 +28,44 @@
     <div id="incotermRulesContainer" class="rules-list"></div>
 </section>
 
+<section class="settings-card mt-4">
+    <div class="settings-card-header">
+        <div>
+            <h6 class="settings-card-title">Allowed Door Countries</h6>
+            <p class="settings-card-desc">Limit which countries customers can request Door-to-Port or Port-to-Door rates for.</p>
+        </div>
+    </div>
+    <div class="settings-row">
+        <div>
+            <div class="settings-row-label">Country Codes</div>
+            <p class="settings-row-help">Select the countries that are allowed for Door rates. If none are selected, Door rates will be allowed for all countries.</p>
+        </div>
+        <div class="col-md-6">
+            <div id="doorCountriesTags" class="d-flex flex-wrap gap-2 mb-2"></div>
+            <input type="hidden" name="door_countries" id="doorCountriesInput" value="{{ (settings.door_countries | join(',')) if settings.door_countries else '' }}">
+            
+            <select class="form-select" id="doorCountriesSelect" onchange="addCountryTag(this)">
+                <option value="">+ Add a country...</option>
+                <option value="US">United States (US)</option>
+                <option value="CN">China (CN)</option>
+                <option value="GB">United Kingdom (GB)</option>
+                <option value="DE">Germany (DE)</option>
+                <option value="ES">Spain (ES)</option>
+                <option value="FR">France (FR)</option>
+                <option value="IT">Italy (IT)</option>
+                <option value="NL">Netherlands (NL)</option>
+                <option value="BE">Belgium (BE)</option>
+                <option value="TR">Turkey (TR)</option>
+                <option value="IN">India (IN)</option>
+                <option value="AE">United Arab Emirates (AE)</option>
+                <option value="SG">Singapore (SG)</option>
+                <option value="AU">Australia (AU)</option>
+                <option value="BR">Brazil (BR)</option>
+            </select>
+        </div>
+    </div>
+</section>
+
 <style>
 .rules-hint {
     display: flex; gap: .6rem; align-items: flex-start;
@@ -94,6 +132,35 @@ html[data-color-scheme='dark'] .rule-warn { color: #FBBF24; }
 .term-links { font-size: .72rem; }
 .term-links button { border: none; background: none; padding: 0; color: var(--primary-color); font-weight: 600; }
 .rule-editor-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--st-border); }
+.country-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--primary-color, #0d6efd);
+    color: white;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.country-tag button {
+    background: none;
+    border: none;
+    color: white;
+    padding: 0;
+    opacity: 0.7;
+    display: inline-flex;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+.country-tag button:hover {
+    opacity: 1;
+}
+#doorCountriesTags:empty {
+    display: none !important;
+}
 </style>
 {% endblock %}
 
@@ -323,9 +390,108 @@ function setAllIncoterms(index, all) {
     changed();
 }
 
-document.addEventListener('DOMContentLoaded', renderIncotermRules);
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/customer/api/lookups');
+        if (response.ok) {
+            const data = await response.json();
+            const countries = data.countries || [];
+            if (countries.length > 0) {
+                const select = document.getElementById('doorCountriesSelect');
+                if (select) {
+                    select.innerHTML = '<option value="">Select country...</option>';
+                    const sorted = [...countries].sort((a, b) => a.name.localeCompare(b.name));
+                    sorted.forEach(c => {
+                        const code = c.code.toUpperCase();
+                        COUNTRY_MAP[code] = c.name + ' (' + code + ')';
+                        const opt = document.createElement('option');
+                        opt.value = code;
+                        opt.textContent = COUNTRY_MAP[code];
+                        select.appendChild(opt);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load full country list", e);
+    }
+    
+    renderIncotermRules();
+    renderCountryTags();
+});
+
 document.getElementById('settingsForm').addEventListener('submit', function () {
     document.getElementById('incotermRulesJSON').value = JSON.stringify(incotermRulesConfig);
 });
+
+// --- Country Tags UI ---
+let COUNTRY_MAP = {
+    'US': 'United States (US)',
+    'CN': 'China (CN)',
+    'GB': 'United Kingdom (GB)',
+    'DE': 'Germany (DE)',
+    'ES': 'Spain (ES)',
+    'FR': 'France (FR)',
+    'IT': 'Italy (IT)',
+    'NL': 'Netherlands (NL)',
+    'BE': 'Belgium (BE)',
+    'TR': 'Turkey (TR)',
+    'IN': 'India (IN)',
+    'AE': 'United Arab Emirates (AE)',
+    'SG': 'Singapore (SG)',
+    'AU': 'Australia (AU)',
+    'BR': 'Brazil (BR)'
+};
+
+function renderCountryTags() {
+    const hiddenInput = document.getElementById('doorCountriesInput');
+    const container = document.getElementById('doorCountriesTags');
+    const select = document.getElementById('doorCountriesSelect');
+    
+    if (!hiddenInput || !container || !select) return;
+    
+    const selected = hiddenInput.value ? hiddenInput.value.split(',') : [];
+    
+    container.innerHTML = '';
+    selected.forEach(code => {
+        const name = COUNTRY_MAP[code] || code;
+        container.innerHTML += `
+            <span class="country-tag">
+                ${name}
+                <button type="button" onclick="removeCountryTag('${code}')"><i class="bi bi-x"></i></button>
+            </span>
+        `;
+    });
+    
+    // Update select options (hide already selected)
+    Array.from(select.options).forEach(opt => {
+        if (opt.value === '') return;
+        opt.style.display = selected.includes(opt.value) ? 'none' : '';
+    });
+    select.value = '';
+}
+
+function addCountryTag(selectEl) {
+    const val = selectEl.value;
+    if (!val) return;
+    
+    const hiddenInput = document.getElementById('doorCountriesInput');
+    let selected = hiddenInput.value ? hiddenInput.value.split(',') : [];
+    if (!selected.includes(val)) {
+        selected.push(val);
+        hiddenInput.value = selected.join(',');
+        renderCountryTags();
+        changed();
+    }
+}
+
+function removeCountryTag(code) {
+    const hiddenInput = document.getElementById('doorCountriesInput');
+    let selected = hiddenInput.value ? hiddenInput.value.split(',') : [];
+    selected = selected.filter(c => c !== code);
+    hiddenInput.value = selected.join(',');
+    renderCountryTags();
+    changed();
+}
 </script>
 {% endblock %}
