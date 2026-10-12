@@ -4,7 +4,7 @@
 {% block title %}My Bookings - Fast Transit Line{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/portal_cards.css') }}?v=5">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal_cards.css') }}?v=10">
 
 <div class="mq-container">
 
@@ -14,7 +14,12 @@
             <h1 class="mq-title">My Bookings</h1>
             <p class="mq-subtitle">Every booking request you've submitted, from quote conversions or new shipments</p>
         </div>
-        <a href="{{ url_for('customer.new_booking') }}" class="mq-btn mq-btn-book">+ New Booking</a>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="{{ url_for('customer.export_shipments_excel') }}" class="mq-btn mq-btn-export" id="btnExportShipmentsExcel" title="Export all bookings to Excel">
+                <i class="bi bi-file-earmark-excel"></i> Export to Excel
+            </a>
+            <a href="{{ url_for('customer.new_booking') }}" class="mq-btn mq-btn-book">+ New Booking</a>
+        </div>
     </div>
 
     <!-- UNIFIED TOOLBAR CONTAINER (EXACT CLIENT MOCKUP WITH SEPARATION LINE) -->
@@ -42,11 +47,19 @@
                 <button class="sort-chip" data-sort="eta" onclick="sortBy('eta', this)">Arrival date</button>
                 <button class="sort-chip" data-sort="closing" onclick="sortBy('closing', this)">Closing date</button>
             </div>
-            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                 <div class="search-box">
                     <input type="text" id="shipmentSearch" placeholder="Search by reference, route or PO..." oninput="applySearchAndFilter()">
                 </div>
-                <div class="results-count" id="resultsCount">Showing 0 of 0 bookings</div>
+                <!-- VIEW SWITCHER (CARDS / TABLE) -->
+                <div class="view-switcher-pill">
+                    <button type="button" class="btn-view-toggle active" id="btnCardView" onclick="switchViewMode('card')">
+                        <i class="bi bi-grid-fill"></i> Cards
+                    </button>
+                    <button type="button" class="btn-view-toggle" id="btnListView" onclick="switchViewMode('list')">
+                        <i class="bi bi-list-ul"></i> Table
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -63,23 +76,23 @@
             {% elif 'confirm' in s_status or 'booked' in s_status %}
                 {% set status_cat = 'confirmed' %}
                 {% set status_badge = '<span class="status-pill confirmed"><span class="dot"></span>CONFIRMED</span>' %}
-                {% set status_sub = 'Confirmed ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set status_note = 'Sailing in 8 days' %}
+                {% set status_sub = 'Confirmed ' ~ (shipment.created_at.strftime('%Y-%m-%d') if shipment.created_at else '') %}
+                {% set status_note = 'Booking confirmed' %}
             {% elif 'transit' in s_status or 'dispatched' in s_status %}
                 {% set status_cat = 'transit' %}
                 {% set status_badge = '<span class="status-pill transit"><span class="dot"></span>IN TRANSIT</span>' %}
-                {% set status_sub = 'In Transit since ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_sub = 'Departed ' ~ (shipment.atd.strftime('%Y-%m-%d') if shipment.atd else (shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '')) %}
                 {% set status_note = 'Vessel in transit' %}
             {% elif 'deliver' in s_status or 'arrived' in s_status %}
                 {% set status_cat = 'delivered' %}
                 {% set status_badge = '<span class="status-pill delivered"><span class="dot"></span>DELIVERED</span>' %}
-                {% set status_sub = 'Delivered ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set status_note = 'Delivered' %}
+                {% set status_sub = 'Delivered ' ~ (shipment.ata.strftime('%Y-%m-%d') if shipment.ata else (shipment.eta.strftime('%Y-%m-%d') if shipment.eta else '')) %}
+                {% set status_note = 'Delivered to destination' %}
             {% else %}
                 {% set status_cat = 'pending' %}
                 {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ (shipment.status | upper) ~ '</span>' %}
-                {% set status_sub = 'Created on ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
-                {% set status_note = 'Awaiting office confirmation' %}
+                {% set status_sub = 'Created on ' ~ (shipment.created_at.strftime('%Y-%m-%d') if shipment.created_at else '') %}
+                {% set status_note = 'Status updated' %}
             {% endif %}
 
             {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else '-' %}
@@ -100,22 +113,23 @@
                         <div class="info-pill clickable" onclick="navigator.clipboard.writeText('{{ ref_code }}'); this.classList.add('copied'); setTimeout(()=>this.classList.remove('copied'), 2000);">
                             📌 Ref: <span class="ref-code">{{ ref_code }}</span> <span class="copy-icon">⧉</span>
                         </div>
-                        {% if parent_quote %}
-                        <div class="info-pill">
-                            📌 Quote: <span class="ref-code">{{ parent_quote }}</span>
-                        </div>
-                        {% endif %}
                         
-                        {% set ns = namespace(pkgs=0, kgs=0.0, cbm=0.0) %}
-                        {% for item in shipment.cargo_items %}
-                            {% set ns.pkgs = ns.pkgs + (item.quantity or 1) %}
-                            {% set ns.kgs = ns.kgs + (item.weight_kg or 0.0) %}
-                            {% set ns.cbm = ns.cbm + (item.volume_cbm or 0.0) %}
-                        {% endfor %}
-                        {% if ns.pkgs > 0 or ns.kgs > 0 or ns.cbm > 0 %}
+                        {% if shipment.cargo_summary %}
                         <div class="info-pill">
-                            📦 {{ ns.pkgs }} pcs &middot; {{ "%.2f"|format(ns.kgs) }} kg &middot; {{ "%.2f"|format(ns.cbm) }} m&sup3;
+                            📦 {{ shipment.cargo_summary }}
                         </div>
+                        {% else %}
+                            {% set ns = namespace(pkgs=0, kgs=0.0, cbm=0.0) %}
+                            {% for item in shipment.cargo_items %}
+                                {% set ns.pkgs = ns.pkgs + (item.quantity or 1) %}
+                                {% set ns.kgs = ns.kgs + (item.weight_kg or 0.0) %}
+                                {% set ns.cbm = ns.cbm + (item.volume_cbm or 0.0) %}
+                            {% endfor %}
+                            {% if ns.pkgs > 0 or ns.kgs > 0 or ns.cbm > 0 %}
+                            <div class="info-pill">
+                                📦 {{ ns.pkgs }} pcs &middot; {{ "%.2f"|format(ns.kgs) }} kg &middot; {{ "%.2f"|format(ns.cbm) }} m&sup3;
+                            </div>
+                            {% endif %}
                         {% endif %}
                     </div>
 
@@ -183,6 +197,140 @@
         {% endfor %}
     </div>
 
+    <!-- 2. TABLE / LIST VIEW CONTAINER -->
+    <div id="listViewContainer" style="display: none;">
+        <div class="table-card-wrapper">
+            <div class="table-responsive">
+                <table class="myquotes-list-table" id="shipmentsTable">
+                    <thead>
+                        <tr>
+                            <th class="text-center sortable-th" onclick="setTableSort('status')">Status ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('bookingref')">Booking number ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('customerref')">YourReference ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('origin')">Origin ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('dest')">Destination ▲▼</th>
+                            <th class="sortable-th text-center" onclick="setTableSort('pkgs')">#pkgs ▲▼</th>
+                            <th class="sortable-th text-end" onclick="setTableSort('weight')">Weight ▲▼</th>
+                            <th class="sortable-th text-end" onclick="setTableSort('volume')">Volume ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('vessel')">Vessel ▲▼</th>
+                            <th class="sortable-th text-center" onclick="setTableSort('etd')">ETD/ATD ▲▼</th>
+                            <th class="sortable-th text-center" onclick="setTableSort('eta')">ETA/ATA ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('quote')">Quote ▲▼</th>
+                            <th class="sortable-th text-center" onclick="setTableSort('product')">product ▲▼</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shipmentsTableBody">
+                    {% for shipment in shipments %}
+                        {% set s_status = shipment.status | lower %}
+                        {% if 'pending' in s_status %}
+                            {% set status_cat = 'pending' %}
+                            {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>PENDING</span>' %}
+                        {% elif 'confirm' in s_status or 'booked' in s_status %}
+                            {% set status_cat = 'confirmed' %}
+                            {% set status_badge = '<span class="status-pill confirmed"><span class="dot"></span>CONFIRMED</span>' %}
+                        {% elif 'transit' in s_status or 'dispatched' in s_status %}
+                            {% set status_cat = 'transit' %}
+                            {% set status_badge = '<span class="status-pill transit"><span class="dot"></span>IN TRANSIT</span>' %}
+                        {% elif 'deliver' in s_status or 'arrived' in s_status %}
+                            {% set status_cat = 'delivered' %}
+                            {% set status_badge = '<span class="status-pill delivered"><span class="dot"></span>DELIVERED</span>' %}
+                        {% else %}
+                            {% set status_cat = 'pending' %}
+                            {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ (shipment.status | upper) ~ '</span>' %}
+                        {% endif %}
+
+                        {# 2. Booking number: "bookingref" #}
+                        {% set b_ref = shipment.bookingref if shipment.bookingref is defined and shipment.bookingref else (shipment.bookingRef if shipment.bookingRef is defined and shipment.bookingRef else (shipment.api_booking_ref if shipment.api_booking_ref else ('BK-' ~ "%06d"|format(shipment.id) if shipment.id else '—'))) %}
+
+                        {# 3. YourReference: "customerReference" #}
+                        {% set c_ref = shipment.customerReference if shipment.customerReference is defined and shipment.customerReference else (shipment.customerRef if shipment.customerRef is defined and shipment.customerRef else (shipment.customer_ref if shipment.customer_ref else '—')) %}
+
+                        {# 4. Origin: ISNULL("porlocation","pollocation") #}
+                        {% set loc_origin = shipment.porlocation if shipment.porlocation is defined and shipment.porlocation else (shipment.porLocation if shipment.porLocation is defined and shipment.porLocation else (shipment.place_of_receipt if shipment.place_of_receipt else (shipment.pollocation if shipment.pollocation is defined and shipment.pollocation else (shipment.polLocation if shipment.polLocation is defined and shipment.polLocation else (shipment.origin if shipment.origin else '—'))))) %}
+
+                        {# 5. Destination: ISNULL("dellocation","podlocation") #}
+                        {% set loc_dest = shipment.dellocation if shipment.dellocation is defined and shipment.dellocation else (shipment.delLocation if shipment.delLocation is defined and shipment.delLocation else (shipment.place_of_delivery if shipment.place_of_delivery else (shipment.podlocation if shipment.podlocation is defined and shipment.podlocation else (shipment.podLocation if shipment.podLocation is defined and shipment.podLocation else (shipment.destination if shipment.destination else '—'))))) %}
+
+                        {# Cargo item fallbacks #}
+                        {% set ns = namespace(pkgs=0, kgs=0.0, cbm=0.0) %}
+                        {% if shipment.cargo_items %}
+                            {% for item in shipment.cargo_items %}
+                                {% set ns.pkgs = ns.pkgs + (item.quantity or 1) %}
+                                {% set ns.kgs = ns.kgs + (item.weight_kg or 0.0) %}
+                                {% set ns.cbm = ns.cbm + (item.volume_cbm or 0.0) %}
+                            {% endfor %}
+                        {% endif %}
+
+                        {# 6. #pkgs: "totalcolli" #}
+                        {% set val_pkgs = shipment.totalcolli if (shipment.totalcolli is defined and shipment.totalcolli is not none and shipment.totalcolli != '') else (shipment.totalColli if (shipment.totalColli is defined and shipment.totalColli is not none and shipment.totalColli != '') else (ns.pkgs if ns.pkgs > 0 else '—')) %}
+
+                        {# 7. Weight: "totalweight" #}
+                        {% set val_weight_num = shipment.totalweight if (shipment.totalweight is defined and shipment.totalweight is not none and shipment.totalweight != '') else (shipment.totalWeight if (shipment.totalWeight is defined and shipment.totalWeight is not none and shipment.totalWeight != '') else (ns.kgs if ns.kgs > 0 else 0)) %}
+                        {% set val_weight_display = (("%.2f kg"|format(val_weight_num)) if val_weight_num is number and val_weight_num > 0 else (val_weight_num ~ ' kg' if val_weight_num != 0 and val_weight_num != '0' else '—')) %}
+
+                        {# 8. Volume: "totalVolume" #}
+                        {% set val_volume_num = shipment.totalVolume if (shipment.totalVolume is defined and shipment.totalVolume is not none and shipment.totalVolume != '') else (shipment.totalvolume if (shipment.totalvolume is defined and shipment.totalvolume is not none and shipment.totalvolume != '') else (ns.cbm if ns.cbm > 0 else (shipment.volume if shipment.volume else 0))) %}
+                        {% set val_volume_display = (("%.2f m³"|format(val_volume_num)) if val_volume_num is number and val_volume_num > 0 else (val_volume_num ~ ' m³' if val_volume_num != 0 and val_volume_num != '0' else '—')) %}
+
+                        {# 9. Vessel: concat("vessel"," (","voyage",")") #}
+                        {% set v_vessel = shipment.vessel if (shipment.vessel is defined and shipment.vessel) else (shipment.vessel_name if shipment.vessel_name else '') %}
+                        {% set v_voyage = shipment.voyage if (shipment.voyage is defined and shipment.voyage) else (shipment.voyage_number if shipment.voyage_number else '') %}
+                        {% set val_vessel = (v_vessel ~ ' (' ~ v_voyage ~ ')') if (v_vessel and v_voyage) else (v_vessel if v_vessel else '—') %}
+
+                        {# 10. ETD/ATD: ISNULL("ATD","ETD") #}
+                        {% set val_etd = shipment.atd if (shipment.atd is defined and shipment.atd) else (shipment.ATD if (shipment.ATD is defined and shipment.ATD) else (shipment.etd.strftime('%Y-%m-%d') if (shipment.etd and shipment.etd.strftime is defined) else (shipment.etd if (shipment.etd is defined and shipment.etd) else '—'))) %}
+
+                        {# 11. ETA/ATA: ISNULL("ATA","ETA") #}
+                        {% set val_eta = shipment.ata if (shipment.ata is defined and shipment.ata) else (shipment.ATA if (shipment.ATA is defined and shipment.ATA) else (shipment.eta_pod.strftime('%Y-%m-%d') if (shipment.eta_pod and shipment.eta_pod.strftime is defined) else (shipment.eta.strftime('%Y-%m-%d') if (shipment.eta is defined and shipment.eta and shipment.eta.strftime is defined) else (shipment.eta_pod if (shipment.eta_pod is defined and shipment.eta_pod) else (shipment.eta if (shipment.eta is defined and shipment.eta) else '—'))))) %}
+
+                        {# 12. Quote: "quotenumber" #}
+                        {% set val_quote = shipment.quotenumber if (shipment.quotenumber is defined and shipment.quotenumber) else (shipment.quoteNumber if (shipment.quoteNumber is defined and shipment.quoteNumber) else (shipment.quote_number if (shipment.quote_number is defined and shipment.quote_number) else (shipment.customer_ref if (shipment.customer_ref and ('QUO' in shipment.customer_ref or 'Q-' in shipment.customer_ref)) else '—'))) %}
+
+                        {# 13. product: "product" #}
+                        {% set val_product = shipment.product if (shipment.product is defined and shipment.product) else (shipment.service_type if shipment.service_type else '') %}
+
+                        <tr class="shipment-table-row"
+                            onclick="window.location.href='{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}'"
+                            data-status="{{ status_cat }}"
+                            data-bookingref="{{ b_ref | lower }}"
+                            data-customerref="{{ c_ref | lower }}"
+                            data-origin="{{ loc_origin | lower }}"
+                            data-dest="{{ loc_dest | lower }}"
+                            data-pkgs="{{ val_pkgs }}"
+                            data-weight="{{ val_weight_num }}"
+                            data-volume="{{ val_volume_num }}"
+                            data-vessel="{{ val_vessel | lower }}"
+                            data-etd="{{ val_etd | lower }}"
+                            data-eta="{{ val_eta | lower }}"
+                            data-quote="{{ val_quote | lower }}"
+                            data-product="{{ val_product | lower }}"
+                            data-created="{{ shipment.created_at.timestamp() if shipment.created_at else 0 }}">
+                            
+                            <td class="text-center">{{ status_badge | safe }}</td>
+                            <td><strong style="color: var(--primary-color, #2563eb);">{{ b_ref }}</strong></td>
+                            <td>{{ c_ref }}</td>
+                            <td><strong>{{ loc_origin }}</strong></td>
+                            <td><strong>{{ loc_dest }}</strong></td>
+                            <td class="text-center">{{ val_pkgs }}</td>
+                            <td class="text-end font-monospace">{{ val_weight_display }}</td>
+                            <td class="text-end font-monospace">{{ val_volume_display }}</td>
+                            <td>{{ val_vessel }}</td>
+                            <td class="text-center">{{ val_etd }}</td>
+                            <td class="text-center">{{ val_eta }}</td>
+                            <td>{{ val_quote }}</td>
+                            <td class="text-center">{% if val_product %}<span class="badge bg-light text-dark border">{{ val_product }}</span>{% else %}—{% endif %}</td>
+                            <td style="text-align: right;" onclick="event.stopPropagation();">
+                                <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="btn-table-action-outline">View →</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Empty state -->
     <div class="empty-state" id="emptyState">
         <div class="icon">🔍</div>
@@ -203,11 +351,57 @@
 <script>
     let activeStatus = 'all';
     let activeSort = 'recent';
+    let currentViewMode = localStorage.getItem('my_shipments_view_mode') || 'card';
+    let tableSortKey = '';
+    let tableSortAsc = true;
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize view mode state
+        if (currentViewMode === 'list') {
+            const btnCard = document.getElementById('btnCardView');
+            const btnList = document.getElementById('btnListView');
+            if (btnCard) btnCard.classList.remove('active');
+            if (btnList) btnList.classList.add('active');
+        }
         updateCounts();
         applySearchAndFilter();
+        updateViewVisibility();
     });
+
+    function switchViewMode(mode) {
+        currentViewMode = mode;
+        try {
+            localStorage.setItem('my_shipments_view_mode', mode);
+        } catch (e) {}
+
+        const btnCard = document.getElementById('btnCardView');
+        const btnList = document.getElementById('btnListView');
+        if (btnCard) btnCard.classList.toggle('active', mode === 'card');
+        if (btnList) btnList.classList.toggle('active', mode === 'list');
+
+        updateViewVisibility();
+    }
+
+    function updateViewVisibility(forceEmpty = false) {
+        const cardsContainer = document.getElementById('shipmentsContainer');
+        const listContainer = document.getElementById('listViewContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        const isEmpty = forceEmpty || (emptyState && emptyState.classList.contains('show'));
+        if (isEmpty) {
+            if (cardsContainer) cardsContainer.style.display = 'none';
+            if (listContainer) listContainer.style.display = 'none';
+            return;
+        }
+
+        if (currentViewMode === 'card') {
+            if (cardsContainer) cardsContainer.style.display = 'flex';
+            if (listContainer) listContainer.style.display = 'none';
+        } else {
+            if (cardsContainer) cardsContainer.style.display = 'none';
+            if (listContainer) listContainer.style.display = 'block';
+        }
+    }
 
     function updateCounts() {
         const cards = document.querySelectorAll('.shipment-card-item');
@@ -240,34 +434,84 @@
         document.querySelectorAll('#sortGroup .sort-chip').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
 
-        const container = document.getElementById('shipmentsContainer');
-        const cards = Array.from(container.querySelectorAll('.shipment-card-item'));
+        // 1. Sort Cards
+        const cardContainer = document.getElementById('shipmentsContainer');
+        if (cardContainer) {
+            const cards = Array.from(cardContainer.querySelectorAll('.shipment-card-item'));
+            cards.sort((a, b) => {
+                if (key === 'recent') {
+                    return parseFloat(b.getAttribute('data-created') || 0) - parseFloat(a.getAttribute('data-created') || 0);
+                } else if (key === 'etd') {
+                    return (a.getAttribute('data-etd') || '').localeCompare(b.getAttribute('data-etd') || '');
+                } else if (key === 'eta') {
+                    return (a.getAttribute('data-eta') || '').localeCompare(b.getAttribute('data-eta') || '');
+                } else if (key === 'closing') {
+                    return (a.getAttribute('data-closing') || '').localeCompare(b.getAttribute('data-closing') || '');
+                }
+                return 0;
+            });
+            cards.forEach(c => cardContainer.appendChild(c));
+        }
 
-        cards.sort((a, b) => {
-            if (key === 'recent') {
-                return parseFloat(b.getAttribute('data-created')) - parseFloat(a.getAttribute('data-created'));
-            } else if (key === 'etd') {
-                return (a.getAttribute('data-etd') || '').localeCompare(b.getAttribute('data-etd') || '');
-            } else if (key === 'eta') {
-                return (a.getAttribute('data-eta') || '').localeCompare(b.getAttribute('data-eta') || '');
-            } else if (key === 'closing') {
-                return (a.getAttribute('data-closing') || '').localeCompare(b.getAttribute('data-closing') || '');
+        // 2. Sort Table Rows
+        const tbody = document.getElementById('shipmentsTableBody');
+        if (tbody) {
+            const rows = Array.from(tbody.querySelectorAll('.shipment-table-row'));
+            rows.sort((a, b) => {
+                if (key === 'recent') {
+                    return parseFloat(b.getAttribute('data-created') || 0) - parseFloat(a.getAttribute('data-created') || 0);
+                } else if (key === 'etd') {
+                    return (a.getAttribute('data-etd') || '').localeCompare(b.getAttribute('data-etd') || '');
+                } else if (key === 'eta') {
+                    return (a.getAttribute('data-eta') || '').localeCompare(b.getAttribute('data-eta') || '');
+                } else if (key === 'closing') {
+                    return (a.getAttribute('data-created') || '').localeCompare(b.getAttribute('data-created') || '');
+                }
+                return 0;
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
+        applySearchAndFilter();
+    }
+
+    function setTableSort(key) {
+        if (tableSortKey === key) {
+            tableSortAsc = !tableSortAsc;
+        } else {
+            tableSortKey = key;
+            tableSortAsc = true;
+        }
+
+        const tbody = document.getElementById('shipmentsTableBody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('.shipment-table-row'));
+
+        rows.sort((a, b) => {
+            let valA = a.getAttribute(`data-${key}`) || '';
+            let valB = b.getAttribute(`data-${key}`) || '';
+
+            if (key === 'pkgs' || key === 'weight' || key === 'volume' || key === 'created') {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+                return tableSortAsc ? (valA - valB) : (valB - valA);
             }
-            return 0;
+
+            return tableSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
-        cards.forEach(c => container.appendChild(c));
-        applySearchAndFilter();
+        rows.forEach(r => tbody.appendChild(r));
     }
 
     function applySearchAndFilter() {
         const q = (document.getElementById('shipmentSearch').value || '').toLowerCase().trim();
         const cards = document.querySelectorAll('.shipment-card-item');
+        const rows = document.querySelectorAll('.shipment-table-row');
         const emptyState = document.getElementById('emptyState');
-        const resultsCount = document.getElementById('resultsCount');
         let count = 0;
-        const totalCards = cards.length;
+        const totalItems = cards.length;
 
+        // Filter cards
         cards.forEach(card => {
             const status = card.getAttribute('data-status');
             const ref = card.getAttribute('data-ref') || '';
@@ -287,13 +531,33 @@
             }
         });
 
-        if (count === 0 && totalCards > 0) {
+        // Filter table rows
+        rows.forEach(row => {
+            const status = row.getAttribute('data-status');
+            const bRef = row.getAttribute('data-bookingref') || '';
+            const cRef = row.getAttribute('data-customerref') || '';
+            const origin = row.getAttribute('data-origin') || '';
+            const dest = row.getAttribute('data-dest') || '';
+            const quote = row.getAttribute('data-quote') || '';
+            const vessel = row.getAttribute('data-vessel') || '';
+
+            const matchStatus = (activeStatus === 'all' || status === activeStatus);
+            const matchQ = !q || bRef.includes(q) || cRef.includes(q) || origin.includes(q) || dest.includes(q) || quote.includes(q) || vessel.includes(q);
+
+            if (matchStatus && matchQ) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (count === 0 && totalItems > 0) {
             emptyState.classList.add('show');
+            updateViewVisibility(true);
         } else {
             emptyState.classList.remove('show');
+            updateViewVisibility(false);
         }
-
-        resultsCount.textContent = `Showing ${count} of ${totalCards} bookings`;
     }
 
     function resetFilters() {

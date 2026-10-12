@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify, send_file, abort
 from flask_login import login_required, current_user
 from app.models.models import Rate, Booking, TrackingEvent, CargoItem, BookingAttachment, ShippingInstruction
 from app.services.rate_engine import RateEngine
 from app import db
 from datetime import datetime
 import os
+import io
 from werkzeug.utils import secure_filename
 import json
 import requests
@@ -280,14 +281,17 @@ def api_my_quotes():
         try: customer_id = int(current_user.accounts[0].account_id)
         except: pass
         
-    all_branches = {}
-    try:
-        b_resp = requests.get("http://realnexus.comit.cloud:5000/api/Branches/Branches", headers={'x-api-key': '1'}, timeout=3)
-        if b_resp.status_code == 200:
-            for b in b_resp.json():
-                all_branches[str(b.get('branchID') or b.get('branchId', ''))] = b.get('name', '')
-    except Exception as e:
-        print("Failed to fetch branches:", e)
+    global _GLOBAL_BRANCHES_CACHE
+    if not globals().get('_GLOBAL_BRANCHES_CACHE'):
+        globals()['_GLOBAL_BRANCHES_CACHE'] = {}
+        try:
+            b_resp = requests.get("http://realnexus.comit.cloud:5000/api/Branches/Branches", headers={'x-api-key': '1'}, timeout=2)
+            if b_resp.status_code == 200:
+                for b in b_resp.json():
+                    globals()['_GLOBAL_BRANCHES_CACHE'][str(b.get('branchID') or b.get('branchId', ''))] = b.get('name', '')
+        except Exception as e:
+            print("Failed to fetch branches:", e)
+    all_branches = globals().get('_GLOBAL_BRANCHES_CACHE', {})
         
     quote_data = []
     total_count = 0
@@ -309,7 +313,7 @@ def api_my_quotes():
             params['trafficType'] = request.args.get('trafficType')
             
         headers = {'accept': 'application/json', 'x-api-key': '1'}
-        resp = requests.get(url, params=params, headers=headers, timeout=5)
+        resp = requests.get(url, params=params, headers=headers, timeout=4)
         
         if resp.status_code == 200:
             data = resp.json()
@@ -326,28 +330,46 @@ def api_my_quotes():
             
             # Pre-fetch detailed quotation data in parallel to resolve complete commodities & weight
             import concurrent.futures
+            global _GLOBAL_QUOTE_DETAILS_CACHE
+            if '_GLOBAL_QUOTE_DETAILS_CACHE' not in globals():
+                globals()['_GLOBAL_QUOTE_DETAILS_CACHE'] = {}
+            quote_cache = globals()['_GLOBAL_QUOTE_DETAILS_CACHE']
+
             quote_details_map = {}
             def _fetch_detail(it):
+                # If commodities or tariff lines already exist, detail request is not needed
+                if isinstance(it, dict) and (it.get('commodities') or it.get('tariff', {}).get('lines')):
+                    return None, {}
                 header_obj = it.get('quotation', it).get('header', it)
                 q_num = header_obj.get('quoteNumber') or header_obj.get('quotationNo')
                 q_id = header_obj.get('quotationId')
                 ref_cand = q_num or (f"QUO-2026-{q_id}" if q_id else None)
                 if not ref_cand:
                     return None, {}
+                if ref_cand in quote_cache:
+                    return ref_cand, quote_cache[ref_cand]
                 try:
-                    r_det = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{ref_cand}?accountId={customer_id}", headers=headers, timeout=4)
+                    r_det = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{ref_cand}?accountId={customer_id}", headers=headers, timeout=1.5)
                     if r_det.status_code == 200:
-                        return ref_cand, r_det.json().get('quotation', {})
+                        det = r_det.json().get('quotation', {})
+                        if det:
+                            quote_cache[ref_cand] = det
+                        return ref_cand, det
                 except Exception:
                     pass
                 return ref_cand, {}
 
             try:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(items) or 1)) as executor:
-                    detail_results = list(executor.map(_fetch_detail, items))
-                    for ref_key, det in detail_results:
-                        if ref_key and det:
-                            quote_details_map[ref_key] = det
+                items_needing_detail = [
+                    it for it in items 
+                    if not (isinstance(it, dict) and (it.get('commodities') or it.get('tariff', {}).get('lines')))
+                ]
+                if items_needing_detail:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(items_needing_detail) or 1)) as executor:
+                        detail_results = list(executor.map(_fetch_detail, items_needing_detail))
+                        for ref_key, det in detail_results:
+                            if ref_key and det:
+                                quote_details_map[ref_key] = det
             except Exception as ex:
                 print(f"Parallel quote details fetch error: {ex}")
 
@@ -372,31 +394,85 @@ def api_my_quotes():
                 if not lines:
                     lines = detail_obj.get('tariff', {}).get('lines', []) or []
 
-                routing = header.get('routing', header.get('route', {}))
-                origin = header.get('polLocation') or routing.get('polLocation') or routing.get('porLocation') or "Unknown"
-                destination = header.get('podLocation') or routing.get('podLocation') or routing.get('delLocation') or "Unknown"
+                routing = header.get('routing', header.get('route', {})) or {}
+                if not routing and isinstance(q_item.get('routing'), dict):
+                    routing = q_item.get('routing')
+                if not routing and isinstance(item.get('routing'), dict):
+                    routing = item.get('routing')
+
+                por_location = str(
+                    routing.get('porLocation') or routing.get('porlocation') or
+                    header.get('porLocation') or header.get('porlocation') or
+                    item.get('porLocation') or item.get('porlocation') or ''
+                ).strip()
+                pol_location = str(
+                    routing.get('polLocation') or routing.get('pollocation') or
+                    header.get('polLocation') or header.get('pollocation') or
+                    item.get('polLocation') or item.get('pollocation') or ''
+                ).strip()
+
+                del_location = str(
+                    routing.get('delLocation') or routing.get('dellocation') or
+                    header.get('delLocation') or header.get('dellocation') or
+                    item.get('delLocation') or item.get('dellocation') or ''
+                ).strip()
+                pod_location = str(
+                    routing.get('podLocation') or routing.get('podlocation') or
+                    header.get('podLocation') or header.get('podlocation') or
+                    item.get('podLocation') or item.get('podlocation') or ''
+                ).strip()
+
+                # ISNULL("porlocation","pollocation") & ISNULL("dellocation","podlocation")
+                origin = por_location if por_location else (pol_location if pol_location else "Unknown")
+                destination = del_location if del_location else (pod_location if pod_location else "Unknown")
                 
                 created_on = header.get('createdOn')
                 try:
-                    if 'T' in created_on:
-                        cleaned_created = re.sub(r'\.\d+Z$', 'Z', created_on)
+                    if created_on and 'T' in str(created_on):
+                        cleaned_created = re.sub(r'\.\d+Z$', 'Z', str(created_on))
                         if not cleaned_created.endswith('Z') and '+' not in cleaned_created:
                             cleaned_created += 'Z'
                         created_at = datetime.fromisoformat(cleaned_created.replace('Z', '+00:00'))
+                    elif created_on:
+                        created_at = datetime.strptime(str(created_on)[:10], '%Y-%m-%d')
                     else:
-                        created_at = datetime.strptime(created_on, '%Y-%m-%d')
+                        created_at = now
                 except Exception:
                     created_at = now
+
+                # Valid From resolution
+                valid_from_raw = (
+                    header.get('validFrom') or header.get('validfrom') or
+                    item.get('validFrom') or item.get('validfrom') or
+                    q_item.get('validFrom') or created_on
+                )
+                valid_from = ""
+                if valid_from_raw:
+                    try:
+                        if 'T' in str(valid_from_raw):
+                            cleaned_vf = re.sub(r'\.\d+Z$', 'Z', str(valid_from_raw))
+                            if not cleaned_vf.endswith('Z') and '+' not in cleaned_vf:
+                                cleaned_vf += 'Z'
+                            vf_dt = datetime.fromisoformat(cleaned_vf.replace('Z', '+00:00'))
+                        else:
+                            vf_dt = datetime.strptime(str(valid_from_raw)[:10], '%Y-%m-%d')
+                        valid_from = vf_dt.strftime('%Y-%m-%d')
+                    except Exception:
+                        valid_from = str(valid_from_raw)[:10]
+                if not valid_from:
+                    valid_from = created_at.strftime('%Y-%m-%d')
                     
-                valid_until_str = header.get('validUntil')
+                valid_until_str = header.get('validUntil') or header.get('validuntil') or item.get('validUntil')
                 try:
-                    if 'T' in valid_until_str:
-                        cleaned_until = re.sub(r'\.\d+Z$', 'Z', valid_until_str)
+                    if valid_until_str and 'T' in str(valid_until_str):
+                        cleaned_until = re.sub(r'\.\d+Z$', 'Z', str(valid_until_str))
                         if not cleaned_until.endswith('Z') and '+' not in cleaned_until:
                             cleaned_until += 'Z'
                         valid_until_dt = datetime.fromisoformat(cleaned_until.replace('Z', '+00:00'))
+                    elif valid_until_str:
+                        valid_until_dt = datetime.strptime(str(valid_until_str)[:10], '%Y-%m-%d')
                     else:
-                        valid_until_dt = datetime.strptime(valid_until_str, '%Y-%m-%d')
+                        valid_until_dt = created_at + timedelta(days=30)
                     valid_until = valid_until_dt.strftime('%Y-%m-%d')
                 except Exception:
                     valid_until_dt = created_at + timedelta(days=30)
@@ -413,7 +489,7 @@ def api_my_quotes():
                 if not total_cost or total_cost <= 0:
                     for src in [item, q_item, header, tariff, detail_obj]:
                         if isinstance(src, dict):
-                            for key in ['totalAmount', 'totalCost', 'amount', 'grandTotal']:
+                            for key in ['totalAmount', 'totalCost', 'amount', 'grandTotal', 'totalamount']:
                                 val = src.get(key)
                                 if val is not None:
                                     try:
@@ -441,7 +517,7 @@ def api_my_quotes():
                     
                 quote_currency = header.get('currency') or item.get('currency') or q_item.get('currency') or tariff.get('quotationCurrency') or ''
                 
-                # Resolve cargo details for quote card display
+                # Resolve cargo details for quote card & table display
                 c_vol = 0.0
                 c_weight = 0.0
                 c_packages = ""
@@ -455,7 +531,7 @@ def api_my_quotes():
                         c_packages = ", ".join(pkg_parts)
                         c_desc = local_booking.cargo_items[0].description if local_booking.cargo_items else ""
 
-                commodities = detail_obj.get('commodities', []) or q_item.get('commodities', []) or header.get('commodities', [])
+                commodities = detail_obj.get('commodities', []) or q_item.get('commodities', []) or header.get('commodities', []) or item.get('commodities', [])
                 if not c_vol and commodities:
                     c_vol = sum(float(cm.get('volume') or 0.0) for cm in commodities)
                 if not c_weight and commodities:
@@ -468,6 +544,55 @@ def api_my_quotes():
                         n_pkg = cm.get('nrPackages') or 1
                         pkg_parts.append(f"{n_pkg} x {p_label}")
                     c_packages = ", ".join(pkg_parts)
+
+                # Explicit totalColli (#pkgs)
+                total_colli = (
+                    header.get('totalColli') or header.get('totalcolli') or
+                    item.get('totalColli') or item.get('totalcolli') or
+                    q_item.get('totalColli') or q_item.get('totalcolli') or
+                    detail_obj.get('totalColli') or detail_obj.get('totalcolli')
+                )
+                if total_colli is None or total_colli == '' or total_colli == 0:
+                    if commodities:
+                        try:
+                            total_colli = sum(int(cm.get('nrPackages') or 0) for cm in commodities)
+                        except Exception:
+                            pass
+                if (total_colli is None or total_colli == '' or total_colli == 0) and local_booking and local_booking.cargo_items:
+                    total_colli = sum(int(ci.quantity or 0) for ci in local_booking.cargo_items)
+                try:
+                    total_colli = int(total_colli or 0)
+                except Exception:
+                    total_colli = 0
+
+                # Explicit totalWeight
+                total_weight = (
+                    header.get('totalWeight') or header.get('totalweight') or
+                    item.get('totalWeight') or item.get('totalweight') or
+                    q_item.get('totalWeight') or q_item.get('totalweight') or
+                    detail_obj.get('totalWeight') or detail_obj.get('totalweight')
+                )
+                if total_weight is None or total_weight == '' or total_weight == 0:
+                    total_weight = c_weight
+                try:
+                    total_weight = float(total_weight or 0.0)
+                except Exception:
+                    total_weight = 0.0
+
+                # Explicit totalVolume
+                total_volume = (
+                    header.get('totalVolume') or header.get('totalvolume') or
+                    item.get('totalVolume') or item.get('totalvolume') or
+                    q_item.get('totalVolume') or q_item.get('totalvolume') or
+                    detail_obj.get('totalVolume') or detail_obj.get('totalvolume')
+                )
+                if total_volume is None or total_volume == '' or total_volume == 0:
+                    total_volume = c_vol
+                try:
+                    total_volume = float(total_volume or 0.0)
+                except Exception:
+                    total_volume = 0.0
+
                 # Charge determination logic based on FC, LC, and trafficType
                 t_type_mq = (header.get('trafficType') or item.get('trafficType') or 'EX').upper()
                 has_fc_mq = any(
@@ -501,9 +626,25 @@ def api_my_quotes():
 
                 quote_data.append({
                     'id': local_id,
+                    'quotenumber': api_booking_ref,
+                    'quote_number': api_booking_ref,
+                    'porlocation': por_location,
+                    'pollocation': pol_location,
+                    'dellocation': del_location,
+                    'podlocation': pod_location,
                     'origin': origin,
                     'destination': destination,
                     'total_cost': total_cost,
+                    'totalAmount': round(total_cost, 2),
+                    'total_amount': round(total_cost, 2),
+                    'totalcolli': total_colli,
+                    'total_colli': total_colli,
+                    'totalweight': round(total_weight, 2),
+                    'total_weight': round(total_weight, 2),
+                    'totalVolume': round(total_volume, 2),
+                    'total_volume': round(total_volume, 2),
+                    'validFrom': valid_from,
+                    'valid_from': valid_from,
                     'currency': quote_currency,
                     'offering_branch': offering_branch,
                     'selected_nvocc': header.get('nvoccName') or header.get('carrierName') or offering_branch or '',
@@ -514,9 +655,10 @@ def api_my_quotes():
                     'status': status,
                     'computed_status': computed_status,
                     'valid_until': valid_until,
-                    'volume': f"{c_vol:.2f}" if c_vol > 0 else "",
-                    'weight': f"{c_weight:,.2f}" if c_weight > 0 else "",
-                    'packages': c_packages,
+                    'validUntil': valid_until,
+                    'volume': f"{total_volume:.2f}" if total_volume > 0 else (f"{c_vol:.2f}" if c_vol > 0 else ""),
+                    'weight': f"{total_weight:,.2f}" if total_weight > 0 else (f"{c_weight:,.2f}" if c_weight > 0 else ""),
+                    'packages': f"{total_colli} pkgs" if total_colli > 0 else c_packages,
                     'commodity': c_desc,
                     'has_origin_charges': has_origin_charges,
                     'has_freight_surcharges': has_freight_surcharges,
@@ -537,20 +679,23 @@ def api_my_quotes():
         quote_data = []
         now = datetime.utcnow()
         for q in pagination.items:
-            valid_until = q.created_at + timedelta(days=30)
+            valid_until_dt = q.created_at + timedelta(days=30)
+            valid_until = valid_until_dt.strftime('%Y-%m-%d')
+            valid_from = q.created_at.strftime('%Y-%m-%d')
             if q.status == 'Booked':
                 computed_status = 'Booked'
-            elif valid_until < now:
+            elif valid_until_dt < now:
                 computed_status = 'Expired'
-            elif (valid_until - now).days <= 2:
+            elif (valid_until_dt - now).days <= 2:
                 computed_status = 'Expiring Soon'
             else:
                 computed_status = 'Active'
                 
             c_vol = float(q.volume or 0.0)
             c_weight = sum(float(ci.weight_kg or 0.0) for ci in q.cargo_items) if q.cargo_items else 0.0
+            total_colli = sum(int(ci.quantity or 0) for ci in q.cargo_items) if q.cargo_items else 0
             pkg_parts = [f"{ci.quantity} x {ci.package_type or 'Pkg'}" for ci in q.cargo_items if ci.quantity] if q.cargo_items else []
-            c_packages = ", ".join(pkg_parts)
+            c_packages = ", ".join(pkg_parts) if pkg_parts else (f"{total_colli} pkgs" if total_colli > 0 else "")
             c_desc = q.cargo_items[0].description if q.cargo_items else ""
 
             # Charge inclusion determination for local quote record
@@ -564,20 +709,38 @@ def api_my_quotes():
                 fb_freight = True
                 fb_dest = False
 
+            q_num = q.api_booking_ref or f"Local-{q.id}"
             quote_data.append({
                 'id': q.id,
+                'quotenumber': q_num,
+                'quote_number': q_num,
+                'porlocation': getattr(q, 'por_location', '') or '',
+                'pollocation': q.origin or '',
+                'dellocation': getattr(q, 'del_location', '') or '',
+                'podlocation': q.destination or '',
                 'origin': q.origin,
                 'destination': q.destination,
                 'total_cost': float(q.total_cost or 0.0),
+                'totalAmount': round(float(q.total_cost or 0.0), 2),
+                'total_amount': round(float(q.total_cost or 0.0), 2),
+                'totalcolli': total_colli,
+                'total_colli': total_colli,
+                'totalweight': round(c_weight, 2),
+                'total_weight': round(c_weight, 2),
+                'totalVolume': round(c_vol, 2),
+                'total_volume': round(c_vol, 2),
+                'validFrom': valid_from,
+                'valid_from': valid_from,
+                'validUntil': valid_until,
+                'valid_until': valid_until,
                 'currency': getattr(q, 'currency', 'USD') or 'USD',
                 'selected_nvocc': q.selected_nvocc or 'Local Quote',
                 'service_type': q.service_type,
                 'service_name': getattr(q, 'service_name', None) or 'Direct Service',
-                'api_booking_ref': q.api_booking_ref or f"Local-{q.id}",
+                'api_booking_ref': q_num,
                 'created_at': q.created_at.strftime('%d %b %Y'),
                 'status': q.status,
                 'computed_status': computed_status,
-                'valid_until': valid_until.strftime('%Y-%m-%d'),
                 'volume': f"{c_vol:.2f}" if c_vol > 0 else "",
                 'weight': f"{c_weight:.2f}" if c_weight > 0 else "",
                 'packages': c_packages,
@@ -822,7 +985,20 @@ def api_quote_breakdown(quote_id):
     quote_number = quote.api_booking_ref if (quote and quote.api_booking_ref) else ref
         
     breakdown = []
-    if quote_number:
+    currency = 'USD'
+    total_cost = 0.0
+
+    # 1. First check in-memory cache
+    cache = globals().get('_GLOBAL_QUOTE_DETAILS_CACHE', {})
+    det = cache.get(quote_number) or cache.get(ref)
+    if det and isinstance(det, dict):
+        tariff = det.get('tariff', det)
+        if isinstance(tariff, dict):
+            breakdown = tariff.get('lines') or []
+            currency = tariff.get('quotationCurrency') or det.get('header', {}).get('currency', 'USD')
+            total_cost = float(det.get('totalAmount') or det.get('header', {}).get('totalAmount') or 0.0)
+
+    if not breakdown and quote_number:
         import requests
         headers = {'accept': 'application/json', 'x-api-key': '1'}
         customer_id = None
@@ -844,6 +1020,11 @@ def api_quote_breakdown(quote_id):
                     tariff = data.get('tariff', data)
                     if isinstance(tariff, dict):
                         breakdown = tariff.get('lines') or []
+                        currency = tariff.get('quotationCurrency') or data.get('header', {}).get('currency', 'USD')
+                        total_cost = float(data.get('totalAmount') or data.get('header', {}).get('totalAmount') or 0.0)
+                    if data:
+                        cache[cand] = data
+                        cache[quote_number] = data
                     break
                 else:
                     print(f"API returned {resp.status_code} for {cand}: {resp.text}")
@@ -867,14 +1048,23 @@ def api_quote_breakdown(quote_id):
                         tariff = data.get('tariff', data)
                         if isinstance(tariff, dict):
                             breakdown = tariff.get('lines') or []
+                            currency = tariff.get('quotationCurrency') or header.get('currency', 'USD')
                     elif quote_number and (quote_number == quo_id or str(header.get('quotationId')) in quote_number):
                         tariff = data.get('tariff', data)
                         if isinstance(tariff, dict):
                             breakdown = tariff.get('lines') or []
+                            currency = tariff.get('quotationCurrency') or header.get('currency', 'USD')
         except Exception:
             pass
 
-    return jsonify({'breakdown': breakdown or []})
+    if breakdown and (not total_cost or total_cost <= 0):
+        total_cost = sum(float(l.get('amount') or 0.0) for l in breakdown)
+
+    return jsonify({
+        'breakdown': breakdown or [],
+        'total_cost': total_cost,
+        'currency': currency
+    })
 
 @customer.route('/api/quote-details/<path:quote_id>')
 @login_required
@@ -2568,25 +2758,548 @@ def booking_request():
     flash('Booking request submitted! We will review it shortly.', 'success')
     return redirect(url_for('customer.my_shipments'))
 
+import math
+import urllib.parse
+
+class ApiBookingItem:
+    """Wrapper around ERP /api/Bookings JSON response for template rendering."""
+    def __init__(self, raw):
+        self.raw = raw or {}
+        self.id = self.raw.get('bookingId') or self.raw.get('bookingID') or self.raw.get('id') or 0
+        self.booking_id = self.id
+        self.bookingId = self.id
+        self.bookingref = self.raw.get('bookingRef') or self.raw.get('bookingref') or self.raw.get('bookingNumber') or ''
+        self.bookingRef = self.bookingref
+        self.api_booking_ref = self.bookingref
+        self.customerReference = self.raw.get('customerReference') or self.raw.get('customerRef') or ''
+        self.customerRef = self.customerReference
+        self.customer_ref = self.customerReference
+        self.file_ref = self.raw.get('fileRef') or ''
+        self.fileRef = self.file_ref
+        
+        # Parse Dates
+        self.created_at = self._parse_date(self.raw.get('createdOn')) or datetime.utcnow()
+        self.createdOn = self.raw.get('createdOn') or ''
+        self.etd = self._parse_date(self.raw.get('etd'))
+        self.atd = self._parse_date(self.raw.get('atd'))
+        self.eta_pod = self._parse_date(self.raw.get('eta'))
+        self.eta = self.eta_pod
+        self.ata = self._parse_date(self.raw.get('ata'))
+
+        raw_status = (self.raw.get('status') or '').strip()
+        if self.ata or any(w in raw_status.lower() for w in ['deliver', 'arrived', 'complete']):
+            self.status = 'Delivered'
+        elif self.atd or any(w in raw_status.lower() for w in ['transit', 'depart', 'dispatched', 'sailing']):
+            self.status = 'In Transit'
+        elif raw_status:
+            self.status = raw_status.capitalize()
+        else:
+            self.status = 'Confirmed'
+        
+        self.product = (self.raw.get('product') or '').strip()
+        self.service_type = self.product
+        self.selected_nvocc = self.raw.get('vessel') or ''
+        self.vessel = self.raw.get('vessel') or ''
+        self.vessel_name = self.vessel
+        self.voyage = self.raw.get('voyage') or ''
+        self.voyage_number = self.voyage
+        
+        # Origin: ISNULL(porlocation, pollocation)
+        self.porLocation = self.raw.get('porLocation') or ''
+        self.porlocation = self.porLocation
+        self.place_of_receipt = self.porLocation
+        self.polLocation = self.raw.get('polLocation') or ''
+        self.pollocation = self.polLocation
+        self.origin = (self.porLocation.strip() or self.polLocation.strip()) or 'Origin'
+        
+        # Destination: ISNULL(dellocation, podlocation)
+        self.delLocation = self.raw.get('delLocation') or ''
+        self.dellocation = self.delLocation
+        self.place_of_delivery = self.delLocation
+        self.podLocation = self.raw.get('podLocation') or ''
+        self.podlocation = self.podLocation
+        self.destination = (self.delLocation.strip() or self.podLocation.strip()) or 'Destination'
+        
+        # Quantities
+        self.totalcolli = self.raw.get('totalColli') or 0
+        self.totalColli = self.totalcolli
+        self.totalweight = self.raw.get('totalWeight') or 0.0
+        self.totalWeight = self.totalweight
+        self.totalVolume = self.raw.get('totalVolume') or 0.0
+        self.totalvolume = self.totalVolume
+        self.volume = self.totalVolume
+        
+        # Quote number
+        self.quotenumber = self.raw.get('quoteNumber') or ''
+        self.quoteNumber = self.quotenumber
+        self.quote_number = self.quotenumber
+        
+        # ERP detail fields
+        self.ops_manager = self.raw.get('opsManager') or ''
+        self.customer_name = self.raw.get('customerName') or ''
+        self.customer_contact = self.raw.get('customerContactName') or ''
+        self.special_instructions = self.raw.get('specialInstructions') or ''
+        self.internal_memo = self.raw.get('internalMemo') or ''
+        self.destination_contact = self.raw.get('cfsDestinationRef') or ''
+        self.uuid = self.bookingref
+        
+        PKG_MAP = {
+            'BX': 'Box', 'PX': 'Pallet', 'CR': 'Crate', 'DR': 'Drum', 'BG': 'Bag',
+            'ZR': 'IBC', 'CT': 'Carton', 'CTN': 'Carton', 'CS': 'Case', 'CL': 'Colis',
+            'SK': 'Skid', 'RL': 'Roll', '20CN': "20' Container", '40CN': "40' Container",
+            'PALLET': 'Pallet', 'PALLETS': 'Pallet', 'PACKAGES': 'Package', 'PACKAGE': 'Package',
+            'BUNDLES': 'Bundle', 'BUNDLE': 'Bundle', 'BAGS': 'Bag', 'BAG': 'Bag'
+        }
+        
+        # Attributes for detail page compatibility and cargo badge
+        self.cargo_items = []
+        pkg_parts = []
+        c_weight = float(self.totalweight or 0.0)
+        c_vol = float(self.totalVolume or 0.0)
+        
+        raw_commodities = self.raw.get('commodities') or []
+        for com in raw_commodities:
+            p_code = str(com.get('packageCode') or com.get('packageTypeDescription') or 'Pallet').upper().strip()
+            p_label = PKG_MAP.get(p_code, p_code.capitalize())
+            n_pkg = com.get('nrPackages') or 1
+            pkg_parts.append(f"{n_pkg} x {p_label} pcs")
+            if not c_weight and com.get('weight'):
+                c_weight += float(com.get('weight'))
+            if not c_vol and com.get('volume'):
+                c_vol += float(com.get('volume'))
+                
+            item_mock = type('CargoItemMock', (), {
+                'quantity': n_pkg,
+                'package_type': p_label,
+                'weight_kg': com.get('weight') or com.get('grossWeight') or 0.0,
+                'volume_cbm': com.get('volume') or 0.0,
+                'description': com.get('commodityDescription') or com.get('goodsDescription') or '',
+                'hs_code': com.get('hsCode') or '',
+                'length': 0, 'width': 0, 'height': 0, 'uom': 'cm',
+                'is_imo': com.get('isHazmat', False)
+            })()
+            self.cargo_items.append(item_mock)
+            
+        if not pkg_parts:
+            n_colli = self.totalcolli if self.totalcolli > 0 else 1
+            pkg_parts.append(f"{n_colli} pcs")
+            
+        pkg_str = ", ".join(pkg_parts)
+        self.cargo_summary = f"{pkg_str} · {c_weight:.2f} kg · {c_vol:.2f} m³"
+            
+        self.attachments = []
+        self.tracking_events = []
+        self.shipping_instruction = None
+        self.total_cost = 0.0
+        self.freight_terms = self.raw.get('freightTerms') or ''
+        self.general_description = self.raw.get('specialInstructions') or ''
+        self.general_terms = ''
+        self.pickup_address = ''
+        self.user_id = 0
+        self.is_si_submitted = False
+        
+    def _parse_date(self, d_val):
+        if not d_val:
+            return None
+        if isinstance(d_val, datetime):
+            return d_val
+        try:
+            cleaned = str(d_val).replace('Z', '')
+            if '.' in cleaned:
+                cleaned = cleaned.split('.')[0]
+            if 'T' in cleaned:
+                return datetime.fromisoformat(cleaned)
+            return datetime.strptime(cleaned[:10], '%Y-%m-%d')
+        except Exception:
+            return None
+
+class ApiPagination:
+    """Emulates Flask-SQLAlchemy Pagination object for render_pagination macro."""
+    def __init__(self, items, page, per_page, total):
+        self.items = items
+        self.page = int(page or 1)
+        self.per_page = int(per_page or 10)
+        self.total = int(total or len(items))
+        self.pages = max(1, math.ceil(self.total / self.per_page)) if self.per_page else 1
+        self.has_prev = self.page > 1
+        self.has_next = self.page < self.pages
+        self.prev_num = self.page - 1 if self.has_prev else None
+        self.next_num = self.page + 1 if self.has_next else None
+
+    def iter_pages(self, left_edge=1, right_edge=1, left_current=2, right_current=2):
+        last = 0
+        for num in range(1, self.pages + 1):
+            if (num <= left_edge or 
+                (num >= self.page - left_current and num <= self.page + right_current) or 
+                num > self.pages - right_edge):
+                if last + 1 != num:
+                    yield None
+                yield num
+                last = num
+
 @customer.route('/my-shipments')
 @login_required
 def my_shipments():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    from sqlalchemy.orm import joinedload
-    pagination = Booking.query.options(joinedload(Booking.cargo_items)).filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
-    return render_template('customer/shipments.html', shipments=pagination.items, pagination=pagination)
+    
+    # Hardcoded to 4300 as requested: "for now hardcode 4300 instead of 4294, later we can change it"
+    # Local portal DB is completely removed, fetching strictly from the live API.
+    account_id = 4300
+    
+    url = "http://realnexus.comit.cloud:5000/api/Bookings"
+    params = {
+        "accountId": account_id,
+        "page": page,
+        "pageSize": per_page
+    }
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    
+    items = []
+    total_records = 0
+    
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            raw_bookings = data.get('bookings', [])
+            total_records = data.get('pagination', {}).get('totalRecords', len(raw_bookings))
+            
+            # Pre-fetch commodities in parallel for complete cargo display
+            import concurrent.futures
+            global _GLOBAL_BOOKING_DETAILS_CACHE
+            if '_GLOBAL_BOOKING_DETAILS_CACHE' not in globals():
+                globals()['_GLOBAL_BOOKING_DETAILS_CACHE'] = {}
+            bkg_cache = globals()['_GLOBAL_BOOKING_DETAILS_CACHE']
 
+            def _fetch_bkg_commodities(b_raw):
+                b_ref = b_raw.get('bookingRef')
+                if not b_ref:
+                    return None, []
+                if b_ref in bkg_cache:
+                    return b_ref, bkg_cache[b_ref]
+                try:
+                    q_ref = urllib.parse.quote(b_ref, safe='')
+                    u = f"http://realnexus.comit.cloud:5000/api/Bookings/{q_ref}?accountId={account_id}"
+                    r_d = requests.get(u, headers=headers, timeout=2.5)
+                    if r_d.status_code == 200:
+                        comms = r_d.json().get('commodities', [])
+                        bkg_cache[b_ref] = comms
+                        return b_ref, comms
+                except Exception:
+                    pass
+                return b_ref, []
+
+            try:
+                items_needing_commodities = [b for b in raw_bookings if not b.get('commodities')]
+                if items_needing_commodities:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(items_needing_commodities))) as executor:
+                        results = list(executor.map(_fetch_bkg_commodities, items_needing_commodities))
+                        for b_ref, comms in results:
+                            if b_ref and comms:
+                                for b_raw in raw_bookings:
+                                    if b_raw.get('bookingRef') == b_ref:
+                                        b_raw['commodities'] = comms
+            except Exception as ex:
+                current_app.logger.error(f"Parallel booking commodities fetch error: {ex}")
+
+            items = [ApiBookingItem(b) for b in raw_bookings]
+        else:
+            current_app.logger.error(f"API bookings returned {resp.status_code}: {resp.text}")
+    except Exception as e:
+        current_app.logger.error(f"Error fetching API bookings: {e}")
+        
+    pagination = ApiPagination(items, page, per_page, total_records)
+    return render_template('customer/shipments.html', shipments=items, pagination=pagination)
+
+@customer.route('/shipments/export-excel')
+@login_required
+def export_shipments_excel():
+    import pandas as pd
+    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+    
+    account_id = 4300
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    items = []
+    
+    try:
+        url = "http://realnexus.comit.cloud:5000/api/Bookings"
+        resp = requests.get(url, params={"accountId": account_id, "pageSize": 500}, headers=headers, timeout=8)
+        if resp.status_code == 200:
+            raw_bookings = resp.json().get('bookings', [])
+            items = [ApiBookingItem(b) for b in raw_bookings]
+    except Exception as e:
+        current_app.logger.error(f"Error fetching API bookings for export: {e}")
+        
+    rows = []
+    for it in items:
+        rows.append({
+            'Booking Reference': it.bookingref or f'BK-{it.id}',
+            'Customer Ref': it.customer_ref or '',
+            'Status': it.status or '',
+            'Origin Port': it.origin or '',
+            'Destination Port': it.destination or '',
+            'Service Type': it.service_type or '',
+            'Vessel': it.vessel_name or '',
+            'Voyage': it.voyage_number or '',
+            'Total Pieces': it.totalcolli if it.totalcolli else '',
+            'Gross Weight (kg)': f"{it.totalweight:.2f}" if it.totalweight else '',
+            'Volume (m³)': f"{it.totalVolume:.2f}" if it.totalVolume else '',
+            'Cargo Details': it.cargo_summary or '',
+            'ETD (Departure)': it.etd.strftime('%Y-%m-%d') if it.etd else '',
+            'ATD (Departed)': it.atd.strftime('%Y-%m-%d') if it.atd else '',
+            'ETA (Arrival)': it.eta.strftime('%Y-%m-%d') if it.eta else '',
+            'ATA (Delivered)': it.ata.strftime('%Y-%m-%d') if it.ata else '',
+            'Created Date': it.created_at.strftime('%Y-%m-%d') if it.created_at else ''
+        })
+        
+    df = pd.DataFrame(rows)
+    if df.empty:
+        df = pd.DataFrame(columns=[
+            'Booking Reference', 'Customer Ref', 'Status', 'Origin Port', 'Destination Port',
+            'Service Type', 'Vessel', 'Voyage', 'Total Pieces', 'Gross Weight (kg)',
+            'Volume (m³)', 'Cargo Details', 'ETD (Departure)', 'ATD (Departed)',
+            'ETA (Arrival)', 'ATA (Delivered)', 'Created Date'
+        ])
+        
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Shipments', index=False)
+        sheet = writer.sheets['Shipments']
+        
+        header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+        header_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+        regular_font = Font(name="Segoe UI", size=10)
+        alt_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+        thin_border = Border(
+            left=Side(style='thin', color='E2E8F0'),
+            right=Side(style='thin', color='E2E8F0'),
+            top=Side(style='thin', color='E2E8F0'),
+            bottom=Side(style='thin', color='E2E8F0')
+        )
+        
+        for cell in sheet[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        sheet.row_dimensions[1].height = 28
+        
+        for r_idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
+            sheet.row_dimensions[r_idx].height = 20
+            is_alt = (r_idx % 2 == 0)
+            for cell in row:
+                cell.font = regular_font
+                cell.border = thin_border
+                if is_alt:
+                    cell.fill = alt_fill
+                cell.alignment = Alignment(vertical="center")
+                
+        for col in sheet.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = col[0].column_letter
+            sheet.column_dimensions[col_letter].width = min(max(max_len + 4, 12), 45)
+            
+    output.seek(0)
+    filename = f"FTL_Shipments_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=filename)
+
+@customer.route('/quotes/export-excel')
+@login_required
+def export_quotes_excel():
+    import pandas as pd
+    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+    
+    customer_id = 1
+    if current_user.accounts:
+        try: customer_id = int(current_user.accounts[0].account_id)
+        except: pass
+        
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    quotes_list = []
+    try:
+        url = "http://realnexus.comit.cloud:5000/api/Quotations"
+        resp = requests.get(url, params={"accountId": customer_id, "pageSize": 500}, headers=headers, timeout=8)
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, list):
+                quotes_list = data
+            elif isinstance(data, dict):
+                quotes_list = data.get('items', data.get('quotations', data.get('quotes', [])))
+    except Exception as e:
+        current_app.logger.error(f"Error fetching API quotes for export: {e}")
+        
+    rows = []
+    now = datetime.utcnow()
+    for it in quotes_list:
+        q_item = it.get('quotation', it)
+        header = q_item.get('header', q_item)
+        tariff = q_item.get('tariff', {}) or {}
+        
+        quote_id = header.get('quotationId')
+        prefix1 = header.get('quoPrefix1', 'QUO')
+        prefix2 = header.get('quoPrefix2', '2026')
+        quote_num = header.get('quoteNumber') or header.get('quotationNo') or f"{prefix1}-{prefix2}-{quote_id}"
+        
+        routing = header.get('routing', header.get('route', {})) or {}
+        por = routing.get('porLocation') or header.get('porLocation') or ''
+        pol = routing.get('polLocation') or header.get('polLocation') or ''
+        del_loc = routing.get('delLocation') or header.get('delLocation') or ''
+        pod = routing.get('podLocation') or header.get('podLocation') or ''
+        origin = por or pol or 'Unknown'
+        destination = del_loc or pod or 'Unknown'
+        
+        created_on = str(header.get('createdOn') or '')[:10]
+        valid_until_raw = str(header.get('validUntil') or header.get('validuntil') or '')[:10]
+        valid_from_raw = str(header.get('validFrom') or header.get('validfrom') or '')[:10]
+        
+        valid_until_dt = now
+        try:
+            if valid_until_raw:
+                valid_until_dt = datetime.strptime(valid_until_raw, '%Y-%m-%d')
+        except: pass
+        
+        if valid_until_dt < now:
+            c_status = 'Expired'
+        elif (valid_until_dt - now).days <= 2:
+            c_status = 'Expiring Soon'
+        else:
+            c_status = 'Active'
+            
+        total_cost = 0.0
+        currency = header.get('currency') or tariff.get('quotationCurrency') or 'EUR'
+        for line in tariff.get('lines', []):
+            try:
+                amt = float(line.get('sellAmount') or line.get('totalAmount') or line.get('amount') or 0.0)
+                if amt > 0: total_cost += amt
+            except: pass
+            
+        rows.append({
+            'Quote Number': quote_num,
+            'Customer Reference': header.get('customerReference') or '',
+            'Status': c_status,
+            'Origin Port': origin,
+            'Destination Port': destination,
+            'Service Type': header.get('freightTransportType') or 'LCL',
+            'Carrier / NVOCC': header.get('nvoccName') or header.get('carrierName') or '',
+            'Total Pieces': header.get('totalColli') or '',
+            'Total Weight (kg)': header.get('totalWeight') or '',
+            'Total Volume (m³)': header.get('totalVolume') or '',
+            'Total Amount': f"{total_cost:.2f}" if total_cost > 0 else '',
+            'Currency': currency,
+            'Valid From': valid_from_raw,
+            'Valid Until': valid_until_raw,
+            'Created Date': created_on
+        })
+        
+    df = pd.DataFrame(rows)
+    if df.empty:
+        df = pd.DataFrame(columns=[
+            'Quote Number', 'Customer Reference', 'Status', 'Origin Port', 'Destination Port',
+            'Service Type', 'Carrier / NVOCC', 'Total Pieces', 'Total Weight (kg)',
+            'Total Volume (m³)', 'Total Amount', 'Currency', 'Valid From', 'Valid Until', 'Created Date'
+        ])
+        
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Quotations', index=False)
+        sheet = writer.sheets['Quotations']
+        
+        header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+        header_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+        regular_font = Font(name="Segoe UI", size=10)
+        alt_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+        thin_border = Border(
+            left=Side(style='thin', color='E2E8F0'),
+            right=Side(style='thin', color='E2E8F0'),
+            top=Side(style='thin', color='E2E8F0'),
+            bottom=Side(style='thin', color='E2E8F0')
+        )
+        
+        for cell in sheet[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        sheet.row_dimensions[1].height = 28
+        
+        for r_idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
+            sheet.row_dimensions[r_idx].height = 20
+            is_alt = (r_idx % 2 == 0)
+            for cell in row:
+                cell.font = regular_font
+                cell.border = thin_border
+                if is_alt:
+                    cell.fill = alt_fill
+                cell.alignment = Alignment(vertical="center")
+                
+        for col in sheet.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = col[0].column_letter
+            sheet.column_dimensions[col_letter].width = min(max(max_len + 4, 12), 40)
+            
+    output.seek(0)
+    filename = f"FTL_Quotes_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=filename)
+
+@customer.route('/shipment/<path:booking_id>')
 @customer.route('/shipment/<booking_id>')
 @customer.route('/shipment/<int:booking_id>')
 @login_required
 def shipment_detail(booking_id):
-    booking = get_booking_safely(booking_id, user_id=current_user.id)
-    if not booking:
-        booking = get_booking_safely(booking_id)
-    if not booking:
+    account_id = 4300
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    
+    booking_obj = None
+    ref_cand = str(booking_id).strip()
+    
+    # 1. Fetch bookings from list to get accurate tracking dates & status (ata, atd, eta, etd, status)
+    list_item = None
+    detail_data = None
+    try:
+        r_list = requests.get("http://realnexus.comit.cloud:5000/api/Bookings", params={'accountId': account_id, 'pageSize': 100}, headers=headers, timeout=5)
+        if r_list.status_code == 200:
+            for b_raw in r_list.json().get('bookings', []):
+                b_id_str = str(b_raw.get('bookingId') or '')
+                b_ref_str = str(b_raw.get('bookingRef') or '')
+                if ref_cand in [b_id_str, b_ref_str] or ref_cand.replace('/', '') == b_ref_str.replace('/', ''):
+                    list_item = b_raw
+                    break
+    except Exception as e:
+        current_app.logger.error(f"Error fetching booking list from API: {e}")
+
+    # 2. Determine bookingRef to query detailed API
+    b_ref = (list_item.get('bookingRef') if list_item else ref_cand) or ''
+    if b_ref:
+        try:
+            url = f"http://realnexus.comit.cloud:5000/api/Bookings/{urllib.parse.quote(str(b_ref).strip(), safe='')}"
+            r_d = requests.get(url, params={'accountId': account_id}, headers=headers, timeout=5)
+            if r_d.status_code == 200:
+                detail_data = r_d.json()
+        except Exception as e:
+            current_app.logger.error(f"Error fetching booking detail API: {e}")
+
+    # 3. Merge data from list and detail
+    if list_item or detail_data:
+        merged = {}
+        if list_item:
+            merged.update(list_item)
+        if detail_data:
+            for k, v in detail_data.items():
+                if v is not None or k not in merged:
+                    merged[k] = v
+            # Ensure tracking dates and status from list are preserved
+            for k in ['ata', 'atd', 'eta', 'etd', 'status', 'product']:
+                if list_item and list_item.get(k) is not None:
+                    merged[k] = list_item.get(k)
+        booking_obj = ApiBookingItem(merged)
+
+    # Fallback to local DB safely if any legacy record exists
+    if not booking_obj:
+        booking_obj = get_booking_safely(booking_id)
+        
+    if not booking_obj:
         abort(404)
-    return render_template('customer/shipment_detail.html', booking=booking)
+        
+    return render_template('customer/shipment_detail.html', booking=booking_obj)
 
 @customer.route('/edit-booking/<booking_id>', methods=['GET', 'POST'])
 @customer.route('/edit-booking/<int:booking_id>', methods=['GET', 'POST'])

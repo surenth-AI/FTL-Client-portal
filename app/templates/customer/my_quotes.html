@@ -4,7 +4,7 @@
 {% block title %}My Quotes{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/portal_cards.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal_cards.css') }}?v=10">
 
 <div class="mq-container">
 
@@ -13,7 +13,12 @@
             <h1 class="mq-title">My Quotes</h1>
             <p class="mq-subtitle">Every quotation you've saved or booked, across all your searches</p>
         </div>
-        <a href="{{ url_for('customer.rates') }}" class="mq-btn mq-btn-book">+ New Quote Request</a>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="{{ url_for('customer.export_quotes_excel') }}" class="mq-btn mq-btn-export" id="btnExportQuotesExcel" title="Export all quotes to Excel">
+                <i class="bi bi-file-earmark-excel"></i> Export to Excel
+            </a>
+            <a href="{{ url_for('customer.rates') }}" class="mq-btn mq-btn-book">+ New Quote Request</a>
+        </div>
     </div>
 
     <!-- UNIFIED TOOLBAR CONTAINER WITH SEPARATION LINE -->
@@ -40,17 +45,55 @@
                 <button class="sort-chip" data-sort="expiring" onclick="sortQuotes('expiring', this)">⏳ Expiring soonest</button>
                 <button class="sort-chip" data-sort="price" onclick="sortQuotes('price', this)">💲 Lowest price</button>
             </div>
-            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                 <div class="search-box">
                     <input type="text" id="mqSearch" placeholder="Search by reference, route or service" oninput="applyFilters()">
                 </div>
-                <div class="results-count" id="resultsCount">Loading...</div>
+
+                <!-- VIEW SWITCHER (LIKE SAILING SCHEDULE) -->
+                <div class="view-switcher-pill">
+                    <button type="button" class="btn-view-toggle active" id="btnCardView" onclick="switchViewMode('card')">
+                        <i class="bi bi-grid-fill"></i> Cards
+                    </button>
+                    <button type="button" class="btn-view-toggle" id="btnListView" onclick="switchViewMode('list')">
+                        <i class="bi bi-list-ul"></i> Table
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- 1. CARD VIEW CONTAINER -->
     <div class="offers-list" id="offersList">
         <!-- Javascript populated -->
+    </div>
+
+    <!-- 2. TABLE / LIST VIEW CONTAINER (LIKE SAILING SCHEDULE) -->
+    <div id="listViewContainer" style="display: none;">
+        <div class="table-card-wrapper">
+            <div class="table-responsive">
+                <table class="myquotes-list-table" id="quotesTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable-th" onclick="setTableSort('ref')">Quote Number ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('origin')">Origin ▲▼</th>
+                            <th class="sortable-th" onclick="setTableSort('dest')">Destination ▲▼</th>
+                            <th class="sortable-th text-center" onclick="setTableSort('pkgs')">#pkgs ▲▼</th>
+                            <th class="sortable-th text-end" onclick="setTableSort('weight')">Weight ▲▼</th>
+                            <th class="sortable-th text-end" onclick="setTableSort('volume')">Volume ▲▼</th>
+                            <th class="sortable-th text-end" onclick="setTableSort('amount')">Amount ▲▼</th>
+                            <th class="sortable-th text-center" onclick="setTableSort('validfrom')">ValidFrom ▲▼</th>
+                            <th class="sortable-th text-center" onclick="setTableSort('validuntil')">ValidUntil ▲▼</th>
+                            <th class="text-center">Status</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quotesTableBody">
+                        <!-- Javascript populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- Pagination -->
@@ -73,12 +116,51 @@
     let currentPage = 1;
     let currentPerPage = 10;
     let currentStatus = 'all';
+    let currentViewMode = localStorage.getItem('my_quotes_view_mode') || 'card';
+    let tableSortKey = '';
+    let tableSortAsc = true;
+
+    function switchViewMode(mode) {
+        currentViewMode = mode;
+        try {
+            localStorage.setItem('my_quotes_view_mode', mode);
+        } catch (e) {}
+
+        const btnCard = document.getElementById('btnCardView');
+        const btnList = document.getElementById('btnListView');
+        if (btnCard) btnCard.classList.toggle('active', mode === 'card');
+        if (btnList) btnList.classList.toggle('active', mode === 'list');
+
+        updateViewVisibility();
+    }
+
+    function updateViewVisibility(forceEmpty = false) {
+        const offersList = document.getElementById('offersList');
+        const listViewContainer = document.getElementById('listViewContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        const isEmpty = forceEmpty || (emptyState && emptyState.classList.contains('show'));
+        if (isEmpty) {
+            if (offersList) offersList.style.display = 'none';
+            if (listViewContainer) listViewContainer.style.display = 'none';
+            return;
+        }
+
+        if (currentViewMode === 'card') {
+            if (offersList) offersList.style.display = 'flex';
+            if (listViewContainer) listViewContainer.style.display = 'none';
+        } else {
+            if (offersList) offersList.style.display = 'none';
+            if (listViewContainer) listViewContainer.style.display = 'block';
+        }
+    }
 
     async function loadQuotes(page = 1) {
         const offersList = document.getElementById('offersList');
+        const listViewContainer = document.getElementById('listViewContainer');
         const emptyState = document.getElementById('emptyState');
-        const resultsCount = document.getElementById('resultsCount');
-        
+        const tableBody = document.getElementById('quotesTableBody');
+
         offersList.style.opacity = '0.5';
         offersList.innerHTML = `
             <div class="py-5 text-center text-muted w-100">
@@ -86,7 +168,17 @@
                 <p class="mt-2 small">Loading quotes directory...</p>
             </div>
         `;
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="11" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div> Loading quotes...
+                    </td>
+                </tr>
+            `;
+        }
         emptyState.classList.remove('show');
+        updateViewVisibility();
         
         try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -104,154 +196,387 @@
                 
                 if (currentQuotes.length > 0) {
                     emptyState.classList.remove('show');
-                    offersList.style.display = 'flex';
                     
-                    offersList.innerHTML = currentQuotes.map(item => {
-                        const q = item;
-                        const c_status = item.computed_status;
-                        const refCode = q.api_booking_ref || '—';
-                        
-                        let statusBadge = '';
-                        if (c_status === 'Active') {
-                            statusBadge = `<span class="status-pill active"><span class="dot"></span>Active</span>`;
-                        } else if (c_status === 'Expiring Soon') {
-                            statusBadge = `<span class="status-pill expiring"><span class="dot"></span>Expiring Soon</span>`;
-                        } else if (c_status === 'Booked') {
-                            statusBadge = `<span class="status-pill booked"><span class="dot"></span>Booked</span>`;
-                        } else if (c_status === 'Expired') {
-                            statusBadge = `<span class="status-pill expired"><span class="dot"></span>Expired</span>`;
-                        }
-                        
-                        let validText = '';
-                        if (c_status === 'Booked') {
-                            validText = `<div class="price-valid">✅ Booked on ${q.created_at}</div>`;
-                        } else if (c_status === 'Expired') {
-                            validText = `<div class="price-valid bad">⚠ Expired on ${item.valid_until}</div>`;
-                        } else if (c_status === 'Expiring Soon') {
-                            validText = `<div class="price-valid warn">⏳ Expires soon · ${item.valid_until}</div>`;
-                        } else {
-                            validText = `<div class="price-valid">📅 Valid until ${item.valid_until}</div>`;
-                        }
-                        
-                        const safeRef = refCode.replace(/[^a-zA-Z0-9_-]/g, '_');
-                        
-                        let actionHtml = '';
-                        if (c_status === 'Booked') {
-                            actionHtml = `
-                                ${q.api_booking_ref ? `<div class="booking-no">Booking No.<br><strong>${q.api_booking_ref}</strong></div>` : ''}
-                                <a href="#" class="mq-btn mq-btn-view-booking" onclick="alert('View Booking feature pending backend support')">View Booking →</a>
-                            `;
-                        } else if (c_status === 'Expired') {
-                            actionHtml = `
-                                <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
-                                <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none;">Request Updated Quote →</a>
-                            `;
-                        } else {
-                            actionHtml = `
-                                <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
-                                <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none; margin-bottom: 0.4rem;">Request Updated Quote →</a>
-                                <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
-                            `;
-                        }
-                        
-                        const formatPrice = parseFloat(q.total_cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        
-                        return `
-                            <div class="offer-card ${c_status === 'Expired' ? 'expired' : ''}" 
-                                 data-status="${c_status.toLowerCase().replace(' ', '')}" 
-                                 data-price="${q.total_cost}" 
-                                 data-saved="${q.created_at}" 
-                                 data-validuntil="${item.valid_until}" 
-                                 data-ref="${refCode}" 
-                                 data-route="${q.origin} ${q.destination}" 
-                                 data-service="${q.service_type}">
-                                
-                                <div class="offer-badge-row" style="display:flex; align-items:center; flex-wrap:wrap; gap:0.5rem; justify-content:space-between;">
-                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                                        <div class="info-pill clickable" data-ref="${refCode}" onclick="copyRef(this)">📌 Ref: <span class="ref-code">${refCode}</span> <span class="copy-icon">⧉</span></div>
-                                        ${(q.packages || q.weight || q.volume) ? `
-                                        <div class="info-pill">
-                                            📦 ${q.packages || 0} pcs &middot; ${q.weight || 0} kg &middot; ${q.volume || 0} m&sup3;
-                                        </div>
-                                        ` : ''}
-                                    </div>
-                                    ${statusBadge}
-                                </div>
-                                
-                                <div class="offer-main">
-                                    <div class="offer-price-block">
-                                        <div class="price-label">Total</div>
-                                        <div class="price-amount">${q.currency ? `<span class="currency">${q.currency}</span> ` : ''}${formatPrice}</div>
-                                        ${validText}
-                                    </div>
-                                    
-                                    <div class="offer-details">
-                                        <div class="carrier-row">
-                                            <div class="carrier-text">
-                                                ${q.selected_nvocc ? `<div class="carrier-name">${q.selected_nvocc}</div>` : ''}
-                                                ${q.service_name ? `<div class="service-name">${q.service_name}</div>` : ''}
-                                            </div>
-                                        </div>
-                                        <div class="route-line">
-                                            <span class="route-stop">${q.origin}</span>
-                                            <span class="route-arrow">→</span>
-                                            <span class="route-stop">${q.destination}</span>
-                                        </div>
-                                        <div class="routing-meta" style="margin-top:0.5rem; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                                            ${q.service_type ? `<span class="meta-pill service">📦 ${q.service_type}</span>` : ''}
+                    // 1. Render Cards View
+                    renderCardsView(currentQuotes);
 
-                                            ${q.commodity ? `<span class="meta-pill" style="background: var(--hover-bg); color: var(--text-dark); border: 1px solid var(--border-color);">🏷️ ${q.commodity}</span>` : ''}
-                                            ${q.freight_terms ? `<span class="meta-pill direct">💳 ${q.freight_terms}</span>` : ''}
-                                        </div>
-                                        {% set _dummy = "" %}
-                                        <div class="charges-row">
-                                            <span class="charge-pill ${q.has_origin_charges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Origin Port Charges</span>
-                                            <span class="charge-pill ${q.has_freight_surcharges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Freight &amp; Surcharges</span>
-                                            <span class="charge-pill ${q.has_dest_charges ? 'included' : 'excluded'}"><span class="dot"></span>Destination Port Charges</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="offer-actions">
-                                        ${actionHtml}
-                                    </div>
-                                </div>
-                                
-                                <div class="offer-footer">
-                                    <div class="footer-links">
-                                        <a class="terms-link" href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>📄 Terms &amp; conditions ↗</a>
-                                        <span style="color:var(--mq-border-color);">|</span>
-                                        <button onclick="toggleQuoteBreakdown('${refCode}', this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
-                                        <span style="color:var(--mq-border-color);">|</span>
-                                        <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="download-link">📄 Download PDF</a>
-                                        <button class="download-link" onclick="emailQuote('${encodeURIComponent(refCode)}', this)">✉ Email Quote</button>
-                                    </div>
-                                </div>
-                                
-                                <div id="breakdown-panel-${safeRef}" class="breakdown-panel" style="background: var(--mq-bg-gray);">
-                                    <div class="breakdown-inner">
-                                        <div id="breakdown-content-${safeRef}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
-                                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading breakdown...
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
+                    // 2. Render Table View
+                    renderQuotesTable(currentQuotes);
                     
-                    resultsCount.textContent = `Showing ${data.total} quotes`;
                     renderLocalPagination(data);
+                    updateViewVisibility();
                     applyFilters(); // Re-apply current client-side filter states
                 } else {
                     offersList.style.display = 'none';
+                    if (listViewContainer) listViewContainer.style.display = 'none';
                     emptyState.classList.add('show');
-                    resultsCount.textContent = `Showing 0 quotes`;
                     clearLocalPagination();
                 }
+            } else {
+                throw new Error(`Server returned HTTP ${response.status}`);
             }
         } catch (e) {
             console.error("Failed to load quotes:", e);
+            offersList.style.opacity = '1';
             offersList.innerHTML = `<div class="py-5 text-center text-danger">Failed to retrieve quote records. Please try again later.</div>`;
+            if (tableBody) {
+                tableBody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">Failed to retrieve quote records. Please try again later.</td></tr>`;
+            }
         }
+    }
+
+    function renderCardsView(quotes) {
+        const offersList = document.getElementById('offersList');
+        if (!offersList) return;
+
+        offersList.innerHTML = quotes.map(item => {
+            const q = item;
+            const c_status = item.computed_status;
+            const refCode = q.quotenumber || q.api_booking_ref || '—';
+            
+            let statusBadge = '';
+            if (c_status === 'Active') {
+                statusBadge = `<span class="status-pill active"><span class="dot"></span>Active</span>`;
+            } else if (c_status === 'Expiring Soon') {
+                statusBadge = `<span class="status-pill expiring"><span class="dot"></span>Expiring Soon</span>`;
+            } else if (c_status === 'Booked') {
+                statusBadge = `<span class="status-pill booked"><span class="dot"></span>Booked</span>`;
+            } else if (c_status === 'Expired') {
+                statusBadge = `<span class="status-pill expired"><span class="dot"></span>Expired</span>`;
+            }
+            
+            let validText = '';
+            if (c_status === 'Booked') {
+                validText = `<div class="price-valid">✅ Booked on ${q.created_at}</div>`;
+            } else if (c_status === 'Expired') {
+                validText = `<div class="price-valid bad">⚠ Expired on ${item.validUntil || item.valid_until}</div>`;
+            } else if (c_status === 'Expiring Soon') {
+                validText = `<div class="price-valid warn">⏳ Expires soon · ${item.validUntil || item.valid_until}</div>`;
+            } else {
+                validText = `<div class="price-valid">📅 Valid until ${item.validUntil || item.valid_until}</div>`;
+            }
+            
+            const safeRef = refCode.replace(/[^a-zA-Z0-9_-]/g, '_');
+            
+            let actionHtml = '';
+            if (c_status === 'Booked') {
+                actionHtml = `
+                    ${refCode ? `<div class="booking-no">Booking No.<br><strong>${refCode}</strong></div>` : ''}
+                    <a href="/customer/shipments" class="mq-btn mq-btn-view-booking">View Bookings →</a>
+                `;
+            } else if (c_status === 'Expired') {
+                actionHtml = `
+                    <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
+                    <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none;">Request Updated Quote →</a>
+                `;
+            } else {
+                actionHtml = `
+                    <div class="saved-on">Saved on<br><strong>${q.created_at}</strong></div>
+                    <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-outline" style="text-decoration:none; margin-bottom: 0.4rem;">Request Updated Quote →</a>
+                    <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="mq-btn mq-btn-book w-100" style="text-decoration:none;">Book →</a>
+                `;
+            }
+            
+            const formatPrice = parseFloat(q.totalAmount || q.total_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            return `
+                <div class="offer-card ${c_status === 'Expired' ? 'expired' : ''}" 
+                     data-status="${c_status.toLowerCase().replace(/\s+/g, '')}" 
+                     data-price="${q.totalAmount || q.total_cost || 0}" 
+                     data-saved="${q.created_at}" 
+                     data-validfrom="${item.validFrom || item.valid_from || ''}"
+                     data-validuntil="${item.validUntil || item.valid_until}" 
+                     data-ref="${refCode}" 
+                     data-route="${q.origin} ${q.destination}" 
+                     data-service="${q.service_type || ''}">
+                    
+                    <div class="offer-badge-row" style="display:flex; align-items:center; flex-wrap:wrap; gap:0.5rem; justify-content:space-between;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                            <div class="info-pill clickable" data-ref="${refCode}" onclick="copyRef(this)">📌 Ref: <span class="ref-code">${refCode}</span> <span class="copy-icon">⧉</span></div>
+                            ${(q.packages || q.weight || q.volume) ? `
+                            <div class="info-pill">
+                                📦 ${q.packages || (q.totalcolli ? q.totalcolli + ' pkgs' : '0')} &middot; ${q.weight || (q.totalweight ? q.totalweight + ' kg' : '0')} &middot; ${q.volume || (q.totalVolume ? q.totalVolume + ' m³' : '0')}
+                            </div>
+                            ` : ''}
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    
+                    <div class="offer-main">
+                        <div class="offer-price-block">
+                            <div class="price-label">Total</div>
+                            <div class="price-amount">${q.currency ? `<span class="currency">${q.currency}</span> ` : ''}${formatPrice}</div>
+                            ${validText}
+                        </div>
+                        
+                        <div class="offer-details">
+                            <div class="carrier-row">
+                                <div class="carrier-text">
+                                    ${q.selected_nvocc ? `<div class="carrier-name">${q.selected_nvocc}</div>` : ''}
+                                    ${q.service_name ? `<div class="service-name">${q.service_name}</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="route-line">
+                                <span class="route-stop">${q.origin}</span>
+                                <span class="route-arrow">→</span>
+                                <span class="route-stop">${q.destination}</span>
+                            </div>
+                            <div class="routing-meta" style="margin-top:0.5rem; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                ${q.service_type ? `<span class="meta-pill service">📦 ${q.service_type}</span>` : ''}
+                                ${q.commodity ? `<span class="meta-pill" style="background: var(--hover-bg); color: var(--text-dark); border: 1px solid var(--border-color);">🏷️ ${q.commodity}</span>` : ''}
+                                ${q.freight_terms ? `<span class="meta-pill direct">💳 ${q.freight_terms}</span>` : ''}
+                            </div>
+                            <div class="charges-row">
+                                <span class="charge-pill ${q.has_origin_charges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Origin Port Charges</span>
+                                <span class="charge-pill ${q.has_freight_surcharges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Freight &amp; Surcharges</span>
+                                <span class="charge-pill ${q.has_dest_charges ? 'included' : 'excluded'}"><span class="dot"></span>Destination Port Charges</span>
+                            </div>
+                        </div>
+                        
+                        <div class="offer-actions">
+                            ${actionHtml}
+                        </div>
+                    </div>
+                    
+                    <div class="offer-footer">
+                        <div class="footer-links">
+                            <a class="terms-link" href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>📄 Terms &amp; conditions ↗</a>
+                            <span style="color:var(--mq-border-color);">|</span>
+                            <button onclick="toggleQuoteBreakdown('${refCode}', this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
+                            <span style="color:var(--mq-border-color);">|</span>
+                            <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="download-link">📄 Download PDF</a>
+                            <button class="download-link" onclick="emailQuote('${encodeURIComponent(refCode)}', this)">✉ Email Quote</button>
+                        </div>
+                    </div>
+                    
+                    <div id="breakdown-panel-${safeRef}" class="breakdown-panel">
+                        <div class="breakdown-inner">
+                            <div id="breakdown-content-${safeRef}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading breakdown...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderQuotesTable(quotes) {
+        const tableBody = document.getElementById('quotesTableBody');
+        if (!tableBody) return;
+
+        if (quotes.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="11" class="text-center py-4 text-muted">No quote records match your selection.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = quotes.map(item => {
+            const refCode = item.quotenumber || item.quote_number || item.api_booking_ref || '—';
+            const safeRef = String(refCode).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const origin = item.origin || item.porlocation || item.pollocation || 'Unknown';
+            const destination = item.destination || item.dellocation || item.podlocation || 'Unknown';
+            
+            // #pkgs (totalcolli)
+            const pkgsVal = (item.totalcolli !== null && item.totalcolli !== undefined && item.totalcolli !== '') ? item.totalcolli : (item.packages || '—');
+            
+            // Weight (totalweight)
+            let weightVal = '—';
+            if (item.totalweight !== null && item.totalweight !== undefined && item.totalweight !== '') {
+                weightVal = Number(item.totalweight).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' kg';
+            } else if (item.weight) {
+                weightVal = item.weight + ' kg';
+            }
+
+            // Volume (totalVolume)
+            let volumeVal = '—';
+            if (item.totalVolume !== null && item.totalVolume !== undefined && item.totalVolume !== '') {
+                volumeVal = Number(item.totalVolume).toFixed(2) + ' CBM';
+            } else if (item.volume) {
+                volumeVal = item.volume + ' CBM';
+            }
+
+            // Amount (totalAmount)
+            const numAmount = parseFloat(item.totalAmount || item.total_cost || 0);
+            const amountFormatted = `${item.currency ? item.currency + ' ' : ''}${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // ValidFrom & ValidUntil
+            const validFrom = item.validFrom || item.valid_from || item.created_at || '—';
+            const validUntil = item.validUntil || item.valid_until || '—';
+
+            // Status Badge
+            const c_status = item.computed_status || 'Active';
+            let statusBadge = '';
+            if (c_status === 'Active') {
+                statusBadge = `<span class="status-pill active"><span class="dot"></span>Active</span>`;
+            } else if (c_status === 'Expiring Soon') {
+                statusBadge = `<span class="status-pill expiring"><span class="dot"></span>Expiring</span>`;
+            } else if (c_status === 'Booked') {
+                statusBadge = `<span class="status-pill booked"><span class="dot"></span>Booked</span>`;
+            } else if (c_status === 'Expired') {
+                statusBadge = `<span class="status-pill expired"><span class="dot"></span>Expired</span>`;
+            }
+
+            // Actions
+            let actionBtns = '';
+            if (c_status === 'Booked') {
+                actionBtns = `
+                    <div class="d-flex gap-1 justify-content-end align-items-center" onclick="event.stopPropagation();">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size:0.75rem;">Booked</span>
+                        <a href="/customer/shipments" class="btn-table-action-outline py-1 px-2" style="font-size:0.75rem;" onclick="event.stopPropagation();">View</a>
+                    </div>
+                `;
+            } else if (c_status === 'Expired') {
+                actionBtns = `
+                    <div class="d-flex gap-1 justify-content-end align-items-center" onclick="event.stopPropagation();">
+                        <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-outline py-1 px-2" style="font-size:0.75rem;" onclick="event.stopPropagation();">Re-quote →</a>
+                        <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-outline py-1 px-2" title="Download PDF" style="font-size:0.75rem;" onclick="event.stopPropagation();"><i class="bi bi-file-earmark-pdf"></i></a>
+                    </div>
+                `;
+            } else {
+                actionBtns = `
+                    <div class="d-flex gap-1 justify-content-end align-items-center" onclick="event.stopPropagation();">
+                        <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-book py-1 px-2" style="font-size:0.75rem;" onclick="event.stopPropagation();">Book →</a>
+                        <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-outline py-1 px-2" title="Download PDF" style="font-size:0.75rem;" onclick="event.stopPropagation();"><i class="bi bi-file-earmark-pdf"></i></a>
+                        <button type="button" class="btn-table-action-outline py-1 px-2" title="Email Quote" onclick="event.stopPropagation(); emailQuote('${encodeURIComponent(refCode)}', this)" style="font-size:0.75rem;"><i class="bi bi-envelope"></i></button>
+                    </div>
+                `;
+            }
+
+            return `
+                <tr class="quote-table-row ${c_status === 'Expired' ? 'row-expired' : ''}"
+                    id="quote-row-${safeRef}"
+                    onclick="toggleTableQuoteBreakdown('${refCode}', event)"
+                    data-saferef="${safeRef}"
+                    title="Click row to view detailed rate breakdown"
+                    data-status="${c_status.toLowerCase().replace(/\s+/g, '')}"
+                    data-price="${numAmount}"
+                    data-saved="${item.created_at || ''}"
+                    data-validfrom="${validFrom}"
+                    data-validuntil="${validUntil}"
+                    data-ref="${refCode}"
+                    data-route="${origin} ${destination}"
+                    data-service="${item.service_type || ''}"
+                    data-origin="${origin}"
+                    data-dest="${destination}"
+                    data-pkgs="${item.totalcolli || 0}"
+                    data-weight="${item.totalweight || 0}"
+                    data-volume="${item.totalVolume || 0}"
+                    data-amount="${numAmount}">
+                    
+                    <!-- 1. Quote Number -->
+                    <td>
+                        <div class="d-flex align-items-center gap-1" onclick="event.stopPropagation();">
+                            <a href="/customer/quote/${encodeURIComponent(refCode)}" class="fw-bold font-monospace text-primary text-decoration-none" title="View Quote Details" onclick="event.stopPropagation();">${refCode}</a>
+                            <button class="btn btn-sm btn-link p-0 text-muted" title="Copy Quote Number" onclick="event.stopPropagation(); navigator.clipboard.writeText('${refCode}'); this.innerHTML='✓'; setTimeout(()=>this.innerHTML='⧉', 1500);">⧉</button>
+                        </div>
+                    </td>
+
+                    <!-- 2. Origin: ISNULL(porlocation, pollocation) -->
+                    <td>
+                        <div class="fw-semibold text-dark">${origin}</div>
+                    </td>
+
+                    <!-- 3. Destination: ISNULL(dellocation, podlocation) -->
+                    <td>
+                        <div class="fw-semibold text-dark">${destination}</div>
+                    </td>
+
+                    <!-- 4. #pkgs: totalcolli -->
+                    <td class="text-center font-monospace">
+                        <span class="badge bg-light text-dark border">${pkgsVal}</span>
+                    </td>
+
+                    <!-- 5. Weight: totalweight -->
+                    <td class="text-end font-monospace">
+                        ${weightVal}
+                    </td>
+
+                    <!-- 6. Volume: totalVolume -->
+                    <td class="text-end font-monospace">
+                        ${volumeVal}
+                    </td>
+
+                    <!-- 7. Amount: totalAmount -->
+                    <td class="text-end">
+                        <strong class="text-success">${amountFormatted}</strong>
+                    </td>
+
+                    <!-- 8. ValidFrom -->
+                    <td class="text-center text-muted small">
+                        ${validFrom}
+                    </td>
+
+                    <!-- 9. ValidUntil -->
+                    <td class="text-center text-muted small">
+                        ${validUntil}
+                    </td>
+
+                    <!-- 10. Status -->
+                    <td class="text-center">
+                        ${statusBadge}
+                    </td>
+
+                    <!-- 11. Actions -->
+                    <td style="text-align: right;" onclick="event.stopPropagation();">
+                        ${actionBtns}
+                    </td>
+                </tr>
+                <tr id="table-bd-${safeRef}" class="table-breakdown-row" style="display: none;">
+                    <td colspan="11" style="padding: 0 !important; background: var(--mq-bg-white) !important;">
+                        <div class="breakdown-panel open" style="border-top: none;">
+                            <div class="breakdown-inner">
+                                <div id="table-bd-content-${safeRef}" class="text-center text-muted py-3" style="font-size: 0.8rem;">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading breakdown...
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function setTableSort(key) {
+        if (tableSortKey === key) {
+            tableSortAsc = !tableSortAsc;
+        } else {
+            tableSortKey = key;
+            tableSortAsc = true;
+        }
+        
+        const tbody = document.getElementById('quotesTableBody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('.quote-table-row'));
+        
+        rows.sort((a, b) => {
+            let valA = a.dataset[key] || '';
+            let valB = b.dataset[key] || '';
+            
+            if (['pkgs', 'weight', 'volume', 'amount', 'price'].includes(key)) {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+                return tableSortAsc ? valA - valB : valB - valA;
+            } else if (['validfrom', 'validuntil', 'saved'].includes(key)) {
+                const dA = new Date(valA || 0);
+                const dB = new Date(valB || 0);
+                return tableSortAsc ? dA - dB : dB - dA;
+            } else {
+                return tableSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+        });
+        
+        rows.forEach(r => {
+            tbody.appendChild(r);
+            const ref = r.dataset.saferef;
+            if (ref) {
+                const bd = document.getElementById('table-bd-' + ref);
+                if (bd) tbody.appendChild(bd);
+            }
+        });
     }
 
     function renderLocalPagination(data) {
@@ -315,10 +640,16 @@
 
     function clearLocalPagination() {
         const nav = document.getElementById('pagination-nav');
-        if (nav) nav.innerHTML = '';
+        if (!nav) return;
+        nav.innerHTML = '';
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Set initial button active state based on persisted preference
+        const btnCard = document.getElementById('btnCardView');
+        const btnList = document.getElementById('btnListView');
+        if (btnCard) btnCard.classList.toggle('active', currentViewMode === 'card');
+        if (btnList) btnList.classList.toggle('active', currentViewMode === 'list');
         loadQuotes(1);
     });
 
@@ -346,7 +677,7 @@
                             let rows = '';
                             data.breakdown.forEach(line => {
                                 const chargeCode = line.articleCode || line.chargeCode || line.id || 'N/A';
-                                const description = line.articleName || line.chargeName || line.description || 'Standard Charge';
+                                const description = (line.articleName || line.chargeName || line.description || 'Standard Charge').toUpperCase();
                                 const rawCalc = line.calcCode || line.calcCodeBase || line.unitCode || 'W/M';
                                 const unitCode = (rawCalc === 'MTQ' || rawCalc === 'KGM') ? 'W/M' : (rawCalc === 'ACT' ? 'LUMPSUM' : rawCalc);
                                 const qty = line.appliedQty !== undefined ? line.appliedQty : (line.quantity || 1);
@@ -366,16 +697,16 @@
                             });
 
                             contentDiv.innerHTML = `
-                                <table class="breakdown-table" style="background: var(--mq-bg-white); border: 1px solid var(--mq-border-color); border-radius: 8px; overflow: hidden; margin-bottom: 0;">
-                                    <thead style="background: #f1f5f9;">
+                                <table class="breakdown-table">
+                                    <thead>
                                         <tr>
-                                            <th>Code</th>
-                                            <th>Name</th>
-                                            <th>Base</th>
-                                            <th class="num">Units</th>
-                                            <th class="num">Unit Price</th>
-                                            <th class="num">Rate of Exchange</th>
-                                            <th class="num">Final Amount</th>
+                                            <th>CODE</th>
+                                            <th>NAME</th>
+                                            <th>BASE</th>
+                                            <th class="num">UNITS</th>
+                                            <th class="num">UNIT PRICE</th>
+                                            <th class="num">RATE OF EXCHANGE</th>
+                                            <th class="num">FINAL AMOUNT</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -389,6 +720,88 @@
                     })
                     .catch(err => {
                         contentDiv.innerHTML = `<div class="py-4 text-center text-danger">Failed to load breakdown.</div>`;
+                    });
+            }
+        }
+    }
+
+    function toggleTableQuoteBreakdown(quoteId, evt) {
+        if (evt) {
+            const target = evt.target;
+            if (target && (target.closest('a') || target.closest('button') || target.closest('input') || target.closest('.btn'))) {
+                return;
+            }
+        }
+        const safeRef = String(quoteId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const bdRow = document.getElementById('table-bd-' + safeRef);
+        const parentRow = document.getElementById('quote-row-' + safeRef);
+        const contentDiv = document.getElementById('table-bd-content-' + safeRef);
+        if (!bdRow) return;
+
+        const isCurrentlyOpen = bdRow.style.display !== 'none';
+        if (isCurrentlyOpen) {
+            bdRow.style.display = 'none';
+            if (parentRow) parentRow.classList.remove('table-row-expanded');
+        } else {
+            bdRow.style.display = 'table-row';
+            if (parentRow) parentRow.classList.add('table-row-expanded');
+
+            if (!bdRow.dataset.loaded) {
+                fetch(`/customer/api/quote/${encodeURIComponent(quoteId)}/breakdown`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.breakdown && data.breakdown.length > 0) {
+                            let rows = '';
+                            let totalAmt = 0;
+                            let currency = data.currency || 'USD';
+                            data.breakdown.forEach(line => {
+                                const chargeCode = line.articleCode || line.chargeCode || line.id || 'N/A';
+                                const description = (line.articleName || line.chargeName || line.description || 'Standard Charge').toUpperCase();
+                                const rawCalc = line.calcCode || line.calcCodeBase || line.unitCode || 'W/M';
+                                const unitCode = (rawCalc === 'MTQ' || rawCalc === 'KGM') ? 'W/M' : (rawCalc === 'ACT' ? 'LUMPSUM' : rawCalc);
+                                const qty = line.appliedQty !== undefined && line.appliedQty !== null ? line.appliedQty : (line.quantity || 1);
+                                const curr = line.currency || currency;
+                                const rate = line.appliedRate !== undefined && line.appliedRate !== null ? line.appliedRate : line.amount;
+                                const lineAmt = parseFloat(line.amount !== undefined && line.amount !== null ? line.amount : rate) || 0;
+                                totalAmt += lineAmt;
+                                const amtFormatted = lineAmt.toFixed(2);
+                                const rateFormatted = parseFloat(rate || 0).toFixed(2);
+                                
+                                rows += `<tr>
+                                    <td><span class="code-cell">${chargeCode}</span></td>
+                                    <td>${description}</td>
+                                    <td><span class="base-cell">${unitCode}</span></td>
+                                    <td class="num">${qty}</td>
+                                    <td class="num">${curr} ${rateFormatted}</td>
+                                    <td class="num fx-cell">1 ${curr} = 1.0000 USD</td>
+                                    <td class="num final-cell">USD ${amtFormatted}</td>
+                                </tr>`;
+                            });
+
+                            contentDiv.innerHTML = `
+                                <table class="breakdown-table">
+                                    <thead>
+                                        <tr>
+                                            <th>CODE</th>
+                                            <th>NAME</th>
+                                            <th>BASE</th>
+                                            <th class="num">UNITS</th>
+                                            <th class="num">UNIT PRICE</th>
+                                            <th class="num">RATE OF EXCHANGE</th>
+                                            <th class="num">FINAL AMOUNT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${rows}
+                                    </tbody>
+                                </table>`;
+                        } else {
+                            contentDiv.innerHTML = `<div class="py-4 text-center text-muted">No breakdown details available for this quote.</div>`;
+                        }
+                        bdRow.dataset.loaded = "true";
+                    })
+                    .catch(err => {
+                        contentDiv.innerHTML = `<div class="py-4 text-center text-danger">Failed to load quotation breakdown.</div>`;
                     });
             }
         }
@@ -448,6 +861,7 @@
     function applyFilters() {
         const searchTerm = document.getElementById('mqSearch').value.toLowerCase().trim();
         const cards = document.querySelectorAll('.offer-card');
+        const tableRows = document.querySelectorAll('.quote-table-row');
         let visibleCount = 0;
 
         cards.forEach(card => {
@@ -460,9 +874,26 @@
             if (show) visibleCount++;
         });
 
-        document.getElementById('resultsCount').textContent = `Showing ${visibleCount} quotes`;
-        document.getElementById('emptyState').classList.toggle('show', visibleCount === 0);
-        document.getElementById('offersList').style.display = visibleCount === 0 ? 'none' : 'flex';
+        tableRows.forEach(row => {
+            const matchesStatus = currentStatus === 'all' || row.dataset.status === currentStatus || (currentStatus === 'expiringsoon' && row.dataset.status === 'expiringsoon');
+            const haystack = (row.dataset.ref + ' ' + row.dataset.route + ' ' + row.dataset.service).toLowerCase();
+            const matchesSearch = !searchTerm || haystack.includes(searchTerm);
+            
+            const show = matchesStatus && matchesSearch;
+            row.style.display = show ? '' : 'none';
+            const ref = row.dataset.saferef;
+            if (ref) {
+                const bd = document.getElementById('table-bd-' + ref);
+                if (bd && !show) {
+                    bd.style.display = 'none';
+                    row.classList.remove('table-row-expanded');
+                }
+            }
+        });
+
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.classList.toggle('show', visibleCount === 0);
+        updateViewVisibility(visibleCount === 0);
     }
 
     function resetFilters() {
@@ -477,21 +908,46 @@
         document.querySelectorAll('.sort-chip[data-sort]').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
 
+        // Sort Card View
         const list = document.getElementById('offersList');
-        const cards = Array.from(list.querySelectorAll('.offer-card'));
+        if (list) {
+            const cards = Array.from(list.querySelectorAll('.offer-card'));
+            cards.sort((a, b) => {
+                if (criteria === 'recent') {
+                    return new Date(b.dataset.saved) - new Date(a.dataset.saved);
+                } else if (criteria === 'expiring') {
+                    return new Date(a.dataset.validuntil) - new Date(b.dataset.validuntil);
+                } else if (criteria === 'price') {
+                    return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+                }
+                return 0;
+            });
+            cards.forEach(card => list.appendChild(card));
+        }
 
-        cards.sort((a, b) => {
-            if (criteria === 'recent') {
-                return new Date(b.dataset.saved) - new Date(a.dataset.saved);
-            } else if (criteria === 'expiring') {
-                return new Date(a.dataset.validuntil) - new Date(b.dataset.validuntil);
-            } else if (criteria === 'price') {
-                return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
-            }
-            return 0;
-        });
-
-        cards.forEach(card => list.appendChild(card));
+        // Sort Table View
+        const tbody = document.getElementById('quotesTableBody');
+        if (tbody) {
+            const rows = Array.from(tbody.querySelectorAll('.quote-table-row'));
+            rows.sort((a, b) => {
+                if (criteria === 'recent') {
+                    return new Date(b.dataset.saved) - new Date(a.dataset.saved);
+                } else if (criteria === 'expiring') {
+                    return new Date(a.dataset.validuntil) - new Date(b.dataset.validuntil);
+                } else if (criteria === 'price') {
+                    return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+                }
+                return 0;
+            });
+            rows.forEach(row => {
+                tbody.appendChild(row);
+                const ref = row.dataset.saferef;
+                if (ref) {
+                    const bd = document.getElementById('table-bd-' + ref);
+                    if (bd) tbody.appendChild(bd);
+                }
+            });
+        }
     }
 </script>
 {% endblock %}

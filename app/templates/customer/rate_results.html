@@ -991,8 +991,6 @@
                             <span class="label">Total</span>
                             <span class="amount">{{ res.quotation_currency or res.api_quote.tariff.quotationCurrency|default('USD') }} {{ "%.2f"|format(res.total_cost) }}</span>
                         </div>
-                        <div class="fx-note">ℹ️ Charges are calculated in their original currency and converted using
-                            the rate of exchange shown on each line, fixed at quotation time.</div>
                     </div>
                 </div>
             </div>
