@@ -222,6 +222,58 @@ def dashboard():
 
     return render_template('customer/dashboard.html', today=datetime.now())
 
+def _direct_document_url(url):
+    """Turn Google Drive / Docs share links into direct file URLs; other URLs are returned unchanged."""
+    m = re.search(r'docs\.google\.com/(document|spreadsheets|presentation)/d/([\w-]+)', url)
+    if m:
+        return f'https://docs.google.com/{m.group(1)}/d/{m.group(2)}/export?format=pdf'
+    m = (re.search(r'drive\.google\.com/file/d/([\w-]+)', url)
+         or re.search(r'drive\.google\.com/(?:open|uc)\?(?:.*&)?id=([\w-]+)', url))
+    if m:
+        return f'https://drive.google.com/uc?export=download&confirm=t&id={m.group(1)}'
+    return url
+
+@customer.route('/terms-conditions')
+@login_required
+def terms_conditions():
+    """Serve the configured T&C document from our own origin so the source URL stays hidden."""
+    from app import get_cached_system_settings
+    from flask import Response
+    terms_url = get_cached_system_settings(current_user).get('terms_conditions_url', '')
+    if not terms_url:
+        return Response('<p style="font-family:sans-serif;padding:2rem;color:#64748b;">Terms &amp; conditions are not configured.</p>',
+                        mimetype='text/html')
+    fetch_url = _direct_document_url(terms_url)
+    try:
+        upstream = requests.get(fetch_url, timeout=20)
+        upstream.raise_for_status()
+    except Exception as e:
+        print(f"Error fetching terms & conditions: {e}")
+        return Response('<p style="font-family:sans-serif;padding:2rem;color:#64748b;">Terms &amp; conditions could not be loaded. Please try again later.</p>',
+                        mimetype='text/html', status=502)
+
+    content_type = upstream.headers.get('Content-Type', 'application/octet-stream')
+    body = upstream.content
+    if body[:5] == b'%PDF-':
+        # Hosts like Google Drive send PDFs as octet-stream, which browsers download instead of display
+        content_type = 'application/pdf'
+    elif 'text/html' in content_type:
+        # Keep relative links/styles of the source page working when served from here
+        html = upstream.text
+        from markupsafe import escape
+        base_tag = f'<base href="{escape(terms_url)}">'
+        if re.search(r'<head[^>]*>', html, re.I):
+            html = re.sub(r'<head[^>]*>', lambda m: m.group(0) + base_tag, html, count=1, flags=re.I)
+        else:
+            html = base_tag + html
+        body = html.encode('utf-8')
+        content_type = 'text/html; charset=utf-8'
+
+    resp = Response(body, mimetype=None, content_type=content_type)
+    resp.headers['Content-Disposition'] = 'inline'
+    resp.headers['Cache-Control'] = 'private, max-age=600'
+    return resp
+
 @customer.route('/api/dashboard-stats')
 @login_required
 def api_dashboard_stats():
@@ -905,70 +957,7 @@ def save_quote():
 @customer.route('/quote/<int:quote_id>')
 @login_required
 def quote_detail(quote_id):
-    if current_user.role != 'customer':
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('index'))
-    
-    ref = str(quote_id).strip()
-    quote = get_booking_safely(ref, user_id=current_user.id, status='Saved Quote')
-    if not quote:
-        quote = get_booking_safely(ref, user_id=current_user.id)
-    if not quote:
-        flash('Quote not found.', 'danger')
-        return redirect(url_for('customer.my_quotes'))
-    
-    breakdown = []
-    quote_number = quote.api_booking_ref or ref
-    if quote_number:
-        import requests
-        headers = {'accept': 'application/json', 'x-api-key': '1'}
-        customer_id = None
-        if current_user.accounts:
-            try: customer_id = int(current_user.accounts[0].account_id)
-            except: pass
-        params = {'accountId': customer_id} if customer_id else {}
-        
-        candidates = [quote_number]
-        if quote_number.isdigit():
-            candidates.extend([f"QUO-2026-{quote_number}", f"26-TDR-{quote_number}"])
-            
-        for cand in candidates:
-            try:
-                resp = requests.get(f"http://realnexus.comit.cloud:5000/api/Quotations/{cand}", params=params, headers=headers, timeout=10)
-                if resp.status_code == 200:
-                    resp_json = resp.json()
-                    data = resp_json.get('quotation', resp_json)
-                    tariff = data.get('tariff', data)
-                    breakdown = tariff.get('lines', [])
-                    break
-                else:
-                    print(f"API returned {resp.status_code} for {cand}: {resp.text}")
-            except Exception as e:
-                print(f"Failed to fetch quote breakdown for {cand}:", e)
-
-    # Fallback to cached API response if available
-    if not breakdown:
-        import os
-        import tempfile
-        import json
-        temp_file = os.path.join(tempfile.gettempdir(), f"last_api_response_{current_user.id}.json")
-        try:
-            if os.path.exists(temp_file):
-                with open(temp_file, 'r', encoding='utf-8') as f:
-                    cached_data = json.load(f)
-                    
-                    data = cached_data.get('quotation', cached_data)
-                    header = data.get('header', data)
-                    
-                    quo_id = header.get('quotationNo') or header.get('quoteNo') or str(header.get('quotationId') or '')
-                    
-                    if str(header.get('quotationId')) in str(quote.api_booking_ref) or quote.api_booking_ref == quo_id or (quote.api_booking_ref and quote.api_booking_ref.endswith('-')):
-                        tariff = data.get('tariff', data)
-                        breakdown = tariff.get('lines', [])
-        except Exception as e:
-            print(f"Failed to load cached quote breakdown: {e}")
-
-    return render_template('customer/quote_detail.html', quote=quote, breakdown=breakdown)
+    return redirect(url_for('customer.my_quotes'))
 
 @customer.route('/api/quote/<path:quote_id>/breakdown')
 @customer.route('/api/quote/<int:quote_id>/breakdown')
@@ -1156,49 +1145,192 @@ def api_quote_details(quote_id):
 @customer.route('/quote/<quote_id>/email', methods=['POST'])
 @login_required
 def email_quote(quote_id):
-    from flask import jsonify
+    from flask import jsonify, request
     try:
         if current_user.role != 'customer':
             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
             
+        data = request.get_json(silent=True) or request.form or {}
+        to_email = (data.get('to') or data.get('to_email') or current_user.email or '').strip()
+        cc_email = (data.get('cc') or data.get('cc_email') or '').strip()
+        bcc_email = (data.get('bcc') or data.get('bcc_email') or '').strip()
+        subject = (data.get('subject') or f"Your Quotation - {quote_id}").strip()
+        custom_message = (data.get('message') or data.get('custom_message') or '').strip()
+
+        if not to_email:
+            return jsonify({'success': False, 'message': 'Recipient email (To) is required.'}), 400
+
+        ref = str(quote_id).strip()
+        quote = get_booking_safely(ref, user_id=current_user.id)
+        if not quote:
+            quote = get_booking_safely(ref)
+
         response = download_pdf(quote_id=quote_id)
         if response.status_code == 302:
             return jsonify({'success': False, 'message': 'Quote not found or failed to generate PDF.'})
             
         pdf_data = response.get_data()
-        
-        subject = f"Your Quotation - {quote_id}"
+
+        # Build clean custom message block if provided
+        custom_msg_html = ""
+        if custom_message:
+            import html as html_lib
+            safe_msg = html_lib.escape(custom_message).replace('\n', '<br>')
+            custom_msg_html = f"""
+            <div style="background-color: #f1f5f9; border-left: 4px solid #2563eb; padding: 14px 18px; margin: 20px 0; border-radius: 6px; font-size: 0.95rem; color: #1e293b; line-height: 1.5;">
+                {safe_msg}
+            </div>
+            """
+
+        quote_info_html = ""
+        if quote:
+            origin_val = getattr(quote, 'origin', '') or 'N/A'
+            dest_val = getattr(quote, 'destination', '') or 'N/A'
+            carrier_val = getattr(quote, 'selected_nvocc', '') or 'Standard'
+            service_val = getattr(quote, 'service_type', '') or 'LCL'
+            vol_val = getattr(quote, 'volume', 0) or 0
+            cost_val = getattr(quote, 'total_cost', 0) or 0.0
+            quote_info_html = f"""
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+                <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold; color: #475569; width: 35%;">Routing:</td>
+                    <td style="padding: 10px 14px; color: #0f172a; font-weight: 600;">{origin_val} &rarr; {dest_val}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold; color: #475569;">Carrier / NVOCC:</td>
+                    <td style="padding: 10px 14px; color: #0f172a;">{carrier_val}</td>
+                </tr>
+                <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold; color: #475569;">Service Type:</td>
+                    <td style="padding: 10px 14px; color: #0f172a;">{service_val}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold; color: #475569;">Total Volume:</td>
+                    <td style="padding: 10px 14px; color: #0f172a;">{vol_val} CBM</td>
+                </tr>
+                <tr style="background-color: #eff6ff;">
+                    <td style="padding: 12px 14px; font-weight: bold; color: #1e40af;">Total Amount:</td>
+                    <td style="padding: 12px 14px; color: #1e3a8a; font-size: 1.15rem; font-weight: 800;">${cost_val:,.2f}</td>
+                </tr>
+            </table>
+            """
+
+        from app.services.customer_settings import effective_settings
+        settings_data = effective_settings(current_user)
+        co_name = getattr(settings_data, 'company_name', None) or 'Fast Transit Line'
+
         html = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; color: #1a1a2e; background: #f9fafb; border-radius: 10px;">
-            <h2 style="color: #0d47a1; margin-bottom: 20px;">Quotation {quote_id}</h2>
-            <p style="font-size: 1rem;">Dear {current_user.name},</p>
-            <p style="font-size: 0.95rem; line-height: 1.6;">
-                Please find attached your requested quotation <strong>{quote_id}</strong>.
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: auto; padding: 28px; color: #1e293b; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <div style="border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px;">
+                <h2 style="color: #1e3a8a; margin: 0; font-size: 1.45rem;">Quotation: {quote_id}</h2>
+                <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">{co_name} · Customer Portal</div>
+            </div>
+            
+            <p style="font-size: 1rem; margin-bottom: 12px;">Dear Valued Partner / Customer,</p>
+            
+            <p style="font-size: 0.95rem; line-height: 1.6; color: #334155; margin-bottom: 12px;">
+                Please find below the quotation details for quotation reference <strong>{quote_id}</strong>. The complete official quotation document is attached to this email as a PDF.
             </p>
-            <p style="font-size: 0.95rem; margin-top: 30px;">
-                Thank you for choosing Fast Transit Line.
+
+            {custom_msg_html}
+
+            {quote_info_html}
+
+            <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.88rem; color: #475569;">
+                📎 <strong>Attachment:</strong> Quotation_{quote_id}.pdf (Official Quotation Document)
+            </div>
+
+            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 24px;">
+                If you have any questions or would like to proceed with booking this shipment, please feel free to reply directly to this email or visit our portal.
             </p>
+
+            <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">
+                <strong>Sent by:</strong> {current_user.name} ({current_user.email})<br>
+                <strong>{co_name}</strong>
+            </div>
         </div>
         """
         
         from app.services.email_service import SystemMailer
         success = SystemMailer.send_email(
-            current_user.email, 
+            to_email, 
             subject, 
             html, 
             attachment_data=pdf_data, 
-            attachment_filename=f"Quotation_{quote_id}.pdf"
+            attachment_filename=f"Quotation_{quote_id}.pdf",
+            user=current_user,
+            cc=cc_email or None,
+            bcc=bcc_email or None
         )
         
         if success:
-            return jsonify({'success': True, 'message': 'Quote emailed successfully!'})
+            try:
+                from app.models.models import QuoteEmailDraft
+                QuoteEmailDraft.query.filter_by(user_id=current_user.id, quote_ref=ref).delete()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            return jsonify({'success': True, 'message': f'Quote emailed successfully to {to_email}!'})
         else:
-            return jsonify({'success': False, 'message': 'Failed to send email. Please check mail settings.'})
+            return jsonify({'success': False, 'message': 'Failed to send email. Please check your SMTP settings in Settings or contact your administrator.'})
     except Exception as e:
         import traceback
         trace = traceback.format_exc()
         print("EMAIL QUOTE ERROR:", trace)
         return jsonify({'success': False, 'message': f'Server Error: {str(e)}'}), 500
+
+
+@customer.route('/quote/<quote_id>/email/draft', methods=['GET', 'POST', 'DELETE'])
+@login_required
+def quote_email_draft(quote_id):
+    from flask import jsonify, request
+    from datetime import datetime
+    from app.models.models import QuoteEmailDraft
+    if current_user.role != 'customer':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    ref = str(quote_id).strip()
+    
+    if request.method == 'GET':
+        draft = QuoteEmailDraft.query.filter_by(user_id=current_user.id, quote_ref=ref).first()
+        if draft:
+            return jsonify({
+                'success': True,
+                'has_draft': True,
+                'draft': {
+                    'to': draft.to_email or '',
+                    'cc': draft.cc_email or '',
+                    'bcc': draft.bcc_email or '',
+                    'subject': draft.subject or '',
+                    'message': draft.message or '',
+                    'updated_at': draft.updated_at.strftime('%Y-%m-%d %H:%M') if draft.updated_at else ''
+                }
+            })
+        return jsonify({'success': True, 'has_draft': False, 'draft': None})
+
+    elif request.method == 'POST':
+        data = request.get_json(silent=True) or request.form or {}
+        draft = QuoteEmailDraft.query.filter_by(user_id=current_user.id, quote_ref=ref).first()
+        if not draft:
+            draft = QuoteEmailDraft(user_id=current_user.id, quote_ref=ref)
+            db.session.add(draft)
+        
+        draft.to_email = (data.get('to') or '').strip()
+        draft.cc_email = (data.get('cc') or '').strip()
+        draft.bcc_email = (data.get('bcc') or '').strip()
+        draft.subject = (data.get('subject') or '').strip()
+        draft.message = (data.get('message') or '').strip()
+        draft.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Draft saved successfully!'})
+
+    elif request.method == 'DELETE':
+        QuoteEmailDraft.query.filter_by(user_id=current_user.id, quote_ref=ref).delete()
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Draft deleted successfully.'})
+
 
 @customer.route('/quote/<quote_id>/download_pdf')
 @customer.route('/quote/<int:quote_id>/download_pdf')
@@ -1394,7 +1526,7 @@ def download_pdf(quote_id=None):
     
     if pisa_status.err:
         flash('Failed to generate PDF document.', 'danger')
-        return redirect(url_for('customer.quote_detail', quote_id=quote_id))
+        return redirect(url_for('customer.my_quotes'))
         
     response = make_response(pdf.getvalue())
     response.headers['Content-Type'] = 'application/pdf'

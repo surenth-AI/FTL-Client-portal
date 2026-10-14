@@ -1,0 +1,39 @@
+<!-- TERMS & CONDITIONS FULL-SCREEN VIEWER (open with openTermsModal()) -->
+<div id="termsModal" style="display:none; position:fixed; inset:0; z-index:2000; background:#fff; flex-direction:column;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1.25rem; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
+        <div class="d-flex align-items-center gap-2">
+            <img src="{{ url_for('static', filename='img/terms_conditions.png') }}" alt="" style="width:28px;height:28px;object-fit:contain;">
+            <span style="font-weight:600; font-size:1rem; color:#0f172a;">Terms &amp; Conditions</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeTermsModal()" title="Close (Esc)"><i class="bi bi-x-lg"></i> Close</button>
+    </div>
+    <div style="position:relative; flex:1;">
+        <div id="termsLoading" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; color:#64748b;">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading…
+        </div>
+        <iframe id="termsFrame" title="Terms &amp; Conditions" style="width:100%; height:100%; border:0; position:relative;" onload="if (this.getAttribute('src')) document.getElementById('termsLoading').style.display='none';"></iframe>
+    </div>
+</div>
+
+<script>
+    // Document is served via /customer/terms-conditions so the source URL stays hidden
+    function openTermsModal() {
+        const modal = document.getElementById('termsModal');
+        const frame = document.getElementById('termsFrame');
+        if (!frame.getAttribute('src')) {
+            document.getElementById('termsLoading').style.display = 'flex';
+            frame.setAttribute('src', '{{ url_for("customer.terms_conditions") }}');
+        }
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeTermsModal() {
+        document.getElementById('termsModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeTermsModal();
+    });
+</script>

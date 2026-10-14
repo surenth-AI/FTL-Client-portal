@@ -469,3 +469,16 @@ class Lookup(db.Model):
     extra_info = db.Column(db.String(255), nullable=True) # e.g., Country 'CN' or Type 'port'/'door'
 
 
+class QuoteEmailDraft(db.Model):
+    __tablename__ = 'quote_email_draft'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    quote_ref = db.Column(db.String(100), nullable=False)
+    to_email = db.Column(db.Text, nullable=True)
+    cc_email = db.Column(db.Text, nullable=True)
+    bcc_email = db.Column(db.Text, nullable=True)
+    subject = db.Column(db.String(255), nullable=True)
+    message = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+

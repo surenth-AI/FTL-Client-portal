@@ -340,7 +340,7 @@
                     
                     <div class="offer-footer">
                         <div class="footer-links">
-                            <a class="terms-link" href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>📄 Terms &amp; conditions ↗</a>
+                            <a class="terms-link" href="#" onclick="event.preventDefault(); event.stopPropagation(); openTermsModal();">📄 Terms &amp; conditions</a>
                             <span style="color:var(--mq-border-color);">|</span>
                             <button onclick="toggleQuoteBreakdown('${refCode}', this)" class="breakdown-toggle">📊 View Breakdown <span class="chev">▾</span></button>
                             <span style="color:var(--mq-border-color);">|</span>
@@ -434,6 +434,7 @@
                     <div class="d-flex gap-1 justify-content-end align-items-center" onclick="event.stopPropagation();">
                         <a href="/customer/rates?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-outline py-1 px-2" style="font-size:0.75rem;" onclick="event.stopPropagation();">Re-quote →</a>
                         <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-outline py-1 px-2" title="Download PDF" style="font-size:0.75rem;" onclick="event.stopPropagation();"><i class="bi bi-file-earmark-pdf"></i></a>
+                        <a href="#" class="d-inline-flex align-items-center" title="Terms &amp; Conditions" onclick="event.preventDefault(); event.stopPropagation(); openTermsModal();"><img src="{{ url_for('static', filename='img/terms_conditions.png') }}" alt="Terms &amp; Conditions" style="width:30px;height:30px;object-fit:contain;"></a>
                     </div>
                 `;
             } else {
@@ -441,6 +442,7 @@
                     <div class="d-flex gap-1 justify-content-end align-items-center" onclick="event.stopPropagation();">
                         <a href="/customer/new-booking?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-book py-1 px-2" style="font-size:0.75rem;" onclick="event.stopPropagation();">Book →</a>
                         <a href="/customer/download_pdf?quote_id=${encodeURIComponent(refCode)}" class="btn-table-action-outline py-1 px-2" title="Download PDF" style="font-size:0.75rem;" onclick="event.stopPropagation();"><i class="bi bi-file-earmark-pdf"></i></a>
+                        <a href="#" class="d-inline-flex align-items-center" title="Terms &amp; Conditions" onclick="event.preventDefault(); event.stopPropagation(); openTermsModal();"><img src="{{ url_for('static', filename='img/terms_conditions.png') }}" alt="Terms &amp; Conditions" style="width:30px;height:30px;object-fit:contain;"></a>
                         <button type="button" class="btn-table-action-outline py-1 px-2" title="Email Quote" onclick="event.stopPropagation(); emailQuote('${encodeURIComponent(refCode)}', this)" style="font-size:0.75rem;"><i class="bi bi-envelope"></i></button>
                     </div>
                 `;
@@ -469,10 +471,7 @@
                     
                     <!-- 1. Quote Number -->
                     <td>
-                        <div class="d-flex align-items-center gap-1" onclick="event.stopPropagation();">
-                            <a href="/customer/quote/${encodeURIComponent(refCode)}" class="fw-bold font-monospace text-primary text-decoration-none" title="View Quote Details" onclick="event.stopPropagation();">${refCode}</a>
-                            <button class="btn btn-sm btn-link p-0 text-muted" title="Copy Quote Number" onclick="event.stopPropagation(); navigator.clipboard.writeText('${refCode}'); this.innerHTML='✓'; setTimeout(()=>this.innerHTML='⧉', 1500);">⧉</button>
-                        </div>
+                        <span class="fw-bold font-monospace text-primary" style="cursor: pointer;" title="Toggle Quote Breakdown" onclick="toggleTableQuoteBreakdown('${refCode}', event)">${refCode}</span>
                     </td>
 
                     <!-- 2. Origin: ISNULL(porlocation, pollocation) -->
@@ -819,36 +818,314 @@
         }, 1200);
     }
 
+    let currentQuoteId = null;
+    let currentQuoteBtn = null;
+    let currentQuoteBtnOriginalText = '';
+    let currentQuoteObj = null;
+
     function emailQuote(quoteId, btn) {
-        const originalText = btn.innerHTML;
-        btn.innerHTML = 'Sending...';
-        btn.disabled = true;
+        const rawId = decodeURIComponent(quoteId);
+        currentQuoteId = rawId;
+        currentQuoteBtn = btn;
+        if (btn) currentQuoteBtnOriginalText = btn.innerHTML;
+
+        currentQuoteObj = (typeof currentQuotes !== 'undefined' && currentQuotes)
+            ? currentQuotes.find(q => (q.quotenumber || q.api_booking_ref || '') === rawId || String(q.id) === rawId)
+            : null;
+
+        openEmailQuoteModal(rawId, currentQuoteObj);
+    }
+
+    function openEmailQuoteModal(quoteId, quoteObj) {
+        const modal = document.getElementById('emailQuoteModal');
+        if (!modal) return;
+
+        document.getElementById('eqModalRef').textContent = quoteId;
+        const routeBadge = document.getElementById('eqModalRouteBadge');
+        const origin = quoteObj ? (quoteObj.origin || '') : '';
+        const dest = quoteObj ? (quoteObj.destination || '') : '';
+        if (origin && dest) {
+            routeBadge.textContent = `${origin} → ${dest}`;
+            routeBadge.style.display = '';
+        } else {
+            routeBadge.style.display = 'none';
+        }
+
+        document.getElementById('eqAttachmentName').textContent = `Quotation_${quoteId}.pdf`;
+        document.getElementById('eqPreviewRefText').textContent = quoteId;
+        document.getElementById('eqPreviewRoute').textContent = (origin && dest) ? `${origin} → ${dest}` : '—';
+        document.getElementById('eqPreviewCarrier').textContent = quoteObj ? (quoteObj.selected_nvocc || quoteObj.carrier_name || 'Standard') : 'Standard';
+        document.getElementById('eqPreviewService').textContent = quoteObj ? (quoteObj.service_type || 'LCL') : 'LCL';
         
-        fetch(`/customer/quote/${quoteId}/email`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                btn.innerHTML = '✓ Sent!';
+        let vol = quoteObj ? (quoteObj.volume || quoteObj.totalVolume || 0) : 0;
+        let wt = quoteObj ? (quoteObj.weight || quoteObj.totalweight || 0) : 0;
+        document.getElementById('eqPreviewVolume').textContent = `${vol} CBM` + (wt ? ` · ${wt} KG` : '');
+        
+        let cost = quoteObj ? (quoteObj.totalAmount || quoteObj.total_cost || 0) : 0;
+        let curr = quoteObj ? (quoteObj.currency || 'USD') : 'USD';
+        document.getElementById('eqPreviewTotal').textContent = `$${parseFloat(cost || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${curr}`;
+        document.getElementById('eqPreviewAttachmentLabel').textContent = `Quotation_${quoteId}.pdf`;
+
+        // Reset status alert
+        const alertBox = document.getElementById('eqStatusAlert');
+        alertBox.style.display = 'none';
+        alertBox.innerHTML = '';
+
+        // Check for saved draft: first from localStorage, then from backend
+        let loadedDraft = null;
+        try {
+            const local = localStorage.getItem('eq_draft_' + quoteId);
+            if (local) loadedDraft = JSON.parse(local);
+        } catch (e) {}
+
+        if (loadedDraft) {
+            populateDraftFields(loadedDraft, 'Restored from local draft');
+        } else {
+            // Default fields
+            document.getElementById('eqToInput').value = '{{ current_user.email }}';
+            document.getElementById('eqCcInput').value = '';
+            document.getElementById('eqBccInput').value = '';
+            document.getElementById('eqSubjectInput').value = `Quotation ${quoteId} - {{ company.name if company else "Fast Transit Line" }}`;
+            document.getElementById('eqMessageInput').value = `Please find attached quotation ${quoteId} for your upcoming shipment. Let us know if you have any questions or require any adjustments.`;
+            hideDraftBadge();
+            updateEmailPreview();
+        }
+
+        // Query backend draft asynchronously
+        fetch(`/customer/quote/${encodeURIComponent(quoteId)}/email/draft`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.has_draft && data.draft) {
+                    populateDraftFields(data.draft, 'Draft saved at ' + (data.draft.updated_at || ''));
+                }
+            })
+            .catch(() => {});
+
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => { document.getElementById('eqToInput').focus(); }, 150);
+    }
+
+    function populateDraftFields(draft, statusText) {
+        if (draft.to !== undefined) document.getElementById('eqToInput').value = draft.to || '';
+        if (draft.cc !== undefined) document.getElementById('eqCcInput').value = draft.cc || '';
+        if (draft.bcc !== undefined) document.getElementById('eqBccInput').value = draft.bcc || '';
+        if (draft.subject !== undefined) document.getElementById('eqSubjectInput').value = draft.subject || '';
+        if (draft.message !== undefined) document.getElementById('eqMessageInput').value = draft.message || '';
+        if (statusText) showDraftBadge(statusText);
+        updateEmailPreview();
+    }
+
+    function closeEmailQuoteModal() {
+        const modal = document.getElementById('emailQuoteModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function addCurrentUserToRecipient() {
+        const toInput = document.getElementById('eqToInput');
+        const userEmail = '{{ current_user.email }}';
+        if (!toInput.value.trim()) {
+            toInput.value = userEmail;
+        } else if (!toInput.value.includes(userEmail)) {
+            toInput.value = toInput.value.trim() + ', ' + userEmail;
+        }
+        updateEmailPreview();
+        toInput.focus();
+    }
+
+    function updateEmailPreview() {
+        const toVal = document.getElementById('eqToInput').value.trim();
+        const ccVal = document.getElementById('eqCcInput').value.trim();
+        const bccVal = document.getElementById('eqBccInput').value.trim();
+        const subVal = document.getElementById('eqSubjectInput').value.trim();
+        const msgVal = document.getElementById('eqMessageInput').value.trim();
+
+        // Update To preview
+        const prevTo = document.getElementById('eqPreviewTo');
+        if (toVal) {
+            prevTo.textContent = toVal;
+            prevTo.className = 'col-10 text-primary fw-semibold';
+        } else {
+            prevTo.textContent = '(Enter recipient email)';
+            prevTo.className = 'col-10 text-danger fst-italic';
+        }
+
+        // Update Cc preview
+        const ccRow = document.getElementById('eqPreviewCcRow');
+        const prevCc = document.getElementById('eqPreviewCc');
+        if (ccVal) {
+            prevCc.textContent = ccVal;
+            ccRow.style.display = '';
+        } else {
+            ccRow.style.display = 'none';
+        }
+
+        // Update Bcc preview
+        const bccRow = document.getElementById('eqPreviewBccRow');
+        const prevBcc = document.getElementById('eqPreviewBcc');
+        if (bccVal) {
+            prevBcc.textContent = bccVal;
+            bccRow.style.display = '';
+        } else {
+            bccRow.style.display = 'none';
+        }
+
+        // Update Subject preview
+        document.getElementById('eqPreviewSubject').textContent = subVal || `Quotation - ${currentQuoteId || ''}`;
+
+        // Update Custom Message in Preview
+        const customMsgContainer = document.getElementById('eqPreviewCustomMsgContainer');
+        const customMsgText = document.getElementById('eqPreviewCustomMsgText');
+        if (msgVal) {
+            customMsgText.textContent = msgVal;
+            customMsgContainer.style.display = 'block';
+        } else {
+            customMsgContainer.style.display = 'none';
+        }
+    }
+
+    function showDraftBadge(text) {
+        const badge = document.getElementById('eqDraftSavedBadge');
+        const badgeText = document.getElementById('eqDraftSavedText');
+        if (badge && badgeText) {
+            badgeText.textContent = text;
+            badge.style.display = 'inline-flex';
+        }
+    }
+
+    function hideDraftBadge() {
+        const badge = document.getElementById('eqDraftSavedBadge');
+        if (badge) badge.style.display = 'none';
+    }
+
+    async function saveEmailQuoteDraft() {
+        if (!currentQuoteId) return;
+        const saveBtn = document.getElementById('eqSaveDraftBtn');
+        const originalHtml = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+        saveBtn.disabled = true;
+
+        const draftData = {
+            to: document.getElementById('eqToInput').value.trim(),
+            cc: document.getElementById('eqCcInput').value.trim(),
+            bcc: document.getElementById('eqBccInput').value.trim(),
+            subject: document.getElementById('eqSubjectInput').value.trim(),
+            message: document.getElementById('eqMessageInput').value.trim()
+        };
+
+        try {
+            localStorage.setItem('eq_draft_' + currentQuoteId, JSON.stringify(draftData));
+        } catch (e) {}
+
+        try {
+            const resp = await fetch(`/customer/quote/${encodeURIComponent(currentQuoteId)}/email/draft`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(draftData)
+            });
+            const resJson = await resp.json();
+            if (resJson.success) {
+                showDraftBadge('Draft saved at ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+                saveBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>Saved!';
                 setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }, 3000);
+                    saveBtn.innerHTML = originalHtml;
+                    saveBtn.disabled = false;
+                }, 1600);
             } else {
-                alert(data.message || 'Failed to email quote');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                throw new Error(resJson.message);
             }
-        })
-        .catch(err => {
-            alert('An error occurred while emailing the quote.');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        });
+        } catch (err) {
+            showDraftBadge('Draft saved (locally)');
+            saveBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>Saved (Local)';
+            setTimeout(() => {
+                saveBtn.innerHTML = originalHtml;
+                saveBtn.disabled = false;
+            }, 1600);
+        }
+    }
+
+    async function sendEmailQuoteNow() {
+        if (!currentQuoteId) return;
+        const toVal = document.getElementById('eqToInput').value.trim();
+        const alertBox = document.getElementById('eqStatusAlert');
+        alertBox.style.display = 'none';
+
+        if (!toVal) {
+            alertBox.className = 'mt-3 alert alert-danger py-2 small';
+            alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Please specify at least one recipient email address (To).';
+            alertBox.style.display = 'block';
+            document.getElementById('eqToInput').focus();
+            return;
+        }
+
+        const sendBtn = document.getElementById('eqSendBtn');
+        const originalHtml = sendBtn.innerHTML;
+        sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+        sendBtn.disabled = true;
+
+        const payload = {
+            to: toVal,
+            cc: document.getElementById('eqCcInput').value.trim(),
+            bcc: document.getElementById('eqBccInput').value.trim(),
+            subject: document.getElementById('eqSubjectInput').value.trim(),
+            message: document.getElementById('eqMessageInput').value.trim()
+        };
+
+        try {
+            const resp = await fetch(`/customer/quote/${encodeURIComponent(currentQuoteId)}/email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const resJson = await resp.json();
+            if (resJson.success) {
+                try { localStorage.removeItem('eq_draft_' + currentQuoteId); } catch(e){}
+                fetch(`/customer/quote/${encodeURIComponent(currentQuoteId)}/email/draft`, { method: 'DELETE' }).catch(()=>{});
+
+                if (currentQuoteBtn) {
+                    currentQuoteBtn.innerHTML = '✓ Sent!';
+                    setTimeout(() => {
+                        currentQuoteBtn.innerHTML = currentQuoteBtnOriginalText;
+                        currentQuoteBtn.disabled = false;
+                    }, 4000);
+                }
+
+                closeEmailQuoteModal();
+                showGlobalNotification('✓ ' + (resJson.message || 'Quotation email sent successfully!'), 'success');
+            } else {
+                alertBox.className = 'mt-3 alert alert-danger py-2 small';
+                alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (resJson.message || 'Failed to send email.');
+                alertBox.style.display = 'block';
+                sendBtn.innerHTML = originalHtml;
+                sendBtn.disabled = false;
+            }
+        } catch (err) {
+            alertBox.className = 'mt-3 alert alert-danger py-2 small';
+            alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Network error sending email. Please try again.';
+            alertBox.style.display = 'block';
+            sendBtn.innerHTML = originalHtml;
+            sendBtn.disabled = false;
+        }
+    }
+
+    function showGlobalNotification(msg, type='success') {
+        let toast = document.getElementById('eqGlobalToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'eqGlobalToast';
+            toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.2);font-weight:600;font-size:0.9rem;display:flex;align-items:center;gap:10px;transition:all 0.3s ease;transform:translateY(100px);opacity:0;';
+            document.body.appendChild(toast);
+        }
+        toast.style.background = type === 'success' ? '#059669' : '#dc2626';
+        toast.style.color = '#ffffff';
+        toast.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill'}"></i> <span>${msg}</span>`;
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.transform = 'translateY(100px)';
+            toast.style.opacity = '0';
+        }, 4500);
     }
 
     function filterStatus(status, chip) {
@@ -949,5 +1226,365 @@
             });
         }
     }
+
+    // Modal Keyboard listener (Escape to close)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeEmailQuoteModal();
+    });
+
 </script>
+
+{% include 'components/terms_modal.html' %}
+
+<!-- EMAIL QUOTE INTERACTIVE MODAL POPUP -->
+<div id="emailQuoteModal" class="eq-modal-backdrop" style="display: none;" onclick="if(event.target === this) closeEmailQuoteModal();">
+    <div class="eq-modal-dialog">
+        <div class="eq-modal-content">
+            <!-- Modal Header -->
+            <div class="eq-modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="eq-icon-circle">
+                        <i class="bi bi-envelope-paper-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold eq-title">Email Quotation</h5>
+                        <div class="eq-subtitle small text-muted">
+                            Ref: <span id="eqModalRef" class="font-monospace fw-bold text-primary"></span>
+                            <span id="eqModalRouteBadge" class="badge bg-light text-dark border ms-2"></span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="eq-close-btn" onclick="closeEmailQuoteModal()" aria-label="Close" title="Close (Esc)">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="eq-modal-body">
+                <div class="row g-4">
+                    <!-- Left Column: Compose Fields -->
+                    <div class="col-lg-6">
+                        <div class="eq-form-section">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label small fw-bold mb-0 text-uppercase tracking-wider">
+                                    Recipients <span class="text-danger">*</span>
+                                </label>
+                                <button type="button" class="btn btn-link p-0 small text-decoration-none fw-semibold" style="font-size: 0.75rem;" onclick="addCurrentUserToRecipient()">
+                                    <i class="bi bi-person-plus me-1"></i>+ My Email
+                                </button>
+                            </div>
+                            
+                            <!-- To Field -->
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text eq-input-label">To</span>
+                                <input type="text" id="eqToInput" class="form-control" placeholder="client@company.com, partner@logistics.com" oninput="updateEmailPreview()">
+                            </div>
+
+                            <!-- Cc Field -->
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text eq-input-label">Cc</span>
+                                <input type="text" id="eqCcInput" class="form-control" placeholder="colleague@company.com" oninput="updateEmailPreview()">
+                            </div>
+
+                            <!-- Bcc Field -->
+                            <div class="input-group input-group-sm mb-3">
+                                <span class="input-group-text eq-input-label">Bcc</span>
+                                <input type="text" id="eqBccInput" class="form-control" placeholder="audit@company.com, records@domain.com" oninput="updateEmailPreview()">
+                            </div>
+
+                            <!-- Subject Field -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-uppercase tracking-wider">Subject</label>
+                                <input type="text" id="eqSubjectInput" class="form-control form-control-sm" placeholder="Quotation Subject" oninput="updateEmailPreview()">
+                            </div>
+
+                            <!-- Message Field -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold text-uppercase tracking-wider mb-0">Custom Note / Message</label>
+                                    <span class="text-muted" style="font-size: 0.72rem;">Included in email body</span>
+                                </div>
+                                <textarea id="eqMessageInput" class="form-control form-control-sm" rows="3" placeholder="Add custom notes, instructions, or greeting for recipient..." oninput="updateEmailPreview()"></textarea>
+                            </div>
+
+                            <!-- Attachment Info -->
+                            <div class="eq-attachment-chip p-2 rounded-3 border d-flex align-items-center justify-content-between bg-light">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
+                                    <div>
+                                        <div class="fw-bold small" id="eqAttachmentName">Quotation_PDF.pdf</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">Official generated PDF document attached</div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Auto-Attached</span>
+                            </div>
+
+                            <!-- Status / Feedback Message -->
+                            <div id="eqStatusAlert" class="mt-3 small" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Live Email Preview -->
+                    <div class="col-lg-6">
+                        <div class="eq-preview-header d-flex align-items-center justify-content-between mb-2">
+                            <span class="small fw-bold text-uppercase tracking-wider text-muted">
+                                <i class="bi bi-eye me-1"></i> Live Email Preview
+                            </span>
+                            <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">Recipient View</span>
+                        </div>
+
+                        <div class="eq-preview-window border rounded-3 p-3">
+                            <!-- Simulated Email Header Meta -->
+                            <div class="eq-preview-meta border-bottom pb-2 mb-2" style="font-size: 0.76rem;">
+                                <div class="row g-1 mb-1">
+                                    <div class="col-2 text-muted fw-bold">From:</div>
+                                    <div class="col-10 text-dark fw-semibold" id="eqPreviewFrom">{{ current_user.name }} &lt;{{ current_user.email }}&gt;</div>
+                                </div>
+                                <div class="row g-1 mb-1">
+                                    <div class="col-2 text-muted fw-bold">To:</div>
+                                    <div class="col-10 text-primary fw-semibold" id="eqPreviewTo">(No recipient entered)</div>
+                                </div>
+                                <div class="row g-1 mb-1" id="eqPreviewCcRow" style="display: none;">
+                                    <div class="col-2 text-muted fw-bold">Cc:</div>
+                                    <div class="col-10 text-secondary" id="eqPreviewCc"></div>
+                                </div>
+                                <div class="row g-1 mb-1" id="eqPreviewBccRow" style="display: none;">
+                                    <div class="col-2 text-muted fw-bold">Bcc:</div>
+                                    <div class="col-10 text-muted fst-italic" id="eqPreviewBcc"></div>
+                                </div>
+                                <div class="row g-1">
+                                    <div class="col-2 text-muted fw-bold">Subject:</div>
+                                    <div class="col-10 text-dark fw-bold" id="eqPreviewSubject">Quotation Details</div>
+                                </div>
+                            </div>
+
+                            <!-- Simulated Email Body Content -->
+                            <div class="eq-preview-body p-3 bg-white border rounded-2" style="font-size: 0.8rem; max-height: 290px; overflow-y: auto;">
+                                <div style="border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 12px;">
+                                    <div class="fw-bold fs-6 text-primary" id="eqPreviewBrandTitle">{{ company.name if company else (system_company_name or "Fast Transit Line") }}</div>
+                                    <div class="text-muted" style="font-size: 0.68rem;">Customer Logistics Portal · Official Quotation</div>
+                                </div>
+
+                                <p class="mb-2">Dear Valued Partner / Customer,</p>
+                                <p class="text-muted mb-2" style="line-height: 1.45; font-size: 0.78rem;">
+                                    Please find below the quotation details for quotation reference <strong class="text-dark" id="eqPreviewRefText">—</strong>. The complete official quotation document is attached to this email as a PDF.
+                                </p>
+
+                                <div id="eqPreviewCustomMsgContainer" class="p-2 mb-2 rounded bg-light border-start border-primary border-3" style="display: none; font-size: 0.78rem; font-style: italic; color: #334155;">
+                                    <span id="eqPreviewCustomMsgText"></span>
+                                </div>
+
+                                <!-- Summary Table in Preview -->
+                                <table class="table table-sm table-bordered mb-2" style="font-size: 0.74rem;">
+                                    <tbody>
+                                        <tr>
+                                            <td class="bg-light fw-bold" style="width: 38%;">Routing:</td>
+                                            <td id="eqPreviewRoute" class="fw-semibold">—</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="bg-light fw-bold">Carrier / NVOCC:</td>
+                                            <td id="eqPreviewCarrier">—</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="bg-light fw-bold">Service Type:</td>
+                                            <td id="eqPreviewService">LCL</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="bg-light fw-bold">Cargo Details:</td>
+                                            <td id="eqPreviewVolume">—</td>
+                                        </tr>
+                                        <tr class="table-primary">
+                                            <td class="fw-bold">Total Amount:</td>
+                                            <td id="eqPreviewTotal" class="fw-bold text-primary">—</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="p-2 bg-light border border-dashed rounded text-muted mb-2" style="font-size: 0.72rem;">
+                                    📎 <strong id="eqPreviewAttachmentLabel">Quotation.pdf</strong> attached
+                                </div>
+
+                                <div class="text-muted pt-2 border-top" style="font-size: 0.68rem;">
+                                    Sent by {{ current_user.name }} &middot; {{ company.name if company else (system_company_name or "Fast Transit Line") }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="eq-modal-footer d-flex align-items-center justify-content-between p-3 border-top">
+                <div class="d-flex align-items-center gap-2">
+                    <span id="eqDraftSavedBadge" class="badge bg-secondary-subtle text-secondary" style="display: none; font-size: 0.72rem;">
+                        <i class="bi bi-clock-history me-1"></i><span id="eqDraftSavedText">Draft saved</span>
+                    </span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3 rounded-pill" onclick="closeEmailQuoteModal()">
+                        Cancel
+                    </button>
+                    <button type="button" id="eqSaveDraftBtn" class="btn btn-sm btn-outline-primary px-3 rounded-pill" onclick="saveEmailQuoteDraft()">
+                        <i class="bi bi-bookmark-check me-1"></i>Save as Draft
+                    </button>
+                    <button type="button" id="eqSendBtn" class="btn btn-sm btn-primary px-4 rounded-pill fw-bold shadow-sm" onclick="sendEmailQuoteNow()">
+                        <i class="bi bi-send-fill me-1"></i>Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Email Quote Modal Styles */
+.eq-modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1060;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: eqFadeIn 0.2s ease-out;
+}
+@keyframes eqFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.eq-modal-dialog {
+    width: 100%;
+    max-width: 960px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    animation: eqSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes eqSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.eq-modal-content {
+    background: var(--mq-bg-white, #ffffff);
+    border: 1px solid var(--mq-border-color, #e2e8f0);
+    border-radius: 16px;
+    box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+    max-height: 92vh;
+    overflow: hidden;
+}
+.eq-modal-header {
+    padding: 1rem 1.4rem;
+    border-bottom: 1px solid var(--mq-border-color, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--mq-bg-light, #f8fafc);
+}
+.eq-icon-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--primary-color, #2563eb) 12%, transparent);
+    color: var(--primary-color, #2563eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+}
+.eq-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1rem;
+    color: #64748b;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.eq-close-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #0f172a;
+}
+.eq-modal-body {
+    padding: 1.4rem;
+    overflow-y: auto;
+    flex: 1;
+}
+.eq-input-label {
+    min-width: 48px;
+    font-weight: 700;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    background: var(--mq-bg-light, #f8fafc);
+}
+.eq-preview-window {
+    background: var(--mq-bg-light, #f8fafc);
+    border: 1px solid var(--mq-border-color, #e2e8f0);
+}
+.eq-preview-body {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* Dark mode overrides for modal */
+html[data-color-scheme="dark"] .eq-modal-content {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+html[data-color-scheme="dark"] .eq-modal-header {
+    background: #0f172a;
+    border-bottom-color: #334155;
+}
+html[data-color-scheme="dark"] .eq-close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+html[data-color-scheme="dark"] .eq-input-label {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+html[data-color-scheme="dark"] .eq-modal-content .form-control {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+html[data-color-scheme="dark"] .eq-attachment-chip {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+}
+html[data-color-scheme="dark"] .eq-preview-window {
+    background: #0f172a;
+    border-color: #334155;
+}
+html[data-color-scheme="dark"] .eq-preview-body {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f1f5f9 !important;
+}
+html[data-color-scheme="dark"] .eq-preview-body table td {
+    background: #1e293b !important;
+    color: #f1f5f9 !important;
+    border-color: #334155 !important;
+}
+html[data-color-scheme="dark"] .eq-preview-body table td.bg-light {
+    background: #0f172a !important;
+    color: #94a3b8 !important;
+}
+html[data-color-scheme="dark"] .eq-modal-footer {
+    border-top-color: #334155 !important;
+    background: #0f172a;
+}
+</style>
 {% endblock %}

@@ -90,8 +90,8 @@ from app.models.models import SystemSetting
 
 class SystemMailer:
     @staticmethod
-    def send_email(to_email, subject, html_content, attachment_data=None, attachment_filename=None, user=None):
-        # Use the recipient's customer mail settings when they have their own SMTP server
+    def send_email(to_email, subject, html_content, attachment_data=None, attachment_filename=None, user=None, cc=None, bcc=None):
+        import re
         from app.models.models import User
         from app.services.customer_settings import effective_settings
         if user is None:
@@ -101,11 +101,28 @@ class SystemMailer:
             print("SystemMailer Error: SMTP settings are incomplete in the Admin Dashboard.")
             return False
 
+        def parse_addrs(val):
+            if not val:
+                return []
+            if isinstance(val, list):
+                return [str(v).strip() for v in val if v and str(v).strip()]
+            return [v.strip() for v in re.split(r'[,;]+', str(val)) if v.strip()]
+
+        to_list = parse_addrs(to_email)
+        cc_list = parse_addrs(cc)
+        bcc_list = parse_addrs(bcc)
+
+        if not to_list:
+            print("SystemMailer Error: No recipient email specified.")
+            return False
+
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         sender_name = getattr(settings, 'smtp_sender_name', None) or getattr(settings, 'company_name', None) or 'Admin'
         msg['From'] = f"{sender_name} <{settings.smtp_user}>"
-        msg['To'] = to_email
+        msg['To'] = ", ".join(to_list)
+        if cc_list:
+            msg['Cc'] = ", ".join(cc_list)
 
         msg.attach(MIMEText(html_content, 'html'))
         
@@ -115,11 +132,13 @@ class SystemMailer:
             part['Content-Disposition'] = f'attachment; filename="{attachment_filename}"'
             msg.attach(part)
 
+        all_recipients = list(dict.fromkeys(to_list + cc_list + bcc_list))
+
         try:
             server = smtplib.SMTP(settings.smtp_server, int(settings.smtp_port or 587))
             server.starttls()
             server.login(settings.smtp_user, settings.smtp_password)
-            server.sendmail(settings.smtp_user, [to_email], msg.as_string())
+            server.sendmail(settings.smtp_user, all_recipients, msg.as_string())
             server.quit()
             return True
         except Exception as e:

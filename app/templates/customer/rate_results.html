@@ -947,7 +947,7 @@
                 </div>
                 <div class="offer-footer">
                     <div class="footer-links">
-                        <a class="terms-link" href="{{ system_terms_url if system_terms_url else '#' }}" {% if system_terms_url %}target="_blank"{% endif %}>📄 View terms &amp; conditions ↗</a>
+                        <a class="terms-link" href="#" onclick="event.preventDefault(); event.stopPropagation(); openTermsModal();">📄 View terms &amp; conditions</a>
                     </div>
                     <button class="breakdown-toggle" onclick="toggleBreakdown(this, 'bd-{{ loop.index }}')">View rate
                         breakdown <span class="chev">▾</span></button>
@@ -1260,4 +1260,5 @@
 </div>
 {% endfor %}
 
+{% include 'components/terms_modal.html' %}
 {% endblock %}

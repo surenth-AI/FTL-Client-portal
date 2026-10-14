@@ -282,7 +282,6 @@ def create_app(config_class=Config):
     from app.routes.auth import auth
     from app.routes.admin import admin
     from app.routes.customer import customer
-    from app.routes.tracking import tracking_bp
     from app.routes.edi import edi
     from app.routes.notices import notices
     from app.routes.billing import billing
@@ -293,7 +292,6 @@ def create_app(config_class=Config):
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(admin, url_prefix='/admin')
     app.register_blueprint(customer, url_prefix='/customer')
-    app.register_blueprint(tracking_bp, url_prefix='/tracking')
     app.register_blueprint(edi, url_prefix='/edi')
     app.register_blueprint(notices, url_prefix='/notices')
     app.register_blueprint(billing, url_prefix='/billing')

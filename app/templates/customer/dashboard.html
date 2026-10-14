@@ -103,7 +103,7 @@
 
 <!-- Quick Actions -->
 <div class="row g-3 mb-4 intel-fade-in" style="animation-delay: 0.1s;">
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4">
         <a href="{{ url_for('customer.my_shipments') }}" class="action-card">
             <div class="glass-card action-inner p-4 text-center h-100">
                 <div class="action-icon bg-success bg-opacity-10 mx-auto">
@@ -114,7 +114,7 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4">
         <a href="{{ url_for('customer.rates') }}" class="action-card">
             <div class="glass-card action-inner p-4 text-center h-100">
                 <div class="action-icon bg-primary bg-opacity-10 mx-auto">
@@ -125,18 +125,7 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
-        <a href="{{ url_for('tracking.index') }}" class="action-card">
-            <div class="glass-card action-inner p-4 text-center h-100">
-                <div class="action-icon bg-warning bg-opacity-10 mx-auto">
-                    <i class="bi bi-geo-alt text-warning fs-5"></i>
-                </div>
-                <div class="fw-bold text-dark small mb-1">Live Tracking</div>
-                <div class="text-muted" style="font-size: 0.7rem;">Track your cargo</div>
-            </div>
-        </a>
-    </div>
-    <div class="col-6 col-md-3" id="si-action-container">
+    <div class="col-12 col-md-4" id="si-action-container">
         <div class="glass-card action-inner p-4 text-center h-100" style="opacity: 0.5;">
             <div class="action-icon bg-secondary bg-opacity-10 mx-auto">
                 <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
