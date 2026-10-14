@@ -277,28 +277,38 @@ def terms_conditions():
 @customer.route('/api/dashboard-stats')
 @login_required
 def api_dashboard_stats():
-    total_shipments = Booking.query.filter_by(user_id=current_user.id).count()
-    in_transit = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status.contains('Transit')).count()
-    delivered = Booking.query.filter_by(user_id=current_user.id, status='Delivered').count()
-    pending = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status.contains('Pending')).count()
-    booked = Booking.query.filter_by(user_id=current_user.id, status='Booked').count()
+    account_id = 4300
+    headers = {'accept': 'application/json', 'x-api-key': '1'}
+    items = []
     
-    si_needed_booking = Booking.query.filter_by(user_id=current_user.id, status='Booked', is_si_submitted=False).first()
-    si_needed = {'id': si_needed_booking.id} if si_needed_booking else None
-    
-    recent_bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).limit(5).all()
+    try:
+        url = "http://realnexus.comit.cloud:5000/api/Bookings"
+        resp = requests.get(url, params={"accountId": account_id, "pageSize": 100}, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            raw_bookings = resp.json().get('bookings', [])
+            items = [ApiBookingItem(b) for b in raw_bookings]
+    except Exception as e:
+        current_app.logger.error(f"Error fetching API bookings for dashboard stats: {e}")
+
+    total_shipments = len(items)
+    in_transit = sum(1 for it in items if it.status == 'In Transit')
+    delivered = sum(1 for it in items if it.status == 'Delivered')
+    booked = sum(1 for it in items if it.status in ['Confirmed', 'Booked'])
+    pending = sum(1 for it in items if 'Pending' in (it.status or ''))
+
     recent_shipments = []
-    for b in recent_bookings:
+    for it in items[:5]:
+        b_ref = it.bookingref or str(it.id)
         recent_shipments.append({
-            'id': b.id,
-            'origin': b.origin,
-            'destination': b.destination,
-            'service_type': b.service_type,
-            'selected_nvocc': b.selected_nvocc,
-            'status': b.status,
-            'created_at': b.created_at.strftime('%d %b %Y')
+            'id': b_ref,
+            'origin': it.origin,
+            'destination': it.destination,
+            'service_type': it.service_type or 'LCL/LCL',
+            'selected_nvocc': it.vessel or 'Direct',
+            'status': it.status,
+            'created_at': it.created_at.strftime('%d %b %Y') if it.created_at else ''
         })
-        
+
     return jsonify({
         'total_shipments': total_shipments,
         'total_active': total_shipments - delivered,
@@ -306,7 +316,7 @@ def api_dashboard_stats():
         'pending': pending,
         'delivered': delivered,
         'booked': booked,
-        'si_needed': si_needed,
+        'si_needed': None,
         'recent_shipments': recent_shipments
     })
 
@@ -2942,7 +2952,7 @@ class ApiBookingItem:
         self.place_of_receipt = self.porLocation
         self.polLocation = self.raw.get('polLocation') or ''
         self.pollocation = self.polLocation
-        self.origin = (self.porLocation.strip() or self.polLocation.strip()) or 'Origin'
+        self.origin = (self.porLocation.strip() or self.polLocation.strip()) or ''
         
         # Destination: ISNULL(dellocation, podlocation)
         self.delLocation = self.raw.get('delLocation') or ''
@@ -2950,7 +2960,7 @@ class ApiBookingItem:
         self.place_of_delivery = self.delLocation
         self.podLocation = self.raw.get('podLocation') or ''
         self.podlocation = self.podLocation
-        self.destination = (self.delLocation.strip() or self.podLocation.strip()) or 'Destination'
+        self.destination = (self.delLocation.strip() or self.podLocation.strip()) or ''
         
         # Quantities
         self.totalcolli = self.raw.get('totalColli') or 0
@@ -2970,6 +2980,12 @@ class ApiBookingItem:
         self.ops_manager = self.raw.get('opsManager') or ''
         self.customer_name = self.raw.get('customerName') or ''
         self.customer_contact = self.raw.get('customerContactName') or ''
+        self.shipper_name = self.raw.get('shipperName') or ''
+        self.shipper_contact = self.raw.get('shipperContactName') or ''
+        self.consignee_name = self.raw.get('consigneeName') or ''
+        self.consignee_contact = self.raw.get('consigneeContactName') or ''
+        self.notify_party = self.raw.get('notifyParty') or ''
+        self.notify_contact = self.raw.get('notifyContact') or ''
         self.special_instructions = self.raw.get('specialInstructions') or ''
         self.internal_memo = self.raw.get('internalMemo') or ''
         self.destination_contact = self.raw.get('cfsDestinationRef') or ''
@@ -3424,10 +3440,6 @@ def shipment_detail(booking_id):
                     merged[k] = list_item.get(k)
         booking_obj = ApiBookingItem(merged)
 
-    # Fallback to local DB safely if any legacy record exists
-    if not booking_obj:
-        booking_obj = get_booking_safely(booking_id)
-        
     if not booking_obj:
         abort(404)
         

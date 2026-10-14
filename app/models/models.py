@@ -92,8 +92,8 @@ class Booking(db.Model):
     place_of_delivery = db.Column(db.String(100), nullable=True)
     freight_terms = db.Column(db.String(100), nullable=True)
     general_description = db.Column(db.Text, nullable=True)
-    general_terms = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(50), nullable=False, default='Booked') # Booked / In Transit / Delivered / Arrival Notice Sent
+    # Legacy field preserved for schema compatibility; live shipment statuses are derived dynamically from ERP API milestones
+    status = db.Column(db.String(50), nullable=True)
     
     # Shipment Tracking Details
     mbl_number = db.Column(db.String(100), nullable=True)

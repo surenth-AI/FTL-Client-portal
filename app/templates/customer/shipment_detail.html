@@ -659,20 +659,17 @@
     <div class="vb-header-row">
         <div class="vb-title-block">
             <h1>
-                {{ booking.api_booking_ref or booking.bookingref or ('BK-' ~ '%06d'|format(booking.id)) }}
+                {{ booking.api_booking_ref or booking.bookingref or '' }}
                 <span class="vb-status-pill {{ status_class }}"><span class="dot"></span>{{ status_text }}</span>
             </h1>
             <div class="vb-meta-line">
-                {{ booking.origin }} → {{ booking.destination }}{% if booking.created_at %} · Submitted {{ booking.created_at.strftime('%Y-%m-%d') }}{% endif %}{% if booking.ata %} · Delivered {{ booking.ata.strftime('%Y-%m-%d') }}{% elif booking.atd %} · Departed {{ booking.atd.strftime('%Y-%m-%d') }}{% elif booking.etd %} · Expected ETD {{ booking.etd.strftime('%Y-%m-%d') }}{% endif %}
+                {{ booking.origin }}{% if booking.origin and booking.destination %} → {% endif %}{{ booking.destination }}{% if booking.created_at %} · Submitted {{ booking.created_at.strftime('%Y-%m-%d') }}{% endif %}{% if booking.ata %} · Delivered {{ booking.ata.strftime('%Y-%m-%d') }}{% elif booking.atd %} · Departed {{ booking.atd.strftime('%Y-%m-%d') }}{% elif booking.etd %} · Expected ETD {{ booking.etd.strftime('%Y-%m-%d') }}{% endif %}
             </div>
         </div>
         <div class="vb-actions">
             <a href="{{ url_for('customer.download_all_docs', booking_id=booking.id) }}" class="vb-btn">
                 <span>↓</span> Download Documents
             </a>
-            <button class="vb-btn" onclick="alert('Connecting to Antwerp Operations Office (+32 3 205 6152)...')">
-                <span>📞</span> Contact Office
-            </button>
             {% if stage <= 2 %}
             <button class="vb-btn vb-btn-danger" onclick="if(confirm('Are you sure you want to request cancellation for this booking?')) alert('Cancellation request submitted to Operations team.');">
                 Cancel Request
@@ -693,28 +690,28 @@
             <div class="stepper-step {{ 'completed' if stage > 1 else ('active' if stage == 1 else '') }}">
                 <div class="stepper-circle">{{ '✓' if stage > 1 else '' }}</div>
                 <div class="stepper-label">Submitted</div>
-                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '—' }}</div>
+                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '' }}</div>
             </div>
 
             <!-- STEP 2: Confirmed -->
             <div class="stepper-step {{ 'completed' if stage > 2 else ('active' if stage == 2 else '') }}">
                 <div class="stepper-circle">{{ '✓' if stage > 2 else ('' if stage == 2 else '2') }}</div>
                 <div class="stepper-label">Confirmed</div>
-                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '—' }}</div>
+                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '' }}</div>
             </div>
 
             <!-- STEP 3: In Transit -->
             <div class="stepper-step {{ 'completed' if stage > 3 else ('active' if stage == 3 else '') }}">
                 <div class="stepper-circle">{{ '✓' if stage > 3 else ('' if stage == 3 else '3') }}</div>
                 <div class="stepper-label">In Transit</div>
-                <div class="stepper-date">{% if booking.atd %}Departed {{ booking.atd.strftime('%Y-%m-%d') }}{% elif booking.etd %}Expected {{ booking.etd.strftime('%Y-%m-%d') }}{% else %}—{% endif %}</div>
+                <div class="stepper-date">{% if booking.atd %}Departed {{ booking.atd.strftime('%Y-%m-%d') }}{% endif %}</div>
             </div>
 
             <!-- STEP 4: Delivered -->
             <div class="stepper-step {{ 'completed' if stage >= 4 else '' }}">
                 <div class="stepper-circle">{{ '✓' if stage >= 4 else '4' }}</div>
                 <div class="stepper-label">Delivered</div>
-                <div class="stepper-date">{% if booking.ata %}Delivered {{ booking.ata.strftime('%Y-%m-%d') }}{% elif booking.eta %}Expected {{ booking.eta.strftime('%Y-%m-%d') }}{% else %}—{% endif %}</div>
+                <div class="stepper-date">{% if booking.ata %}Delivered {{ booking.ata.strftime('%Y-%m-%d') }}{% endif %}</div>
             </div>
         </div>
     </div>
@@ -728,38 +725,40 @@
             <div class="vb-card">
                 <div class="card-title-row">
                     <h2 class="card-title">Route &amp; Sailing</h2>
-                    {% if booking.customer_ref or booking.quotenumber %}
-                    <span class="quote-badge">REF {{ booking.customer_ref or booking.quotenumber }}</span>
+                    {% if booking.customer_ref %}
+                    <span class="quote-badge">REF {{ booking.customer_ref }}</span>
+                    {% elif booking.quotenumber %}
+                    <span class="quote-badge">QUOTE {{ booking.quotenumber }}</span>
                     {% endif %}
                 </div>
 
                 <div class="route-display">
                     <div class="port-block">
                         <span class="port-label">ORIGIN</span>
-                        <span class="port-name">{{ booking.origin }}</span>
-                        <span class="port-sub">Port</span>
+                        <span class="port-name">{{ booking.origin or '' }}</span>
+                        <span class="port-sub">{% if booking.origin %}Port{% endif %}</span>
                     </div>
                     <div style="font-size: 1.2rem; color: #94a3b8;">→</div>
                     <div class="port-block" style="text-align: right;">
                         <span class="port-label">DESTINATION</span>
-                        <span class="port-name">{{ booking.destination }}</span>
-                        <span class="port-sub">Port</span>
+                        <span class="port-name">{{ booking.destination or '' }}</span>
+                        <span class="port-sub">{% if booking.destination %}Port{% endif %}</span>
                     </div>
                 </div>
 
                 <div class="vessel-info-box">
                     <div>
                         <span style="margin-right: 0.3rem;">🚢</span>
-                        <span class="vessel-name">{{ booking.vessel_name or '—' }}{% if booking.voyage_number %} · Voyage {{ booking.voyage_number }}{% endif %}</span>
+                        <span class="vessel-name">{{ booking.vessel_name or '' }}{% if booking.voyage_number %} · Voyage {{ booking.voyage_number }}{% endif %}</span>
                     </div>
                     <div class="vessel-dates">
-                        ETD {{ booking.etd.strftime('%Y-%m-%d') if booking.etd else '—' }} → ETA {{ booking.eta.strftime('%Y-%m-%d') if booking.eta else '—' }}
+                        {% if booking.etd %}ETD {{ booking.etd.strftime('%Y-%m-%d') }}{% endif %}{% if booking.etd and booking.eta %} → {% endif %}{% if booking.eta %}ETA {{ booking.eta.strftime('%Y-%m-%d') }}{% endif %}
                     </div>
                 </div>
 
-                {% if booking.via_port or via_port %}
+                {% if booking.via_port %}
                 <div>
-                    <span class="service-badge-pill">⇄ Non-Direct Service · via {{ booking.via_port or via_port }}</span>
+                    <span class="service-badge-pill">⇄ Non-Direct Service · via {{ booking.via_port }}</span>
                 </div>
                 {% endif %}
             </div>
@@ -769,9 +768,11 @@
                 <div class="card-title-row">
                     <h2 class="card-title">Cargo</h2>
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        {% if booking.cargo_items %}
                         <span style="font-size: 0.8rem; color: #64748b;">{{ booking.cargo_items|length }} Item(s)</span>
                         {% if booking.cargo_items|length > 1 %}
                         <button class="vb-btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="toggleAllCargo()">Expand all</button>
+                        {% endif %}
                         {% endif %}
                     </div>
                 </div>
@@ -780,15 +781,14 @@
                 {% for item in booking.cargo_items %}
                 <div class="cargo-accordion-item">
                     <div class="cargo-header" onclick="toggleCargoItem(this)">
-                        <span>▼ Cargo Item #{{ loop.index }} {% if item.is_imo %}<span class="haz-badge">⚠ Hazardous</span>{% endif %} &nbsp; <span style="font-weight: normal; color: #64748b;">{{ item.quantity }} {{ item.package_type }} · {{ "%.2f"|format(item.weight_kg) }} kg · {{ "%.3f"|format(item.volume_cbm) }} m³</span></span>
+                        <span>▼ Cargo Item #{{ loop.index }} {% if item.is_imo %}<span class="haz-badge">⚠ Hazardous</span>{% endif %} &nbsp; <span style="font-weight: normal; color: #64748b;">{% if item.quantity %}{{ item.quantity }} {{ item.package_type }}{% endif %}{% if item.weight_kg %} · {{ "%.2f"|format(item.weight_kg) }} kg{% endif %}{% if item.volume_cbm %} · {{ "%.3f"|format(item.volume_cbm) }} m³{% endif %}</span></span>
                     </div>
                     <div class="cargo-body">
                         <div class="cargo-grid">
                             <div><div class="grid-col-label">PIECES</div><div class="grid-col-val">{{ item.quantity }} {{ item.package_type }}</div></div>
                             <div><div class="grid-col-label">GOODS TYPE</div><div class="grid-col-val">{{ 'Hazardous Materials' if item.is_imo else 'General Cargo' }}</div></div>
-                            <div><div class="grid-col-label">WEIGHT</div><div class="grid-col-val">{{ "%.2f"|format(item.weight_kg) }} kg</div></div>
-                            <div><div class="grid-col-label">VOLUME</div><div class="grid-col-val">{{ "%.3f"|format(item.volume_cbm) }} m³</div></div>
-                            <div><div class="grid-col-label">STACKABLE</div><div class="grid-col-val">Yes</div></div>
+                            <div><div class="grid-col-label">WEIGHT</div><div class="grid-col-val">{% if item.weight_kg %}{{ "%.2f"|format(item.weight_kg) }} kg{% endif %}</div></div>
+                            <div><div class="grid-col-label">VOLUME</div><div class="grid-col-val">{% if item.volume_cbm %}{{ "%.3f"|format(item.volume_cbm) }} m³{% endif %}</div></div>
                         </div>
 
                         {% if item.description %}
@@ -802,7 +802,7 @@
                 {% endfor %}
                 {% else %}
                 <div class="py-3 text-muted" style="font-size: 0.85rem;">
-                    No cargo item details recorded. Total colli: {{ booking.totalcolli or '—' }}, Weight: {{ booking.totalweight or '—' }} kg, Volume: {{ booking.totalVolume or '—' }} m³
+                    No cargo item details recorded.
                 </div>
                 {% endif %}
 
@@ -810,15 +810,15 @@
                 <div class="cargo-summary-bar">
                     <div>
                         <div class="summary-item-label">TOTAL PIECES</div>
-                        <div class="summary-item-val">{{ booking.totalcolli if booking.totalcolli else (booking.cargo_items|sum(attribute='quantity') if booking.cargo_items else '—') }}</div>
+                        <div class="summary-item-val">{{ booking.totalcolli if booking.totalcolli else '' }}</div>
                     </div>
                     <div>
                         <div class="summary-item-label">TOTAL WEIGHT</div>
-                        <div class="summary-item-val">{{ "%.2f kg"|format(booking.totalweight) if booking.totalweight else (("%.2f kg"|format(booking.cargo_items|sum(attribute='weight_kg'))) if booking.cargo_items else '—') }}</div>
+                        <div class="summary-item-val">{{ "%.2f kg"|format(booking.totalweight) if booking.totalweight else '' }}</div>
                     </div>
                     <div>
                         <div class="summary-item-label">TOTAL VOLUME</div>
-                        <div class="summary-item-val">{{ "%.3f m³"|format(booking.totalVolume or booking.volume) if (booking.totalVolume or booking.volume) else '—' }}</div>
+                        <div class="summary-item-val">{{ "%.3f m³"|format(booking.totalVolume) if booking.totalVolume else '' }}</div>
                     </div>
                 </div>
             </div>
@@ -829,16 +829,16 @@
                 <div class="cargo-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.75rem;">
                     <div>
                         <div class="grid-col-label">CUSTOMER REFERENCE</div>
-                        <div class="grid-col-val">{{ booking.customer_ref or '—' }}</div>
+                        <div class="grid-col-val">{{ booking.customer_ref or '' }}</div>
                     </div>
                     <div>
                         <div class="grid-col-label">CARGO READY DATE</div>
-                        <div class="grid-col-val">{{ booking.etd.strftime('%Y-%m-%d') if booking.etd else '—' }}</div>
+                        <div class="grid-col-val">{{ booking.etd.strftime('%Y-%m-%d') if booking.etd else '' }}</div>
                     </div>
                 </div>
 
                 <div class="instructions-box">
-                    {{ booking.special_instructions or booking.internal_memo or booking.general_description or booking.general_terms or 'No special instructions recorded.' }}
+                    {{ booking.special_instructions or booking.internal_memo or 'No special instructions recorded.' }}
                 </div>
             </div>
 
@@ -848,22 +848,24 @@
                 <div class="parties-grid">
                     <div>
                         <div class="party-title">SHIPPER</div>
-                        <div class="party-name">{{ booking.customer_name or (current_user.accounts[0].account_name if current_user.accounts else '—') }}</div>
+                        <div class="party-name">{{ booking.shipper_name or '' }}</div>
                         <div class="party-sub">
-                            {{ booking.customer_contact or current_user.full_name or '—' }}<br>
-                            {{ current_user.email or '' }}
+                            {{ booking.shipper_contact or '' }}
                         </div>
                     </div>
                     <div>
-                        <div class="party-title">DESTINATION / CONSIGNEE</div>
-                        <div class="party-name">{{ booking.destination or '—' }}</div>
+                        <div class="party-title">CONSIGNEE</div>
+                        <div class="party-name">{{ booking.consignee_name or '' }}</div>
                         <div class="party-sub">
-                            {{ booking.destination_contact or 'Direct Delivery' }}
+                            {{ booking.consignee_contact or '' }}
                         </div>
                     </div>
                     <div>
                         <div class="party-title">NOTIFY PARTY</div>
-                        <div class="party-name" style="font-size: 0.8rem; font-weight: 700; color: #475569;">Same as Consignee</div>
+                        <div class="party-name">{{ booking.notify_party or '' }}</div>
+                        <div class="party-sub">
+                            {{ booking.notify_contact or '' }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -872,17 +874,17 @@
         <!-- RIGHT COLUMN (SIDEBAR CARDS) -->
         <div>
             <!-- BOOKING COORDINATOR CARD -->
+            {% if booking.ops_manager %}
             <div class="vb-card">
                 <div class="grid-col-label" style="margin-bottom: 0.75rem;">BOOKING COORDINATOR</div>
                 <div class="coordinator-card">
                     <div class="avatar-circle">FTL</div>
                     <div>
-                        <div class="coord-name">{{ booking.ops_manager or 'Operations Team' }}</div>
-                        <div class="coord-sub">Operations · Fast Transit Line</div>
-                        <div class="coord-email">operations@fasttransitline.com</div>
+                        <div class="coord-name">{{ booking.ops_manager }}</div>
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <!-- BOOKING INFO CARD -->
             <div class="vb-card">
@@ -890,22 +892,17 @@
 
                 <div class="info-list-item">
                     <div class="info-label">BOOKING TYPE</div>
-                    <div class="info-val">{{ ('Ocean Freight · ' ~ booking.service_type) if booking.service_type else 'Ocean Freight' }}</div>
-                </div>
-
-                <div class="info-list-item">
-                    <div class="info-label">FTL OFFICE</div>
-                    <div class="info-val">Antwerp, Belgium</div>
+                    <div class="info-val">{{ booking.service_type or '' }}</div>
                 </div>
 
                 <div class="info-list-item">
                     <div class="info-label">CUSTOMER ACCOUNT</div>
-                    <div class="info-val">{{ booking.customer_name or (current_user.accounts[0].account_name if current_user.accounts else '—') }}</div>
+                    <div class="info-val">{{ booking.customer_name or '' }}</div>
                 </div>
 
                 <div class="info-list-item">
                     <div class="info-label">LINKED QUOTE</div>
-                    <div class="info-val">{{ booking.quotenumber or booking.customer_ref or '—' }}</div>
+                    <div class="info-val">{{ booking.quotenumber or '' }}</div>
                 </div>
             </div>
         </div>
