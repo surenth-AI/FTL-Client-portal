@@ -488,12 +488,9 @@ def seed_lookups():
 # ====================================================================
 # AZURE & GUNICORN NAMESPACE COLLISION HOTFIX
 # ====================================================================
-# When Azure Gunicorn executes 'app:app', standard Python import rules
-# prioritize the 'app' package folder over the 'app.py' file. 
-#
-# To guarantee an instant, self-healing boot without requiring manual 
-# Azure Portal config changes, we instantiate and expose the Flask 
-# factory 'app' directly at the package root ONLY when running in Azure.
+# When Azure Gunicorn executes 'gunicorn app:app', Python resolves 'app'
+# to either 'app.py' or the 'app/' package folder.
+# We ensure 'app' is ALWAYS instantiated and exposed at the package root
+# so that Gunicorn is 100% guaranteed to find the WSGI callable.
 # ====================================================================
-if 'WEBSITE_INSTANCE_ID' in os.environ:
-    app = create_app()
+app = create_app()

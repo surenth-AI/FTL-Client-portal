@@ -24,3 +24,7 @@ cachetools
 flask-talisman
 flask-limiter
 python-json-logger
+flask-cors
+requests
+reportlab
+pypdf
