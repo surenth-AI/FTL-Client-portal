@@ -2,80 +2,366 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Quotation {{ header.quoteNumber or quote.api_booking_ref or quote.id }}</title>
+    <title>Quotation {{ quote_number }}</title>
     <style>
         @page {
-            size: a4 portrait;
-            margin: 10mm;
-            @frame footer_frame {           
+            size: letter portrait;
+            margin-left: 51pt;
+            margin-right: 51pt;
+            margin-top: 20pt;
+            margin-bottom: 35pt;
+            @frame footer_frame {
                 -pdf-frame-content: footer_content;
-                left: 10mm; width: 190mm; top: 280mm; height: 10mm;
+                left: 51pt;
+                width: 510pt;
+                top: 755pt;
+                height: 25pt;
             }
         }
+        @font-face {
+            font-family: 'Arial';
+            src: url('font:arial');
+        }
+        @font-face {
+            font-family: 'Arial';
+            src: url('font:arial-bold');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'Tahoma';
+            src: url('font:tahoma');
+        }
+        @font-face {
+            font-family: 'Tahoma';
+            src: url('font:tahoma-bold');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'TimesNewRoman';
+            src: url('font:times');
+        }
+
         body {
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 8pt;
+            font-family: 'Arial', sans-serif;
+            font-size: 8.5pt;
             color: #000;
+            line-height: 1.15;
         }
         table {
             border-collapse: collapse;
         }
         td, th {
             vertical-align: top;
+            padding: 0;
+            margin: 0;
         }
         .bold {
             font-weight: bold;
         }
-        .right {
-            text-align: right;
+        .tahoma {
+            font-family: 'Tahoma', sans-serif;
         }
-        .section-header {
-            background-color: #e0e0e0;
+        .times {
+            font-family: 'TimesNewRoman', serif;
+        }
+
+        /* 2. Header Box */
+        .header-outer {
+            width: 100%;
+            border: 1px solid #000;
+        }
+        .header-left-cell {
+            width: 52%;
+            border-right: 1px solid #000;
+            padding: 1pt 3pt;
+        }
+        .header-right-cell {
+            width: 48%;
+            padding: 1pt 3pt;
+        }
+        .header-meta-table {
+            width: 100%;
+        }
+        .header-meta-table td {
+            line-height: 11pt;
+            vertical-align: top;
+        }
+        .meta-lbl {
             font-weight: bold;
-            padding: 4px;
+            font-size: 7.5pt;
+            width: 88pt;
+            white-space: nowrap;
+        }
+        .meta-val {
+            font-size: 8.5pt;
+        }
+        .header-divider-td {
+            border-bottom: 1px solid #000;
+            padding: 0;
+            height: 1pt;
+            line-height: 1pt;
+        }
+        .company-address-text {
+            color: #5F5F5F;
+            font-size: 7.5pt;
+            line-height: 8.7pt;
+            vertical-align: middle;
+        }
+
+        /* 3. Title Bar */
+        .blue-stripe-top {
+            height: 3pt;
+            background-color: #0469B5;
+            margin-top: 4pt;
+        }
+        .black-title-bar {
+            background-color: #000;
+            color: #fff;
+            text-align: center;
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            font-size: 12.2pt;
+            height: 13.6pt;
+            line-height: 13.6pt;
+            margin: 1pt 0;
+        }
+        .blue-stripe-bottom {
+            height: 3pt;
+            background-color: #0469B5;
+            margin-bottom: 5pt;
+        }
+
+        /* 1 & 12. Content Boxes and Section Bars */
+        .content-box-page1 {
+            width: 100%;
+            border: 1px solid #000;
+        }
+        .section-bar-tr td {
+            background-color: #E2E2E2;
+            font-weight: bold;
+            font-size: 9.3pt;
+            height: 11.3pt;
+            line-height: 11.3pt;
+            padding: 0 4pt;
             border-top: 1px solid #000;
             border-bottom: 1px solid #000;
-            font-size: 8pt;
         }
-        .cell-pad {
-            padding: 4px;
-        }
-        .border-bottom {
+        .section-bar-tr-first td {
+            background-color: #E2E2E2;
+            font-weight: bold;
+            font-size: 9.3pt;
+            height: 11.3pt;
+            line-height: 11.3pt;
+            padding: 0 4pt;
+            border-top: none;
             border-bottom: 1px solid #000;
+        }
+        .hazard-bar-tr td {
+            background-color: #E0E0E0;
+            font-weight: bold;
+            font-size: 7.5pt;
+            height: 9pt;
+            line-height: 9pt;
+            padding: 0 4pt;
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }
+
+        /* 4. Greeting */
+        .intro-td {
+            padding: 3pt 6pt 4pt 6pt;
+            font-family: 'Tahoma', sans-serif;
+            font-size: 7.5pt;
+            line-height: 9.1pt;
+        }
+
+        /* 5. Routing */
+        .routing-td {
+            padding: 2pt 4pt;
+        }
+        .routing-table {
+            width: 100%;
+        }
+        .routing-table td {
+            line-height: 11.7pt;
+            vertical-align: top;
+        }
+        .routing-lbl {
+            font-weight: bold;
+            font-size: 7.5pt;
+            width: 105pt;
+            white-space: nowrap;
+        }
+        .routing-val {
+            font-size: 9.3pt;
+        }
+
+        /* 6. Cargo Details */
+        .cargo-td {
+            padding: 2pt 4pt;
+        }
+        .cargo-table {
+            width: 100%;
+        }
+        .cargo-table th {
+            font-weight: bold;
+            font-size: 7.5pt;
+            border-bottom: 1px solid #000;
+            padding-bottom: 1pt;
+        }
+        .cargo-table td {
+            font-size: 9.3pt;
+            line-height: 12pt;
+        }
+        .dims-table {
+            border: 0.5px dotted #000;
+            width: 167pt;
+            text-align: center;
+        }
+        .dims-table th {
+            font-size: 8.5pt;
+            font-weight: normal;
+            border-bottom: 0.5px solid #000;
+            padding: 1pt;
+        }
+        .dims-table td {
+            font-size: 8.5pt;
+            padding: 1pt;
+        }
+        .cargo-totals-table {
+            width: 100%;
+            border-top: 1px solid #000;
+            margin-top: 2pt;
+            padding-top: 2pt;
+        }
+        .cargo-tot-lbl {
+            font-weight: bold;
+            font-size: 8.5pt;
+        }
+        .cargo-tot-val {
+            font-weight: normal;
+            font-size: 9.3pt;
+        }
+
+        /* 7. Hazardous */
+        .hazard-td {
+            padding: 2pt 6pt;
+            font-size: 7.5pt;
+            line-height: 10pt;
+        }
+
+        /* 8. Tariff */
+        .tariff-wrapper-td {
+            padding: 2pt 4pt;
+            background-color: #F0F8FF;
+        }
+        .tariff-table {
+            width: 100%;
+        }
+        .tariff-table th {
+            font-weight: bold;
+            font-size: 7.5pt;
+            border-bottom: 1px solid #000;
+            padding: 1pt 2pt;
+            line-height: 10pt;
+        }
+        .tariff-table td {
+            font-size: 7.5pt;
+            padding: 0.5pt 2pt;
+            line-height: 11.3pt;
+            vertical-align: top;
+        }
+        .tariff-subtotal-rule {
+            border-top: 0.5px solid #000;
+        }
+        .tariff-grand-rule {
+            border-top: 0.5px solid #000;
+            font-size: 9.3pt;
+            font-weight: bold;
+            line-height: 12pt;
+        }
+
+        /* 9. Notes (Total overall, Remarks, Pick Up) */
+        .note-td {
+            padding: 2pt 6pt;
+            font-family: 'Tahoma', sans-serif;
+            font-size: 8.5pt;
+            line-height: 10pt;
+        }
+
+        /* Page 2 */
+        .content-box-page2 {
+            width: 100%;
+            border: 1px solid #000;
+        }
+        .terms-td {
+            padding: 3pt 6pt;
+            font-family: 'TimesNewRoman', serif;
+            font-size: 8.5pt;
+            line-height: 10pt;
+        }
+        .heavy-divider {
+            height: 1.5pt;
+            background-color: #000;
+        }
+        .sailing-table-wrap {
+            padding: 3pt 0 4pt 0;
+        }
+        .sailing-grid {
+            width: 458pt;
+            margin-left: 18pt;
+            border: 1px solid #000;
+        }
+        .sailing-grid th {
+            font-weight: bold;
+            font-size: 8.5pt;
+            border: 0.5px solid #000;
+            padding: 1.5pt 2pt;
+        }
+        .sailing-grid td {
+            font-size: 8.5pt;
+            border: 0.5px solid #000;
+            padding: 1.5pt 2pt;
+            height: 12pt;
+        }
+        .sailing-row-grey td {
+            background-color: #EBEBEB;
         }
     </style>
 </head>
 <body>
-    
-    <!-- HEADER -->
-    <table width="100%" style="border: 1px solid #000;">
+
+    <!-- 2. HEADER BOX -->
+    <table class="header-outer">
         <tr>
-            <td width="50%" style="border-right: 1px solid #000; padding: 4px;">
-                <table width="100%">
-                    <tr><td width="25%" class="bold">Quotation No.:</td><td width="75%">{{ header.quoteNumber or quote.api_booking_ref or ('QUO-' ~ quote.id) }}</td></tr>
-                    <tr><td width="25%" class="bold">Print Date:</td><td width="75%">{{ header.validFrom or quote.created_at.strftime('%Y-%m-%d') }}</td></tr>
-                    <tr><td width="25%" class="bold">To:</td><td width="75%">{{ company_name or (current_user.company.name if current_user and current_user.company else '') }}</td></tr>
-                    <tr><td width="25%" class="bold">Attn.:</td><td width="75%">{{ header.contactName or (current_user.name if current_user else '') }}</td></tr>
-                    <tr><td colspan="2"><hr style="border-top: 1px solid #000; margin: 4px 0;" /></td></tr>
-                    <tr><td width="25%" class="bold">From:</td><td width="75%">{{ prepared_by_name }}</td></tr>
-                    <tr><td width="25%" class="bold">Email:</td><td width="75%">{{ prepared_by_email }}</td></tr>
-                    <tr><td width="25%" class="bold">Phone:</td><td width="75%">{{ prepared_by_phone }}</td></tr>
+            <td class="header-left-cell">
+                <table class="header-meta-table">
+                    <tr><td class="meta-lbl">Quotation No.:</td><td class="meta-val">{{ quote_number }}</td></tr>
+                    <tr><td class="meta-lbl">Print Date:</td><td class="meta-val">{{ print_date }}</td></tr>
+                    <tr><td class="meta-lbl">To:</td><td class="meta-val">{{ to_company }}</td></tr>
+                    <tr><td class="meta-lbl">Attn.:</td><td class="meta-val">{{ attn_name }}</td></tr>
+                    <tr><td colspan="2" class="header-divider-td">&nbsp;</td></tr>
+                    <tr><td class="meta-lbl">From:</td><td class="meta-val">{{ from_name }}</td></tr>
+                    <tr><td class="meta-lbl">Email:</td><td class="meta-val">{{ from_email }}</td></tr>
+                    <tr><td class="meta-lbl">Phone:</td><td class="meta-val">{{ from_phone }}</td></tr>
                 </table>
             </td>
-            <td width="50%" style="padding: 4px;">
+            <td class="header-right-cell">
                 <table width="100%">
                     <tr>
-                        <td width="40%" align="center" style="vertical-align: middle;">
+                        <td width="48%" align="center" style="vertical-align: middle;">
                             {% if logo_abs_path %}
-                            <img src="{{ logo_abs_path }}" style="max-height: 50px; max-width: 150px;">
+                            <img src="{{ logo_abs_path }}" style="width: 102pt; height: 64pt;">
                             {% else %}
-                            <div style="font-size: 32pt; font-weight: 900; color: #1e5a9c; font-style: italic;">{{ sys_company_name[:3] | upper }}</div>
-                            <div style="font-size: 12pt; color: #1e204c; margin-top: -5px;">{{ sys_company_name }}</div>
+                            <div style="font-size: 24pt; font-weight: 900; color: #1a73c9; font-style: italic;">FTL</div>
+                            <div style="font-size: 10pt; font-weight: bold; color: #2b3c97;">Fast Transit Line</div>
                             {% endif %}
                         </td>
-                        <td width="60%" style="color: #777; font-size: 7.5pt; vertical-align: middle;">
+                        <td width="52%" class="company-address-text">
                             {{ sys_company_name }}<br>
-                            {{ sys_company_address | replace('\n', '<br>') | safe }}<br>
+                            {% for line in sys_company_address_lines %}
+                            {{ line }}<br>
+                            {% endfor %}
                             PHONE: {{ sys_company_phone }}
                         </td>
                     </tr>
@@ -84,252 +370,258 @@
         </tr>
     </table>
 
-    <!-- BANNERS -->
-    <hr style="border-top: 2px solid #0056b3; margin: 6px 0 2px 0;" />
-    <div style="background-color: #000; color: #fff; text-align: center; font-weight: bold; font-size: 11pt; padding: 4px 0;">*** QUOTATION ***</div>
-    <hr style="border-top: 2px solid #0056b3; margin: 2px 0 6px 0;" />
+    <!-- 3. QUOTATION TITLE BAR -->
+    <div class="blue-stripe-top"></div>
+    <div class="black-title-bar">*** QUOTATION ***</div>
+    <div class="blue-stripe-bottom"></div>
 
-    <!-- MAIN BODY BORDERED BOX -->
-    <table width="100%" style="border: 1px solid #000;">
+    <!-- 1. PAGE 1 CONTENT BOX (Extends down to y=746) -->
+    <table class="content-box-page1">
         
-        <!-- DEAR SECTION -->
+        <!-- 4. GREETING -->
         <tr>
-            <td class="cell-pad">
-                Dear {{ header.contactName or (current_user.name if current_user else '') }},<br>
+            <td class="intro-td">
+                Dear {{ attn_name }},<br>
                 we thank you for your request. Please find herewith our rate and tentative sailing schedule. With future correspondence in regard to this rate offer, please refer to above mentioned quotation ID nr. If you have any further questions, please do not hesitate to contact us.
             </td>
         </tr>
 
-        <!-- ROUTING SECTION -->
-        <tr>
-            <td class="section-header">
+        <!-- 5. ROUTING & INCO TERM -->
+        <tr class="section-bar-tr-first">
+            <td>
                 <table width="100%">
                     <tr>
-                        <td width="50%" class="bold">ROUTING</td>
-                        <td width="50%" align="right" class="bold">INCO TERM: {{ header.incoTerm or header.incoterm or quote.incoterm or 'CFR' }}</td>
+                        <td width="70%" style="font-weight: bold; font-size: 9.3pt;"> ROUTING</td>
+                        <td width="30%" align="right" style="font-weight: bold; font-size: 9.3pt;">INCO TERM: {{ inco_term }} </td>
                     </tr>
                 </table>
             </td>
         </tr>
         <tr>
-            <td class="cell-pad">
-                <table width="100%">
-                    <tr><td width="20%" class="bold">PLACE OF RECEIPT:</td><td width="30%">{{ quote.origin or header.polLocation or '' }}</td><td width="20%">&nbsp;</td><td width="30%">&nbsp;</td></tr>
-                    <tr><td width="20%" class="bold border-bottom" colspan="4"><hr style="border-top: 1px solid #000; margin: 2px 0;" /></td></tr>
-                    <tr><td width="20%" class="bold">PORT OF LOADING:</td><td width="30%">{{ quote.origin or header.polLocation or '' }}</td><td width="20%">&nbsp;</td><td width="30%">&nbsp;</td></tr>
-                    <tr><td width="20%" class="bold border-bottom" colspan="4"><hr style="border-top: 1px solid #000; margin: 2px 0;" /></td></tr>
-                    <tr><td width="20%" class="bold">PORT OF DISCHARGE:</td><td width="30%">{{ quote.destination or header.podLocation or '' }}</td><td width="20%" align="right" class="bold">FINAL DESTINATION:&nbsp;</td><td width="30%">{{ quote.destination or header.podLocation or '' }}</td></tr>
+            <td class="routing-td">
+                <table class="routing-table">
+                    <tr>
+                        <td class="routing-lbl">PLACE OF RECEIPT:</td>
+                        <td class="routing-val" width="38%">{{ por_location }}</td>
+                        <td width="20%">&nbsp;</td>
+                        <td width="20%">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td class="routing-lbl">PORT OF LOADING:</td>
+                        <td class="routing-val">{{ pol_location }}</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td class="routing-lbl">PORT OF DISCHARGE:</td>
+                        <td class="routing-val">{{ pod_location }}</td>
+                        <td class="routing-lbl" style="width: 110pt;">FINAL DESTINATION:</td>
+                        <td class="routing-val">{{ del_location }}</td>
+                    </tr>
                 </table>
             </td>
         </tr>
 
-        <!-- CARGO DETAILS SECTION -->
-        <tr>
-            <td class="section-header">CARGO DETAILS</td>
+        <!-- 6. CARGO DETAILS -->
+        <tr class="section-bar-tr">
+            <td>CARGO DETAILS</td>
         </tr>
         <tr>
-            <td class="cell-pad">
-                <table width="100%">
+            <td class="cargo-td">
+                <table class="cargo-table">
                     <tr>
-                        <th width="30%" class="border-bottom" align="left">No. and kind of packages</th>
-                        <th width="30%" class="border-bottom" align="left">Description</th>
-                        <th width="20%" class="border-bottom" align="right">Weight (kgs)</th>
-                        <th width="20%" class="border-bottom" align="right">Volume (m³)</th>
+                        <th width="24%" align="left">No. and kind of packages</th>
+                        <th width="44%" align="left">Description</th>
+                        <th width="16%" align="right">Weight (kgs)</th>
+                        <th width="16%" align="right">Volume (m³)</th>
                     </tr>
                     {% if commodities and commodities|length > 0 %}
                         {% for c in commodities %}
                         <tr>
                             <td>{{ c.nrPackages or 1 }} {{ c.packageCode or c.packageTypeDescription or 'BX' }}</td>
                             <td>{{ c.commodityDescription or 'General Cargo' }}</td>
-                            <td align="right">{{ "{:,.2f}".format(c.weight or 0) }}</td>
-                            <td align="right">{{ "{:,.2f}".format(c.volume or 0) }}</td>
+                            <td align="right">{{ c.weight | fmt_num(2) }}</td>
+                            <td align="right">{{ c.volume | fmt_num(2) }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td>{{ quote.packages or 1 }} BX</td>
-                            <td>{{ quote.commodity or 'General Cargo' }}</td>
-                            <td align="right">{{ "{:,.2f}".format(quote.weight or 0) }}</td>
-                            <td align="right">{{ "{:,.2f}".format(quote.volume or 0) }}</td>
+                            <td>{{ quote_packages }} BX</td>
+                            <td>{{ quote_commodity }}</td>
+                            <td align="right">{{ quote_weight | fmt_num(2) }}</td>
+                            <td align="right">{{ quote_volume | fmt_num(2) }}</td>
                         </tr>
                     {% endif %}
                     <tr>
-                        <td colspan="4" style="padding-top: 8px;">
-                            <table width="100%">
+                        <td style="padding-top: 3pt; font-size: 9.3pt;">Dimensions</td>
+                        <td colspan="3" style="padding-top: 2pt;">
+                            <table class="dims-table">
                                 <tr>
-                                    <td width="20%">Dimensions</td>
-                                    <td width="80%">
-                                        <table width="100%" style="border: 1px solid #ccc; text-align: center;">
-                                            <tr>
-                                                <th width="25%" style="border: 1px solid #ccc;">#</th>
-                                                <th width="25%" style="border: 1px solid #ccc;">L</th>
-                                                <th width="25%" style="border: 1px solid #ccc;">W</th>
-                                                <th width="25%" style="border: 1px solid #ccc;">H</th>
-                                            </tr>
-                                            {% if commodities and commodities[0].dimensions %}
-                                            <tr>
-                                                <td style="border: 1px solid #ccc;">&nbsp;</td>
-                                                <td style="border: 1px solid #ccc;">{{ commodities[0].dimensions.length }}</td>
-                                                <td style="border: 1px solid #ccc;">{{ commodities[0].dimensions.width }}</td>
-                                                <td style="border: 1px solid #ccc;">{{ commodities[0].dimensions.height }}</td>
-                                            </tr>
-                                            {% else %}
-                                            <tr>
-                                                <td style="border: 1px solid #ccc;">&nbsp;</td>
-                                                <td style="border: 1px solid #ccc;">0</td>
-                                                <td style="border: 1px solid #ccc;">0</td>
-                                                <td style="border: 1px solid #ccc;">0</td>
-                                            </tr>
-                                            {% endif %}
-                                        </table>
-                                    </td>
+                                    <th width="25%">#</th>
+                                    <th width="25%">L</th>
+                                    <th width="25%">W</th>
+                                    <th width="25%">H</th>
+                                </tr>
+                                <tr>
+                                    <td>{% if commodities and commodities[0].dimensions and commodities[0].dimensions.amount %}{{ commodities[0].dimensions.amount }}{% else %}&nbsp;{% endif %}</td>
+                                    <td>{% if commodities and commodities[0].dimensions and commodities[0].dimensions.length %}{{ commodities[0].dimensions.length }}{% else %}&nbsp;{% endif %}</td>
+                                    <td>{% if commodities and commodities[0].dimensions and commodities[0].dimensions.width %}{{ commodities[0].dimensions.width }}{% else %}&nbsp;{% endif %}</td>
+                                    <td>{% if commodities and commodities[0].dimensions and commodities[0].dimensions.height %}{{ commodities[0].dimensions.height }}{% else %}&nbsp;{% endif %}</td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
+                </table>
+                <table class="cargo-totals-table">
                     <tr>
-                        <td colspan="4"><hr style="border-top: 2px solid #000; margin: 4px 0;" /></td>
-                    </tr>
-                    <tr>
-                        <td class="bold">TOTAL #: {% if commodities %}{{ commodities|map(attribute='nrPackages')|sum }}{% else %}{{ quote.packages or 1 }}{% endif %}</td>
-                        <td align="center" class="bold">TOTAL WEIGHT: {% if commodities %}{{ "{:,.2f}".format(commodities|map(attribute='weight')|sum) }}{% else %}{{ "{:,.2f}".format(quote.weight or 0) }}{% endif %}</td>
-                        <td align="right" class="bold" colspan="2">TOTAL VOLUME: {% if commodities %}{{ "{:,.2f}".format(commodities|map(attribute='volume')|sum) }}{% else %}{{ "{:,.2f}".format(quote.volume or 0) }}{% endif %}</td>
+                        <td width="28%"><span class="cargo-tot-lbl">TOTAL #:</span> <span class="cargo-tot-val">{{ total_packages }}</span></td>
+                        <td width="36%"><span class="cargo-tot-lbl">TOTAL WEIGHT:</span> <span class="cargo-tot-val">{{ total_weight | fmt_num(2) }}</span></td>
+                        <td width="36%"><span class="cargo-tot-lbl">TOTAL VOLUME:</span> <span class="cargo-tot-val">{{ total_volume | fmt_num(2) }}</span></td>
                     </tr>
                 </table>
             </td>
         </tr>
 
-        <!-- HAZARDOUS SECTION -->
-        <tr>
-            <td class="section-header">HAZARDOUS INFORMATION:</td>
+        <!-- 7. HAZARDOUS INFORMATION -->
+        <tr class="hazard-bar-tr">
+            <td>HAZARDOUS INFORMATION:</td>
         </tr>
         <tr>
-            <td class="cell-pad">
-                UN: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CLASS: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PG:
-            </td>
-        </tr>
-
-        <!-- TARIFF SECTION -->
-        <tr>
-            <td class="section-header">TARIFF</td>
-        </tr>
-        <tr>
-            <td class="cell-pad" style="background-color: #f7fbff;">
+            <td class="hazard-td">
                 <table width="100%">
                     <tr>
-                        <th width="30%" class="border-bottom" align="left">Description</th>
-                        <th width="12%" class="border-bottom" align="right">Price</th>
-                        <th width="12%" class="border-bottom" align="right">Minimum</th>
-                        <th width="10%" class="border-bottom" align="right">Qty</th>
-                        <th width="12%" class="border-bottom" align="left">&nbsp;&nbsp;CalcCode</th>
-                        <th width="10%" class="border-bottom" align="left">Curr.</th>
-                        <th width="14%" class="border-bottom" align="right">Total</th>
-                    </tr>
-                    
-                    <!-- Local Charges -->
-                    {% if local_lines %}
-                        {% for item in local_lines %}
-                        <tr>
-                            <td style="padding: 3px 0;">{{ item.articleName }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.appliedRate if item.appliedRate is defined and item.appliedRate is not none else item.amount) }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.appliedRate if item.appliedRate is defined and item.appliedRate is not none else item.amount) }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ item.appliedQty or '1' }}</td>
-                            <td align="left" style="padding: 3px 0;">&nbsp;&nbsp;{{ 'W/M' if (item.calcCode or item.calcCodeBase) in ['MTQ','KGM','W/M'] else 'LUMPSUM' }}</td>
-                            <td align="left" style="padding: 3px 0;">{{ item.currency or 'EUR' }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.amount) }}</td>
-                        </tr>
-                        <tr><td colspan="7"><hr style="border-top: 1px solid #000; margin: 0;" /></td></tr>
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <!-- Surcharges -->
-                    {% if surcharge_lines %}
-                        {% for item in surcharge_lines %}
-                        <tr>
-                            <td style="padding: 3px 0;">{{ item.articleName }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.appliedRate if item.appliedRate is defined and item.appliedRate is not none else item.amount) }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.appliedRate if item.appliedRate is defined and item.appliedRate is not none else item.amount) }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ item.appliedQty or '1' }}</td>
-                            <td align="left" style="padding: 3px 0;">&nbsp;&nbsp;{{ 'W/M' if (item.calcCode or item.calcCodeBase) in ['MTQ','KGM','W/M'] else 'LUMPSUM' }}</td>
-                            <td align="left" style="padding: 3px 0;">{{ item.currency or 'USD' }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.amount) }}</td>
-                        </tr>
-                        <tr><td colspan="7"><hr style="border-top: 1px solid #000; margin: 0;" /></td></tr>
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <!-- Ocean Freight -->
-                    {% if ocean_lines %}
-                        {% for item in ocean_lines %}
-                        <tr>
-                            <td style="padding: 3px 0;">{{ item.articleName or 'OCEAN FREIGHT' }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.appliedRate if item.appliedRate is defined and item.appliedRate is not none else item.amount) }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.appliedRate if item.appliedRate is defined and item.appliedRate is not none else item.amount) }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ item.appliedQty or '1' }}</td>
-                            <td align="left" style="padding: 3px 0;">&nbsp;&nbsp;{{ 'W/M' if (item.calcCode or item.calcCodeBase) in ['MTQ','KGM','W/M'] else 'LUMPSUM' }}</td>
-                            <td align="left" style="padding: 3px 0;">{{ item.currency or 'USD' }}</td>
-                            <td align="right" style="padding: 3px 0;">{{ "%.2f"|format(item.amount) }}</td>
-                        </tr>
-                        <tr><td colspan="7"><hr style="border-top: 1px solid #000; margin: 0;" /></td></tr>
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <tr>
-                        <td colspan="5">&nbsp;</td>
-                        <td align="left" class="bold" style="padding-top: 4px;">{{ quotation_currency or 'USD' }}</td>
-                        <td align="right" class="bold" style="padding-top: 4px;">{{ "%.2f"|format(total_cost or quote.total_cost or 0.0) }}</td>
+                        <td width="12%">UN: {{ haz_un }}</td>
+                        <td width="16%">CLASS: {{ haz_class }}</td>
+                        <td width="72%">PG: {{ haz_pg }}</td>
                     </tr>
                 </table>
             </td>
         </tr>
 
-        <!-- TOTAL OVERALL SECTION -->
-        <tr>
-            <td class="section-header">TOTAL OVERALL</td>
+        <!-- 8. TARIFF -->
+        <tr class="section-bar-tr">
+            <td>TARIFF</td>
         </tr>
         <tr>
-            <td class="cell-pad">
-                {% if exchange_rate_val %}The applied rate of exchange (R.O.E.) is an estimate and subject to change without advance notice, the total amount might differ at the time. {{ from_curr }} 1.00 = {{ to_curr }} {{ "%.4f"|format(exchange_rate_val) }}{% endif %}
+            <td class="tariff-wrapper-td">
+                <table class="tariff-table">
+                    <tr>
+                        <th width="37%" align="left">Description</th>
+                        <th width="10%" align="right">Price</th>
+                        <th width="10%" align="right">Minimum</th>
+                        <th width="10%" align="right">Qty</th>
+                        <th width="13%" align="left">&nbsp;&nbsp;CalcCode</th>
+                        <th width="8%" align="left">Curr.</th>
+                        <th width="12%" align="right">Total</th>
+                    </tr>
+
+                    {% for group in currency_groups %}
+                        {% for item in group.lines %}
+                        <tr>
+                            <td align="left">{{ item.articleName | truncate_str(33) }}</td>
+                            <td align="right">{{ item.price | fmt_num(2) }}</td>
+                            <td align="right">{{ item.minimum | fmt_num(2) }}</td>
+                            <td align="right">{{ item.qty | fmt_num(3) }}</td>
+                            <td align="left">&nbsp;&nbsp;{{ item.calcCode }}</td>
+                            <td align="left">{{ item.currency }}</td>
+                            <td align="right">{{ item.amount | fmt_num(2) }}</td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- Subtotal for this currency group -->
+                        <tr>
+                            <td colspan="5" class="tariff-subtotal-rule">&nbsp;</td>
+                            <td align="left" class="tariff-subtotal-rule bold">{{ group.currency }}</td>
+                            <td align="right" class="tariff-subtotal-rule bold">{{ group.subtotal | fmt_num(2) }}</td>
+                        </tr>
+
+                        <!-- Conversion line if non-quotation currency -->
+                        {% if group.converted_amount is defined and group.converted_amount is not none %}
+                        <tr>
+                            <td colspan="4">&nbsp;</td>
+                            <td align="right" class="bold">=</td>
+                            <td align="left" class="bold">{{ quotation_currency }}</td>
+                            <td align="right" class="bold">{{ group.converted_amount | fmt_num(2) }}</td>
+                        </tr>
+                        {% endif %}
+
+                        {% if not loop.last %}
+                        <tr><td colspan="7" style="height: 4pt; line-height: 4pt;">&nbsp;</td></tr>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Grand Total -->
+                    <tr>
+                        <td colspan="5" class="tariff-grand-rule">&nbsp;</td>
+                        <td align="left" class="tariff-grand-rule">{{ quotation_currency }}</td>
+                        <td align="right" class="tariff-grand-rule">{{ grand_total | fmt_num(2) }}</td>
+                    </tr>
+                </table>
             </td>
         </tr>
 
-        <!-- REMARKS 1 -->
-        <tr>
-            <td class="section-header">REMARKS</td>
+        <!-- 9. TOTAL OVERALL -->
+        <tr class="section-bar-tr">
+            <td>TOTAL OVERALL</td>
         </tr>
         <tr>
-            <td class="cell-pad">
-                The OceanFreight has a validity from <span class="bold">{{ header.validFrom or quote.created_at.strftime('%d/%m/%Y') }}</span> up and until <span class="bold">{{ header.validUntil or quote.valid_until }}</span><br>
-                Surcharges + Fuel are <span class="bold">Valid At Time Of Shipment</span>
+            <td class="note-td">
+                The applied rate of exchange (R.O.E.) is an estimate and subject to change without advance notice, the total amount might differ at the time. {{ roe_text }}
             </td>
         </tr>
 
-        <!-- PICK UP -->
-        <tr>
-            <td class="section-header">PICK UP</td>
+        <!-- 9. REMARKS (Validity) -->
+        <tr class="section-bar-tr">
+            <td>REMARKS</td>
         </tr>
         <tr>
-            <td class="cell-pad">
-                {{ header.pickupRemarks or header.pickup_remarks or 'Please note that the free time for pick up is limited to 30 Minutes.' }}
+            <td class="note-td">
+                The OceanFreight has a validity from <span class="bold">{{ valid_from_formatted }}</span> up and until <span class="bold">{{ valid_until_formatted }}</span><br>
+                Surcharges + Fuel are <span class="bold">V</span>alid <span class="bold">A</span>t <span class="bold">T</span>ime <span class="bold">O</span>f <span class="bold">S</span>hipment
             </td>
         </tr>
 
-        <!-- REMARKS 2 -->
-        <tr>
-            <td class="section-header">REMARKS FOR {{ (quote.destination or header.podLocation or '').upper() }}</td>
+        <!-- 9. PICK UP -->
+        <tr class="section-bar-tr">
+            <td>PICK UP</td>
         </tr>
         <tr>
-            <td class="cell-pad" style="padding-bottom: 15px;">
-                {{ header.destinationRemarks or '' }}
+            <td class="note-td">
+                {{ pickup_remarks }}
+            </td>
+        </tr>
+
+        <!-- 9. REMARKS (Empty general section) -->
+        <tr class="section-bar-tr">
+            <td>REMARKS</td>
+        </tr>
+        <tr>
+            <td style="height: 133pt; line-height: 133pt;">&nbsp;</td>
+        </tr>
+
+    </table> <!-- End Page 1 Box -->
+
+    <pdf:nextpage />
+
+    <!-- 10. PAGE 2 CONTENT BOX (Stops just below content) -->
+    <table class="content-box-page2">
+        
+        <!-- REMARKS FOR Destination -->
+        <tr class="section-bar-tr-first">
+            <td>REMARKS FOR {{ destination_clean }}</td>
+        </tr>
+        <tr>
+            <td class="note-td" style="min-height: 12pt;">
+                {{ destination_remarks }}
             </td>
         </tr>
 
         <!-- TERMS AND CONDITIONS -->
-        <tr>
-            <td class="section-header">TERMS AND CONDITIONS</td>
+        <tr class="section-bar-tr">
+            <td>TERMS AND CONDITIONS</td>
         </tr>
         <tr>
-            <td class="cell-pad">
+            <td class="terms-td">
                 Quotation valid for standard, harmless cargo.<br>
                 DAP CHARGES: Offers based on commercial deliveries.<br>
                 In case of personal effects/domestic delivery please contact us<br>
@@ -338,58 +630,71 @@
             </td>
         </tr>
 
-        <!-- SAILING SCHEDULE -->
+        <!-- HEAVY DIVIDER LINE -->
         <tr>
-            <td class="section-header no-border-bottom">SAILING SCHEDULE FOR {{ (quote.destination or header.podLocation or '').upper() }}</td>
+            <td style="padding: 1pt 0;"><div class="heavy-divider"></div></td>
+        </tr>
+
+        <!-- SAILING SCHEDULE -->
+        <tr class="section-bar-tr">
+            <td>SAILING SCHEDULE FOR {{ destination_clean }}</td>
         </tr>
         <tr>
-            <td class="cell-pad">
-                <table width="100%">
+            <td class="sailing-table-wrap">
+                <table class="sailing-grid">
                     <tr>
-                        <th width="15%" style="border: 1px solid #000;" align="left">Vessel</th>
-                        <th width="15%" style="border: 1px solid #000;" align="left">Voyage</th>
-                        <th width="15%" style="border: 1px solid #000;" align="left">POL</th>
-                        <th width="15%" style="border: 1px solid #000;" align="left">Closing</th>
-                        <th width="10%" style="border: 1px solid #000;" align="left">ETD</th>
-                        <th width="10%" style="border: 1px solid #000;" align="left">ETA</th>
-                        <th width="20%" style="border: 1px solid #000;" align="left">DESTINATION</th>
+                        <th width="27%" align="left">Vessel</th>
+                        <th width="9%" align="left">Voyage</th>
+                        <th width="9%" align="left">POL</th>
+                        <th width="13%" align="left">Closing</th>
+                        <th width="13%" align="left">ETD</th>
+                        <th width="13%" align="left">ETA</th>
+                        <th width="16%" align="left">DESTINATION</th>
                     </tr>
                     {% if sailings and sailings|length > 0 %}
                         {% for s in sailings %}
-                        <tr>
-                            <td style="border: 1px solid #000;">{{ s.vessel or 'Direct' }}</td>
-                            <td style="border: 1px solid #000;">{{ s.voyage or '-' }}</td>
-                            <td style="border: 1px solid #000;">{{ quote.origin or header.polLocation }}</td>
-                            <td style="border: 1px solid #000;">{{ s.closingLCL or '-' }}</td>
-                            <td style="border: 1px solid #000;">{{ s.etd or '-' }}</td>
-                            <td style="border: 1px solid #000;">{{ s.eta or '-' }}</td>
-                            <td style="border: 1px solid #000;">{{ quote.destination or header.podLocation }}</td>
+                        <tr class="{% if loop.first %}sailing-row-grey{% endif %}">
+                            <td>{{ s.vessel or 'Direct' }}</td>
+                            <td>{{ s.voyage or '-' }}</td>
+                            <td>{{ pol_clean }}</td>
+                            <td>{{ s.closingLCL or s.closing or '-' }}</td>
+                            <td>{{ s.etd or '-' }}</td>
+                            <td>{{ s.eta or '-' }}</td>
+                            <td>{{ destination_clean }}</td>
                         </tr>
                         {% endfor %}
-                    {% else %}
+                        {% if sailings|length == 1 %}
                         <tr>
-                            <td style="border: 1px solid #000;">&nbsp;</td>
-                            <td style="border: 1px solid #000;">&nbsp;</td>
-                            <td style="border: 1px solid #000;">&nbsp;</td>
-                            <td style="border: 1px solid #000;">&nbsp;</td>
-                            <td style="border: 1px solid #000;">&nbsp;</td>
-                            <td style="border: 1px solid #000;">&nbsp;</td>
-                            <td style="border: 1px solid #000;">&nbsp;</td>
+                            <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                        </tr>
+                        {% endif %}
+                    {% else %}
+                        <tr class="sailing-row-grey">
+                            <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
                         </tr>
                     {% endif %}
                 </table>
             </td>
         </tr>
 
-    </table> <!-- end main border box -->
-    
+    </table> <!-- End Page 2 Box -->
+
+    <!-- 11. FOOTER -->
     <div id="footer_content">
         <table width="100%">
             <tr>
-                <td width="50%" class="bold">Quotation ID: {{ header.quoteNumber or quote.api_booking_ref or ('QUO-' ~ quote.id) }}</td>
-                <td width="50%" align="right">Pagina <pdf:pagenumber /> van <pdf:pagecount /></td>
+                <td width="60%" style="font-family: 'Arial', sans-serif; vertical-align: middle;">
+                    <span style="font-weight: bold; font-size: 7.5pt;">Quotation ID:</span> <span style="font-size: 8.5pt;">{{ quote_number }}</span>
+                </td>
+                <td width="40%" align="right" style="font-family: 'Arial', sans-serif; font-size: 9.3pt; vertical-align: middle;">
+                    Pagina <pdf:pagenumber /> van <pdf:pagecount />
+                </td>
             </tr>
         </table>
     </div>
+
 </body>
 </html>

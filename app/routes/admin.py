@@ -10,6 +10,7 @@ from app.access import (ALL_ROLES, CUSTOMER_ADMIN, STAFF_ROLES, can_access_booki
 import csv
 import io
 from datetime import datetime
+import time
 from types import SimpleNamespace
 from functools import wraps
 import pandas as pd

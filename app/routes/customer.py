@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import json
 import requests
 import re
+import time
 
 customer = Blueprint('customer', __name__)
 
@@ -274,9 +275,18 @@ def terms_conditions():
     resp.headers['Cache-Control'] = 'private, max-age=600'
     return resp
 
+_DASHBOARD_STATS_CACHE = {
+    'expires_at': 0,
+    'data': None
+}
+
 @customer.route('/api/dashboard-stats')
 @login_required
 def api_dashboard_stats():
+    now = time.time()
+    if _DASHBOARD_STATS_CACHE['data'] is not None and now < _DASHBOARD_STATS_CACHE['expires_at']:
+        return jsonify(_DASHBOARD_STATS_CACHE['data'])
+
     account_id = 4300
     headers = {'accept': 'application/json', 'x-api-key': '1'}
     items = []
@@ -309,7 +319,7 @@ def api_dashboard_stats():
             'created_at': it.created_at.strftime('%d %b %Y') if it.created_at else ''
         })
 
-    return jsonify({
+    result = {
         'total_shipments': total_shipments,
         'total_active': total_shipments - delivered,
         'in_transit': in_transit,
@@ -318,7 +328,10 @@ def api_dashboard_stats():
         'booked': booked,
         'si_needed': None,
         'recent_shipments': recent_shipments
-    })
+    }
+    _DASHBOARD_STATS_CACHE['data'] = result
+    _DASHBOARD_STATS_CACHE['expires_at'] = now + 30
+    return jsonify(result)
 
 
 @customer.route('/my_quotes')
@@ -1376,6 +1389,12 @@ def download_pdf(quote_id=None):
         if current_user.accounts:
             try: customer_id = int(current_user.accounts[0].account_id)
             except: pass
+        if not customer_id and hasattr(quote, 'account_id') and quote.account_id:
+            try: customer_id = int(quote.account_id)
+            except: pass
+        if not customer_id and hasattr(quote, 'customer_id') and quote.customer_id:
+            try: customer_id = int(quote.customer_id)
+            except: pass
         params = {'accountId': customer_id} if customer_id else {}
         
         candidates = [quote_number]
@@ -1419,30 +1438,94 @@ def download_pdf(quote_id=None):
         except Exception as e:
             pass
 
-    # Categorize tariff lines into Ocean freight (FC), Surcharges (AC), and Local charges (LC/DC)
-    ocean_lines = []
-    surcharge_lines = []
-    local_lines = []
+    # --- PDF Formatting Helpers ---
+    def fmt_num(val, decimals=2):
+        if val is None or val == '':
+            return ''
+        try:
+            f = float(val)
+        except (ValueError, TypeError):
+            return str(val)
+        return f"{f:,.{decimals}f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    for l in breakdown:
-        cg = (l.get('articleCostGroup') or '').upper()
-        aname = (l.get('articleName') or '').upper()
-        # FC = Freight Charge (Ocean Freight), AC = Additional Charge (Surcharges), LC/OC/DC = Local/Origin/Destination Charges
-        if cg == 'FC' or 'OCEAN FREIGHT' in aname or 'FREIGHT' in aname:
-            ocean_lines.append(l)
-        elif cg == 'AC' or 'SURCHARGE' in aname or 'FUEL' in aname or 'EBAF' in aname or 'ETS' in aname:
-            surcharge_lines.append(l)
-        else:
-            local_lines.append(l)
+    def fmt_date(val, leading_zero=True):
+        if not val:
+            return ''
+        val_str = str(val).strip()
+        import re
+        m = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})', val_str)
+        if m:
+            y, m, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            return f"{d:02d}/{m:02d}/{y}" if leading_zero else f"{d}/{m}/{y}"
+        m = re.match(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})', val_str)
+        if m:
+            d, m, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            return f"{d:02d}/{m:02d}/{y}" if leading_zero else f"{d}/{m}/{y}"
+        if hasattr(val, 'day'):
+            return f"{val.day:02d}/{val.month:02d}/{val.year}" if leading_zero else f"{val.day}/{val.month}/{val.year}"
+        return val_str
 
-    ocean_subtotal = sum(float(l.get('amount') or 0.0) for l in ocean_lines)
-    surcharge_subtotal = sum(float(l.get('amount') or 0.0) for l in surcharge_lines)
-    local_subtotal = sum(float(l.get('amount') or 0.0) for l in local_lines)
-    total_cost = sum(float(l.get('amount') or 0.0) for l in breakdown)
-    if not total_cost and quote.total_cost:
-        total_cost = float(quote.total_cost)
+    def clean_location(loc):
+        if not loc:
+            return ''
+        s = str(loc).strip()
+        if ' - ' in s:
+            s = s.split(' - ')[0].strip()
+        if '(' in s:
+            s = s.split('(')[0].strip()
+        return s.title()
 
-    quotation_currency = tariff.get('quotationCurrency') if isinstance(tariff, dict) else (header.get('currency') or 'USD')
+    def truncate_str(s, max_len=33):
+        if not s:
+            return ''
+        st = str(s).strip()
+        if len(st) > max_len:
+            return st[:max_len]
+        return st
+
+    # Register filters on jinja environment
+    current_app.jinja_env.filters['fmt_num'] = fmt_num
+    current_app.jinja_env.filters['fmt_date'] = fmt_date
+    current_app.jinja_env.filters['clean_location'] = clean_location
+    current_app.jinja_env.filters['truncate_str'] = truncate_str
+
+    # Windows file locking monkeypatch for xhtml2pdf font embedding
+    import tempfile, os
+    import xhtml2pdf.files as xf
+    if not getattr(xf.BaseFile, '_is_win_patched', False):
+        def _monkey_get_named_tmp_file(self):
+            data = self.get_data()
+            if hasattr(self, 'path') and self.path and os.path.isfile(str(self.path)):
+                class DummyFile:
+                    def __init__(self, name):
+                        self.name = name
+                return DummyFile(str(self.path))
+            fd, path = tempfile.mkstemp(suffix=self.suffix or '.ttf')
+            if data:
+                os.write(fd, data)
+            os.close(fd)
+            class TempHolder:
+                def __init__(self, name):
+                    self.name = name
+            return TempHolder(path)
+        xf.BaseFile.get_named_tmp_file = _monkey_get_named_tmp_file
+        xf.BaseFile._is_win_patched = True
+
+    def _pisa_link_callback(uri, rel):
+        if uri.startswith('font:'):
+            font_name = uri.split(':', 1)[1].lower()
+            font_map = {
+                'arial': r'C:\Windows\Fonts\arial.ttf',
+                'arial-bold': r'C:\Windows\Fonts\arialbd.ttf',
+                'tahoma': r'C:\Windows\Fonts\tahoma.ttf',
+                'tahoma-bold': r'C:\Windows\Fonts\tahomabd.ttf',
+                'times': r'C:\Windows\Fonts\times.ttf',
+            }
+            return font_map.get(font_name, uri)
+        return uri
+
+    quotation_currency = (tariff.get('quotationCurrency') if isinstance(tariff, dict) else None) or header.get('currency') or getattr(quote, 'currency', None) or 'USD'
+    quotation_currency = quotation_currency.strip().upper()
 
     # Extract dynamic Rate of Exchange (ROE) and target currency from API payload
     exchange_rate_val = None
@@ -1472,75 +1555,218 @@ def download_pdf(quote_id=None):
                 exchange_rate_val = r
                 break
 
-    import os
+    if not exchange_rate_val:
+        exchange_rate_val = 2.0  # default fallback
+
+    # Total packages, weight, volume
+    total_packages = sum(int(c.get('nrPackages') or 1) for c in commodities) if commodities else (getattr(quote, 'packages', None) or 1)
+    total_weight = sum(float(c.get('weight') or 0.0) for c in commodities) if commodities else float(getattr(quote, 'weight', None) or 0.0)
+    if total_weight == 0.0 and getattr(quote, 'weight', None):
+        try: total_weight = float(quote.weight)
+        except: pass
+    total_volume = sum(float(c.get('volume') or 0.0) for c in commodities) if commodities else float(getattr(quote, 'volume', None) or 0.0)
+    if total_volume == 0.0 and getattr(quote, 'volume', None):
+        try: total_volume = float(quote.volume)
+        except: pass
+
+    if commodities:
+        if float(commodities[0].get('weight') or 0.0) == 0.0 and total_weight > 0.0:
+            commodities[0]['weight'] = total_weight
+        if float(commodities[0].get('volume') or 0.0) == 0.0 and total_volume > 0.0:
+            commodities[0]['volume'] = total_volume
+
+    # Tariff currency grouping & calculations
+    groups_map = {}
+    for item in breakdown:
+        c = (item.get('currency') or quotation_currency).strip().upper()
+        if c not in groups_map:
+            groups_map[c] = []
+        
+        aname = (item.get('articleName') or '').strip()
+        cg = (item.get('articleCostGroup') or '').strip().upper()
+        calc = (item.get('calcCode') or item.get('calcCodeBase') or '').strip().upper()
+        calc_code_display = 'W/M' if calc in ['MTQ', 'KGM', 'W/M'] else 'LUMPSUM'
+        
+        raw_qty = item.get('appliedQty')
+        if raw_qty is not None and float(raw_qty) > 0:
+            qty_val = float(raw_qty)
+        else:
+            chargeable = max(total_weight / 1000.0, total_volume)
+            qty_val = chargeable if calc_code_display == 'W/M' and chargeable > 0 else 1.0
+            
+        rate_val = float(item.get('appliedRate') if item.get('appliedRate') is not None else (item.get('price') or item.get('amount') or 0.0))
+        min_val = None
+        if item.get('minimum') is not None:
+            try: min_val = float(item['minimum'])
+            except: min_val = None
+        elif calc_code_display == 'LUMPSUM':
+            min_val = rate_val
+        elif calc_code_display == 'W/M':
+            if 'OCEAN FREIGHT' in aname.upper():
+                min_val = 12.0
+            elif any(k in aname.upper() for k in ['EMERGENCY', 'CONGESTION', 'ECS']):
+                min_val = None
+            else:
+                min_val = rate_val
+                
+        amt_val = float(item.get('amount') if item.get('amount') is not None else (rate_val * qty_val))
+        
+        groups_map[c].append({
+            'articleName': aname,
+            'articleCostGroup': cg,
+            'price': rate_val,
+            'minimum': min_val,
+            'qty': qty_val,
+            'calcCode': calc_code_display,
+            'currency': c,
+            'amount': amt_val
+        })
+
+    # Order currency groups: other currencies first (e.g. EUR), quotation currency last (e.g. USD)
+    all_currs = list(groups_map.keys())
+    sorted_currs = [c for c in all_currs if c != quotation_currency] + ([quotation_currency] if quotation_currency in all_currs else [])
+
+    currency_groups = []
+    grand_total = 0.0
+
+    for c in sorted_currs:
+        lines = groups_map[c]
+        if c == quotation_currency:
+            # Place Ocean Freight lines FIRST in the quotation currency group
+            lines.sort(key=lambda l: 0 if ('OCEAN FREIGHT' in l['articleName'].upper() or 'FREIGHT' in l['articleName'].upper() or l['articleCostGroup'] == 'FC') else 1)
+        
+        subtotal = sum(l['amount'] for l in lines)
+        converted_amount = None
+        if c != quotation_currency and exchange_rate_val:
+            converted_amount = round(subtotal * exchange_rate_val, 2)
+            grand_total += converted_amount
+        else:
+            grand_total += subtotal
+            
+        currency_groups.append({
+            'currency': c,
+            'lines': lines,
+            'subtotal': subtotal,
+            'converted_amount': converted_amount
+        })
+
+    if not grand_total and getattr(quote, 'total_cost', None):
+        grand_total = float(quote.total_cost)
+
+    # Rate of Exchange string: base converted currency = 1, quotation currency = rate (e.g. EUR = 1, USD = 2,00)
+    source_curr = sorted_currs[0] if (sorted_currs and sorted_currs[0] != quotation_currency) else (from_curr if from_curr != quotation_currency else 'EUR')
+    roe_text = f"{source_curr} = 1, {quotation_currency} = {fmt_num(exchange_rate_val, 2)}"
+
     from app import get_cached_system_settings
     settings_data = get_cached_system_settings(current_user)
-    logo_rel = settings_data.get('logo_path', 'img/logo.png')
-    logo_abs_path = os.path.join(current_app.root_path, 'static', logo_rel)
+    
+    # Check for client PDF logo
+    logo_abs_path = os.path.join(current_app.root_path, 'static', 'img', 'ftl_pdf_logo.png')
+    if not os.path.exists(logo_abs_path):
+        logo_rel = settings_data.get('logo_path', 'img/logo.png')
+        logo_abs_path = os.path.join(current_app.root_path, 'static', logo_rel)
     if not os.path.exists(logo_abs_path):
         logo_abs_path = os.path.join(current_app.root_path, 'static', 'img', 'logo.png')
 
-    system_terms_url = settings_data.get('terms_conditions_url', '')
+    sys_company_name = settings_data.get('company_name', 'FAST TRANSIT LINE')
+    raw_company_phone = settings_data.get('company_phone') or '+32 (0)3 5419676'
+    company_address_raw = settings_data.get('company_address', 'SCHOUWKENSSTRAAT 1\n2030 ANTWERPEN\nBELGIUM')
+    address_lines = [l.strip() for l in company_address_raw.replace('\r', '').split('\n') if l.strip()]
+    if len(address_lines) == 1 and ',' in address_lines[0]:
+        address_lines = [l.strip() for l in address_lines[0].split(',') if l.strip()]
+
+    phone_line = raw_company_phone if raw_company_phone.upper().startswith('PHONE:') else f"PHONE: {raw_company_phone}"
+    full_address_lines = [sys_company_name]
+    for al in address_lines:
+        if al.upper() != sys_company_name.upper() and not al.upper().startswith('PHONE:'):
+            full_address_lines.append(al)
+    full_address_lines.append(phone_line)
 
     company_name = (header.get('customerName') or header.get('companyName') or 
                     (current_user.company.name if (hasattr(current_user, 'company') and current_user.company) else None) or 
-                    (current_user.accounts[0].account_name if current_user.accounts else None) or 
-                    current_user.name)
+                    (getattr(current_user.accounts[0], 'account_name', None) if current_user.accounts else None) or 
+                    getattr(current_user, 'name', 'Valued Customer'))
 
     prepared_by_name = (header.get('preparedBy') or header.get('salesPerson') or header.get('createdBy') or '')
     prepared_by_email = (header.get('salesPersonEmail') or header.get('createdByEmail') or '')
     prepared_by_phone = (header.get('salesPersonPhone') or header.get('createdByPhone') or '')
 
     routing_data = header.get('routing', {}) if isinstance(header, dict) else {}
-    transit_port = (header.get('viaPort') or header.get('transshipmentPort') or 
-                    routing_data.get('viaPort') or routing_data.get('transshipmentPort') or '')
-    if not transit_port and sailings and isinstance(sailings, list) and len(sailings) > 0:
-        transit_port = sailings[0].get('viaPort') or sailings[0].get('transshipmentPort') or ''
+    por_location = clean_location(routing_data.get('porLocation') or getattr(quote, 'origin', '') or header.get('polLocation') or '')
+    pol_location = clean_location(routing_data.get('polLocation') or getattr(quote, 'origin', '') or '')
+    pod_location = clean_location(routing_data.get('podLocation') or getattr(quote, 'destination', '') or '')
+    del_location = clean_location(routing_data.get('delLocation') or getattr(quote, 'destination', '') or '')
 
-    from xhtml2pdf import pisa
-    from io import BytesIO
+    destination_clean = clean_location(getattr(quote, 'destination', '') or header.get('podLocation') or '')
+    pol_clean = clean_location(getattr(quote, 'origin', '') or header.get('polLocation') or '')
+    destination_remarks = header.get('destinationRemarks') or ''
+
+    print_date = fmt_date(header.get('validFrom') or header.get('createdOn') or getattr(quote, 'created_at', None), leading_zero=False)
+    valid_from_formatted = fmt_date(header.get('validFrom') or getattr(quote, 'created_at', None), leading_zero=True)
+    valid_until_formatted = fmt_date(header.get('validUntil') or getattr(quote, 'valid_until', None) or header.get('validFrom'), leading_zero=True)
+
+    haz_un = header.get('unNumber') or ''
+    haz_class = header.get('hazardClass') or ''
+    haz_pg = header.get('packingGroup') or ''
+    if not haz_un and commodities:
+        haz_un = commodities[0].get('unNumber') or commodities[0].get('un') or ''
+        haz_class = commodities[0].get('imdgClass') or commodities[0].get('hazardClass') or ''
+        haz_pg = commodities[0].get('packingGroup') or commodities[0].get('pg') or ''
+
+    pickup_remarks = header.get('pickupRemarks') or header.get('pickup_remarks') or 'Please note that the free time for pick up is limited to 30 Minutes.'
+    inco_term = (header.get('incoTerm') or header.get('incoterm') or getattr(quote, 'incoterm', None) or 'CFR').strip().upper()
+
+    final_quote_num = header.get('quoteNumber') or getattr(quote, 'api_booking_ref', None) or (f"QUO-{quote.id}" if hasattr(quote, 'id') else ref)
+
+    # Use ReportLab Quotation PDF Generator for pixel-perfect client replication
+    from app.quotation_pdf import generate_quotation_pdf
     from flask import make_response
 
-    html_content = render_template(
-        'customer/quote_pdf_template.html',
-        quote=quote,
-        header=header,
-        commodities=commodities,
-        sailings=sailings,
-        ocean_lines=ocean_lines,
-        surcharge_lines=surcharge_lines,
-        local_lines=local_lines,
-        ocean_subtotal=ocean_subtotal,
-        surcharge_subtotal=surcharge_subtotal,
-        local_subtotal=local_subtotal,
-        total_cost=total_cost,
-        quotation_currency=quotation_currency,
-        breakdown=breakdown,
-        logo_abs_path=logo_abs_path,
-        system_terms_url=system_terms_url,
-        company_name=company_name,
-        prepared_by_name=prepared_by_name,
-        prepared_by_email=prepared_by_email,
-        prepared_by_phone=prepared_by_phone,
-        exchange_rate_val=exchange_rate_val,
-        from_curr=from_curr,
-        to_curr=to_curr,
-        transit_port=transit_port,
-        sys_company_name=settings_data.get('company_name', 'FAST TRANSIT LINE'),
-        sys_company_address=settings_data.get('company_address', 'SCHOUWKENSSTRAAT 1\n2030 ANTWERPEN\nBELGIUM'),
-        sys_company_phone=settings_data.get('company_phone', '+32 (0)3 5419676')
-    )
-    
-    pdf = BytesIO()
-    pisa_status = pisa.CreatePDF(BytesIO(html_content.encode('utf-8')), dest=pdf)
-    
-    if pisa_status.err:
+    payload = {
+        'quote_number': final_quote_num,
+        'print_date': print_date,
+        'to_company': company_name,
+        'attn_name': header.get('contactName') or getattr(current_user, 'name', ''),
+        'from_name': prepared_by_name,
+        'from_email': prepared_by_email,
+        'from_phone': prepared_by_phone,
+        'logo_path': logo_abs_path,
+        'company_name': sys_company_name,
+        'company_address_lines': full_address_lines,
+        'company_phone': raw_company_phone,
+        'inco_term': inco_term,
+        'por_location': por_location,
+        'pol_location': pol_location,
+        'pod_location': pod_location,
+        'del_location': del_location,
+        'commodities': commodities,
+        'total_packages': total_packages,
+        'total_weight': total_weight,
+        'total_volume': total_volume,
+        'haz_un': haz_un,
+        'haz_class': haz_class,
+        'haz_pg': haz_pg,
+        'currency_groups': currency_groups,
+        'quotation_currency': quotation_currency,
+        'grand_total': grand_total,
+        'roe_text': roe_text,
+        'valid_from_formatted': valid_from_formatted,
+        'valid_until_formatted': valid_until_formatted,
+        'pickup_remarks': pickup_remarks,
+        'destination_clean': destination_clean,
+        'sailings': sailings
+    }
+
+    try:
+        pdf_bytes = generate_quotation_pdf(payload)
+    except Exception as e:
+        current_app.logger.error(f"Failed to generate ReportLab quotation PDF: {e}", exc_info=True)
         flash('Failed to generate PDF document.', 'danger')
         return redirect(url_for('customer.my_quotes'))
-        
-    response = make_response(pdf.getvalue())
+
+    response = make_response(pdf_bytes)
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename=Quotation_{quote.api_booking_ref or quote.id}.pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=Quotation_{final_quote_num}.pdf'
     
     return response
 
@@ -1832,6 +2058,13 @@ def rates():
                 except Exception as e:
                     print(f"Could not write temp session file: {e}")
                 
+                if request.is_json:
+                    return jsonify({
+                        'success': True,
+                        'quote_id': quo_id,
+                        'quotation': data
+                    })
+
                 return redirect(url_for('customer.rate_results'))
             else:
                 print("Constructed Payload:", json.dumps(payload, indent=2))
@@ -1845,6 +2078,9 @@ def rates():
                 except Exception:
                     pass
                 
+                if request.is_json:
+                    return jsonify({'success': False, 'message': f"Failed to create quotation: {error_msg}"}), 400
+
                 flash(f"Failed to create quotation: {error_msg}", "danger")
                 return redirect(url_for('customer.rates'))
         except Exception as e:
@@ -2192,6 +2428,125 @@ def api_get_ports(direction, country_code=None):
     except Exception as e:
         print(f"Error fetching ports for {country_code}: {e}")
     return jsonify([])
+
+
+# In-memory cache for RealNexus transport lanes
+_TRANSPORT_LANES_CACHE = {
+    'timestamp': 0,
+    'lanes': []
+}
+
+def _get_cached_transport_lanes():
+    """Fetch and cache all Transport Lanes from Realnexus ERP (cache TTL: 1 hour)."""
+    now = time.time()
+    if _TRANSPORT_LANES_CACHE['lanes'] and (now - _TRANSPORT_LANES_CACHE['timestamp'] < 3600):
+        return _TRANSPORT_LANES_CACHE['lanes']
+    
+    headers = {'accept': '*/*', 'x-api-key': '1'}
+    tl_url = 'http://realnexus.comit.cloud:5000/api/Ports/TransportLanes'
+    try:
+        resp = requests.get(tl_url, headers=headers, timeout=6)
+        if resp.status_code == 200:
+            lanes = resp.json()
+            if isinstance(lanes, list) and len(lanes) > 0:
+                _TRANSPORT_LANES_CACHE['lanes'] = lanes
+                _TRANSPORT_LANES_CACHE['timestamp'] = now
+                return lanes
+    except Exception as e:
+        print("Warning: Failed to fetch transport lanes from API:", e)
+        
+    return _TRANSPORT_LANES_CACHE['lanes']
+
+def _extract_locode(val):
+    if not val:
+        return ''
+    val_str = str(val).strip()
+    match = re.search(r'\(([A-Za-z0-9]{5})\)', val_str)
+    if match:
+        return match.group(1).upper()
+    cleaned = val_str.upper()
+    if len(cleaned) == 5 and ' ' not in cleaned:
+        return cleaned
+    return cleaned
+
+@customer.route('/api/detect-traffic-type')
+@login_required
+def api_detect_traffic_type():
+    origin_raw = request.args.get('origin', '')
+    dest_raw = request.args.get('destination', '')
+    
+    origin = _extract_locode(origin_raw)
+    destination = _extract_locode(dest_raw)
+    
+    if not origin or not destination:
+        return jsonify({
+            'success': False,
+            'message': 'Both origin and destination codes are required.'
+        }), 400
+        
+    branch_id = None
+    if request.args.get('branchId'):
+        try: branch_id = int(request.args.get('branchId'))
+        except: pass
+    if not branch_id and current_user.branches:
+        try: branch_id = int(current_user.branches[0].branch_id)
+        except: pass
+        
+    lanes = _get_cached_transport_lanes()
+    
+    # Priority 1: Match within user's branch
+    if branch_id and lanes:
+        for lane in lanes:
+            if lane.get('branchID') == branch_id:
+                l_from = (lane.get('fromUNLocode') or '').strip().upper()
+                l_to = (lane.get('toUNLocode') or '').strip().upper()
+                if l_from == origin and l_to == destination:
+                    tt = (lane.get('trafficType') or '').strip().upper()
+                    if tt in ('EX', 'IM'):
+                        return jsonify({
+                            'success': True,
+                            'trafficType': tt,
+                            'matched': True,
+                            'matchedBy': 'transport_lane_branch',
+                            'origin': origin,
+                            'destination': destination,
+                            'lane': {
+                                'id': lane.get('id'),
+                                'name': lane.get('name'),
+                                'branchID': lane.get('branchID')
+                            }
+                        })
+                        
+    # Priority 2: Match across all branches
+    if lanes:
+        for lane in lanes:
+            l_from = (lane.get('fromUNLocode') or '').strip().upper()
+            l_to = (lane.get('toUNLocode') or '').strip().upper()
+            if l_from == origin and l_to == destination:
+                tt = (lane.get('trafficType') or '').strip().upper()
+                if tt in ('EX', 'IM'):
+                    return jsonify({
+                        'success': True,
+                        'trafficType': tt,
+                        'matched': True,
+                        'matchedBy': 'transport_lane_global',
+                        'origin': origin,
+                        'destination': destination,
+                        'lane': {
+                            'id': lane.get('id'),
+                            'name': lane.get('name'),
+                            'branchID': lane.get('branchID')
+                        }
+                    })
+
+    # If not found in transport lanes API, return matched=False and no trafficType (no fallback)
+    return jsonify({
+        'success': True,
+        'trafficType': None,
+        'matched': False,
+        'origin': origin,
+        'destination': destination
+    })
 
 
 @customer.route('/api/get-schedules')
@@ -2817,6 +3172,8 @@ def confirm_booking():
     except Exception as e:
         current_app.logger.error(f"Failed to submit background API post: {e}")
     
+    if request.is_json:
+        return jsonify({'success': True, 'booking_id': booking.id, 'message': 'Booking confirmed!'})
     flash('Booking confirmed! You can track your shipment now.', 'success')
     return redirect(url_for('customer.my_shipments'))
 
@@ -2897,6 +3254,8 @@ def booking_request():
     except Exception as e:
         current_app.logger.error(f"Failed to submit background API post: {e}")
     
+    if request.is_json:
+        return jsonify({'success': True, 'booking_id': booking.id, 'message': 'Booking request submitted!'})
     flash('Booking request submitted! We will review it shortly.', 'success')
     return redirect(url_for('customer.my_shipments'))
 
@@ -3045,6 +3404,49 @@ class ApiBookingItem:
         self.pickup_address = ''
         self.user_id = 0
         self.is_si_submitted = False
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'booking_id': self.id,
+            'booking_ref': self.bookingref,
+            'customer_ref': self.customer_ref,
+            'file_ref': self.file_ref,
+            'status': self.status,
+            'origin': self.origin,
+            'destination': self.destination,
+            'service_type': self.service_type,
+            'selected_nvocc': self.selected_nvocc,
+            'vessel_name': self.vessel_name,
+            'voyage_number': self.voyage_number,
+            'total_pieces': self.totalcolli,
+            'total_weight': self.totalweight,
+            'total_volume': self.totalVolume,
+            'cargo_summary': self.cargo_summary,
+            'created_at': self.created_at.strftime('%d %b %Y') if self.created_at else '',
+            'created_at_iso': self.created_at.isoformat() if self.created_at else '',
+            'etd': self.etd.strftime('%d %b %Y') if self.etd else None,
+            'atd': self.atd.strftime('%d %b %Y') if self.atd else None,
+            'eta': self.eta.strftime('%d %b %Y') if self.eta else None,
+            'ata': self.ata.strftime('%d %b %Y') if self.ata else None,
+            'ops_manager': self.ops_manager,
+            'customer_name': self.customer_name,
+            'shipper_name': self.shipper_name,
+            'consignee_name': self.consignee_name,
+            'notify_party': self.notify_party,
+            'special_instructions': self.special_instructions,
+            'commodities': [
+                {
+                    'quantity': getattr(item, 'quantity', 1),
+                    'package_type': getattr(item, 'package_type', ''),
+                    'weight_kg': getattr(item, 'weight_kg', 0.0),
+                    'volume_cbm': getattr(item, 'volume_cbm', 0.0),
+                    'description': getattr(item, 'description', ''),
+                    'hs_code': getattr(item, 'hs_code', ''),
+                    'is_imo': getattr(item, 'is_imo', False)
+                } for item in self.cargo_items
+            ]
+        }
         
     def _parse_date(self, d_val):
         if not d_val:
@@ -3074,6 +3476,18 @@ class ApiPagination:
         self.prev_num = self.page - 1 if self.has_prev else None
         self.next_num = self.page + 1 if self.has_next else None
 
+    def to_dict(self):
+        return {
+            'page': self.page,
+            'per_page': self.per_page,
+            'total_records': self.total,
+            'total_pages': self.pages,
+            'has_prev': self.has_prev,
+            'has_next': self.has_next,
+            'prev_num': self.prev_num,
+            'next_num': self.next_num
+        }
+
     def iter_pages(self, left_edge=1, right_edge=1, left_current=2, right_current=2):
         last = 0
         for num in range(1, self.pages + 1):
@@ -3085,16 +3499,30 @@ class ApiPagination:
                 yield num
                 last = num
 
-@customer.route('/my-shipments')
+_SHIPMENTS_CACHE = {} # (account_id, page, per_page): (expires_at, items, total_records)
+
+@customer.route('/api/my-shipments', endpoint='api_my_shipments')
+@customer.route('/my-shipments', endpoint='my_shipments')
 @login_required
 def my_shipments():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    
-    # Hardcoded to 4300 as requested: "for now hardcode 4300 instead of 4294, later we can change it"
-    # Local portal DB is completely removed, fetching strictly from the live API.
     account_id = 4300
+    cache_key = (account_id, page, per_page)
+    now = time.time()
     
+    # Check 45-second high-speed in-memory cache
+    if cache_key in _SHIPMENTS_CACHE:
+        expires_at, cached_items, cached_total = _SHIPMENTS_CACHE[cache_key]
+        if now < expires_at:
+            pagination = ApiPagination(cached_items, page, per_page, cached_total)
+            if request.is_json or '/api/my-shipments' in request.path or request.args.get('format') == 'json':
+                return jsonify({
+                    'shipments': [it.to_dict() for it in cached_items],
+                    'pagination': pagination.to_dict()
+                })
+            return render_template('customer/shipments.html', shipments=cached_items, pagination=pagination)
+
     url = "http://realnexus.comit.cloud:5000/api/Bookings"
     params = {
         "accountId": account_id,
@@ -3152,12 +3580,18 @@ def my_shipments():
                 current_app.logger.error(f"Parallel booking commodities fetch error: {ex}")
 
             items = [ApiBookingItem(b) for b in raw_bookings]
+            _SHIPMENTS_CACHE[cache_key] = (now + 45, items, total_records)
         else:
             current_app.logger.error(f"API bookings returned {resp.status_code}: {resp.text}")
     except Exception as e:
         current_app.logger.error(f"Error fetching API bookings: {e}")
         
     pagination = ApiPagination(items, page, per_page, total_records)
+    if request.is_json or '/api/my-shipments' in request.path or request.args.get('format') == 'json':
+        return jsonify({
+            'shipments': [it.to_dict() for it in items],
+            'pagination': pagination.to_dict()
+        })
     return render_template('customer/shipments.html', shipments=items, pagination=pagination)
 
 @customer.route('/shipments/export-excel')
@@ -3388,9 +3822,11 @@ def export_quotes_excel():
     filename = f"FTL_Quotes_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=filename)
 
-@customer.route('/shipment/<path:booking_id>')
-@customer.route('/shipment/<booking_id>')
-@customer.route('/shipment/<int:booking_id>')
+@customer.route('/api/shipment/<path:booking_id>', endpoint='api_shipment_detail_path')
+@customer.route('/api/shipment/<booking_id>', endpoint='api_shipment_detail')
+@customer.route('/shipment/<path:booking_id>', endpoint='shipment_detail_path')
+@customer.route('/shipment/<int:booking_id>', endpoint='shipment_detail_int')
+@customer.route('/shipment/<booking_id>', endpoint='shipment_detail')
 @login_required
 def shipment_detail(booking_id):
     account_id = 4300
@@ -3441,8 +3877,13 @@ def shipment_detail(booking_id):
         booking_obj = ApiBookingItem(merged)
 
     if not booking_obj:
+        if request.is_json or '/api/shipment/' in request.path:
+            return jsonify({'success': False, 'message': 'Shipment not found'}), 404
         abort(404)
         
+    if request.is_json or '/api/shipment/' in request.path or request.args.get('format') == 'json':
+        return jsonify({'success': True, 'booking': booking_obj.to_dict()})
+
     return render_template('customer/shipment_detail.html', booking=booking_obj)
 
 @customer.route('/edit-booking/<booking_id>', methods=['GET', 'POST'])
@@ -3751,9 +4192,18 @@ def api_schedules_search():
     return jsonify({'schedules': schedules})
 
 
+_PORTS_LIST_CACHE = {
+    'expires_at': 0,
+    'data': None
+}
+
 @customer.route('/api/ports-list')
 @login_required
 def api_ports_list():
+    now = time.time()
+    if _PORTS_LIST_CACHE['data'] is not None and now < _PORTS_LIST_CACHE['expires_at']:
+        return jsonify(_PORTS_LIST_CACHE['data'])
+
     headers = {'accept': 'application/json', 'x-api-key': '1'}
     all_ports_dict = {}
 
@@ -3780,7 +4230,11 @@ def api_ports_list():
         print(f"Error fetching live ports list: {e}")
 
     ports_list = sorted(list(all_ports_dict.values()), key=lambda x: x['name'])
-    return jsonify({'origins': ports_list, 'destinations': ports_list})
+    result = {'origins': ports_list, 'destinations': ports_list}
+    if ports_list:
+        _PORTS_LIST_CACHE['data'] = result
+        _PORTS_LIST_CACHE['expires_at'] = now + 3600  # 1 hour cache
+    return jsonify(result)
 
 
 

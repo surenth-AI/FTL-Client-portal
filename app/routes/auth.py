@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models.models import User, Company
@@ -194,6 +194,33 @@ def query_with_retry(query_fn, retries=5, delay=4):
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.is_json:
+        data = request.get_json() or {}
+        email = (data.get('email') or '').strip()
+        password = data.get('password') or ''
+        from sqlalchemy.orm import joinedload
+        user = query_with_retry(lambda: User.query.options(joinedload(User.company), joinedload(User.accounts)).filter_by(email=email).first())
+        if user and check_password_hash(user.password_hash, password):
+            if user.role != 'super_admin':
+                if user.status not in ['active', 'activated']:
+                    return jsonify({'success': False, 'message': f'Your account is {user.status.replace("_", " ")}. Please wait for approval.'}), 403
+                if user.company and user.company.status != 'active':
+                    return jsonify({'success': False, 'message': f'Your company status is {user.company.status.replace("_", " ")}. Please wait for approval.'}), 403
+            login_user(user, remember=data.get('remember', False))
+            redirect_to = '/admin/dashboard' if is_staff(user) else '/customer/dashboard'
+            return jsonify({
+                'success': True,
+                'user': {
+                    'id': user.id,
+                    'name': user.name,
+                    'email': user.email,
+                    'role': user.role,
+                    'company': user.company.name if user.company else None
+                },
+                'redirect': redirect_to
+            })
+        return jsonify({'success': False, 'message': 'Invalid email or password.'}), 401
+
     if current_user.is_authenticated:
         if is_staff(current_user):
             return redirect(url_for('admin.dashboard'))
@@ -311,10 +338,32 @@ def login():
     # If GET request or failures
     return render_template('auth/login.html', form=login_form, user_form=user_form, active_tab=active_tab)
 
-@auth.route('/logout')
-@login_required
+@auth.route('/me', methods=['GET'])
+def get_current_user():
+    if current_user.is_authenticated:
+        from app import get_cached_system_settings
+        settings = get_cached_system_settings(current_user)
+        return jsonify({
+            'authenticated': True,
+            'user': {
+                'id': current_user.id,
+                'name': current_user.name,
+                'email': current_user.email,
+                'role': current_user.role,
+                'erp_contact_id': current_user.erp_contact_id,
+                'company': current_user.company.name if current_user.company else None,
+                'company_ftl_code': current_user.company.ftl_code if current_user.company else None,
+            },
+            'settings': settings
+        })
+    return jsonify({'authenticated': False, 'user': None}), 200
+
+@auth.route('/logout', methods=['GET', 'POST'])
 def logout():
-    logout_user()
+    if current_user.is_authenticated:
+        logout_user()
+    if request.is_json or request.method == 'POST':
+        return jsonify({'success': True, 'message': 'Logged out successfully.'})
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
 

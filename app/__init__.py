@@ -6,6 +6,7 @@ from flasgger import Swagger
 from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_cors import CORS
 import os
 import logging
 import time
@@ -155,6 +156,7 @@ def create_app(config_class=Config):
     # Initialize security extensions
     talisman.init_app(app, content_security_policy=False) # Disabled CSP temporarily to avoid breaking inline scripts
     limiter.init_app(app)
+    CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"])
 
     # Ensure upload folder exists
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

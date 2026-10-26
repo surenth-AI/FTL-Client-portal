@@ -1654,7 +1654,8 @@ html[data-color-scheme='dark'] .rates-view-content {
 
                                 <div class="form-group" style="grid-column: 1 / -1;">
                                     <label class="form-label">Traffic Type <span class="required">*</span></label>
-                                    <select class="form-select" id="trafficType" name="traffic_type" onchange="updateAvailableIncoterms()" required>
+                                    <select class="form-select" id="trafficType" name="traffic_type" onchange="onTrafficTypeChange()" required>
+                                        <option value="">Select traffic type</option>
                                         <option value="EX">Export (EX)</option>
                                         <option value="IM">Import (IM)</option>
                                     </select>
@@ -2532,6 +2533,102 @@ async function filterLocations(locationType) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        let lastDetectedTrafficRoute = null;
+        let isManualTrafficOverride = false;
+
+        function onTrafficTypeChange() {
+            isManualTrafficOverride = true;
+            const trafficType = document.getElementById('trafficType')?.value || '';
+            const hiddenDir = document.getElementById('hidden_direction');
+            if (hiddenDir) {
+                hiddenDir.value = trafficType === 'EX' ? 'EXPORT' : (trafficType === 'IM' ? 'IMPORT' : '');
+            }
+            updateAvailableIncoterms();
+            updateChargeInclusions();
+        }
+
+        async function detectTrafficTypeForStep3() {
+            let origCode = '';
+            let destCode = '';
+
+            if (selectedLocations && selectedLocations.origin && selectedLocations.origin.code) {
+                origCode = selectedLocations.origin.code;
+            }
+            if (selectedLocations && selectedLocations.dest && selectedLocations.dest.code) {
+                destCode = selectedLocations.dest.code;
+            }
+
+            if (!origCode) {
+                const origVal = document.getElementById('originLocation')?.value || '';
+                const m = origVal.match(/\(([A-Za-z0-9]{5})\)/);
+                if (m) origCode = m[1];
+                else if (origVal.trim().length === 5 && !origVal.includes(' ')) origCode = origVal.trim();
+            }
+            if (!destCode) {
+                const destVal = document.getElementById('destLocation')?.value || '';
+                const m = destVal.match(/\(([A-Za-z0-9]{5})\)/);
+                if (m) destCode = m[1];
+                else if (destVal.trim().length === 5 && !destVal.includes(' ')) destCode = destVal.trim();
+            }
+
+            if (!origCode || !destCode) {
+                console.log('detectTrafficTypeForStep3: Incomplete route', { origCode, destCode });
+                return;
+            }
+
+            const currentRouteKey = `${origCode}->${destCode}`;
+            if (lastDetectedTrafficRoute === currentRouteKey && isManualTrafficOverride) {
+                return; // Respect user manual override
+            }
+
+            if (lastDetectedTrafficRoute === currentRouteKey) {
+                return; // Already detected
+            }
+
+            try {
+                console.log(`detectTrafficTypeForStep3: Checking Transport Lanes API for ${origCode} -> ${destCode}...`);
+                const res = await fetch(`/customer/api/detect-traffic-type?origin=${encodeURIComponent(origCode)}&destination=${encodeURIComponent(destCode)}`);
+                if (!res.ok) {
+                    console.warn('detectTrafficTypeForStep3 response not OK:', res.status);
+                    return;
+                }
+                const data = await res.json();
+                console.log('detectTrafficTypeForStep3 result:', data);
+
+                lastDetectedTrafficRoute = currentRouteKey;
+                isManualTrafficOverride = false;
+
+                const trafficSelect = document.getElementById('trafficType');
+                const hiddenDir = document.getElementById('hidden_direction');
+
+                // If found in Transport Lane API, populate EX or IM; if nothing found, no fallback: leave empty
+                if (data && data.matched && (data.trafficType === 'EX' || data.trafficType === 'IM')) {
+                    if (trafficSelect) {
+                        trafficSelect.value = data.trafficType;
+                    }
+                    if (hiddenDir) {
+                        hiddenDir.value = data.trafficType === 'EX' ? 'EXPORT' : 'IMPORT';
+                    }
+                } else {
+                    if (trafficSelect) {
+                        trafficSelect.value = '';
+                    }
+                    if (hiddenDir) {
+                        hiddenDir.value = '';
+                    }
+                }
+
+                if (typeof updateAvailableIncoterms === 'function') {
+                    updateAvailableIncoterms();
+                }
+                if (typeof updateChargeInclusions === 'function') {
+                    updateChargeInclusions();
+                }
+            } catch (e) {
+                console.error('detectTrafficTypeForStep3 failed:', e);
+            }
+        }
+
         function togglePanel(panelName) {
             console.log('togglePanel called with:', panelName);
             const panels = ['route', 'cargo', 'services'];
@@ -2562,6 +2659,9 @@ async function filterLocations(locationType) {
                     section.classList.add('active');
                     currentPanel = panelName;
                     console.log('Panel opened, classes:', panel.className);
+                    if (panelName === 'services') {
+                        detectTrafficTypeForStep3();
+                    }
                 }
             } else {
                 console.log('Panel not found!');
@@ -2583,6 +2683,8 @@ async function filterLocations(locationType) {
 
             // Clear selection
             selectedLocations[locationType] = null;
+            lastDetectedTrafficRoute = null;
+            isManualTrafficOverride = false;
             input.value = '';
         }
 
@@ -2590,6 +2692,8 @@ async function filterLocations(locationType) {
             updateDirection();
             // Clear location when country changes
             selectedLocations[locationType] = null;
+            lastDetectedTrafficRoute = null;
+            isManualTrafficOverride = false;
             document.getElementById(locationType + 'Location').value = '';
         }
 
@@ -2607,6 +2711,8 @@ async function filterLocations(locationType) {
 
         function selectLocation(locationType, name, code, countryName = '') {
             selectedLocations[locationType] = { name, code, countryName };
+            lastDetectedTrafficRoute = null;
+            isManualTrafficOverride = false;
             let displayVal = `${name} (${code})`;
             if (countryName) displayVal += ` - ${countryName}`;
             document.getElementById(locationType + 'Location').value = displayVal;
@@ -2621,6 +2727,8 @@ async function filterLocations(locationType) {
         });
 
         function saveRoute() {
+            lastDetectedTrafficRoute = null;
+            isManualTrafficOverride = false;
             console.log('saveRoute called');
             console.log('selectedLocations.origin:', selectedLocations.origin);
             console.log('selectedLocations.dest:', selectedLocations.dest);
@@ -2752,12 +2860,15 @@ async function filterLocations(locationType) {
         // Render dynamic VAS types in route details
         renderVasServices();
             
-            // Update available incoterms based on origin/destination types
-            updateAvailableIncoterms();
+        // Trigger automatic traffic type detection early in background so Step 3 is immediately ready
+        detectTrafficTypeForStep3();
 
-            togglePanel('route');
-            setTimeout(() => togglePanel('cargo'), 300);
-        }
+        // Update available incoterms based on origin/destination types
+        updateAvailableIncoterms();
+
+        togglePanel('route');
+        setTimeout(() => togglePanel('cargo'), 300);
+    }
 
         let currentMatchedRule = null;
 
