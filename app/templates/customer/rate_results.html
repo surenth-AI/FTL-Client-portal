@@ -927,9 +927,19 @@
 
                         </div>
                         <div class="charges-row">
-                            <span class="charge-pill {% if res.has_origin_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Origin Port Charges</span>
+                            {% if (query.get('traffic_type') or 'EX') == 'IM' %}
+                            <span class="charge-pill {% if res.has_destination_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Destination Charges</span>
                             <span class="charge-pill {% if res.has_freight_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Freight &amp; Surcharges</span>
-                            <span class="charge-pill {% if res.has_destination_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Destination Port Charges</span>
+                            {% if res.has_origin_charges %}
+                            <span class="charge-pill included"><span class="dot"></span>Origin Charges</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="charge-pill {% if res.has_origin_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Origin Charges</span>
+                            <span class="charge-pill {% if res.has_freight_charges %}included{% else %}excluded{% endif %}"><span class="dot"></span>Freight &amp; Surcharges</span>
+                            {% if res.has_destination_charges %}
+                            <span class="charge-pill included"><span class="dot"></span>Destination Charges</span>
+                            {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                     <div class="offer-actions">
@@ -954,7 +964,7 @@
                 </div>
                 <div class="breakdown-panel" id="bd-{{ loop.index }}">
                     <div class="breakdown-inner">
-                        <div class="breakdown-title">🧾 Quotation Breakdown</div>
+                        <div class="breakdown-title">🧾 Quotation Breakdown ({{ res.breakdown|length if res.breakdown else 0 }} Line Items)</div>
                         <table class="breakdown-table">
                             <thead>
                                 <tr>
@@ -968,16 +978,16 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% if res.breakdown %}
+                                {% if res.breakdown and res.breakdown|length > 0 %}
                                 {% for line in res.breakdown %}
                                 <tr>
-                                    <td class="code-cell">{{ line.articleCode or line.chargeCode or line.id or 'N/A' }}</td>
-                                    <td>{{ line.articleName or line.chargeName or line.description or 'Standard Charge' }}</td>
+                                    <td class="code-cell">{{ line.articleCode or line.chargeCode or line.id or '—' }}</td>
+                                    <td><strong>{{ line.articleName or line.chargeName or line.description or 'Standard Charge' }}</strong></td>
                                     <td><span class="base-cell">{{ 'W/M' if (line.calcCode or line.calcCodeBase or line.unitCode) in ['MTQ', 'KGM'] else ('LUMPSUM' if (line.calcCode or line.calcCodeBase or line.unitCode) == 'ACT' else (line.calcCode or line.calcCodeBase or line.unitCode or 'W/M')) }}</span></td>
                                     <td class="num">{{ line.appliedQty if line.appliedQty is defined and line.appliedQty is not none else (line.quantity|default(1)) }}</td>
                                     <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.appliedRate if line.appliedRate is defined and line.appliedRate is not none else line.amount) }}</td>
-                                    <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD</td>
-                                    <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>
+                                    <td class="num fx-cell">{% if line.exchangeRate and line.exchangeRate != 1 and line.invoiceCurrency %}1 {{ line.currency }} = {{ "%.4f"|format(line.exchangeRate) }} {{ line.invoiceCurrency }}{% else %}—{% endif %}</td>
+                                    <td class="num final-cell"><strong>{% if line.invoiceCurrency and line.invoiceCurrencyAmount %}{{ line.invoiceCurrency }} {{ "%.2f"|format(line.invoiceCurrencyAmount) }}{% else %}{{ line.currency|default('USD') }} {{ "%.2f"|format(line.amount) }}{% endif %}</strong></td>
                                 </tr>
                                 {% endfor %}
                                 {% else %}
@@ -1026,9 +1036,15 @@
                     <td>{{ res.transit_days ~ ' days' if res.transit_days and res.transit_days > 0 else '-' }}</td>
                     <td>
                         {% set incl = [] %}
-                        {% if res.has_origin_charges %}{% set _ = incl.append('Origin') %}{% endif %}
-                        {% if res.has_freight_charges %}{% set _ = incl.append('Freight') %}{% endif %}
-                        {% if res.has_destination_charges %}{% set _ = incl.append('Destination') %}{% endif %}
+                        {% if (query.get('traffic_type') or 'EX') == 'IM' %}
+                            {% if res.has_destination_charges %}{% set _ = incl.append('Destination') %}{% endif %}
+                            {% if res.has_freight_charges %}{% set _ = incl.append('Freight') %}{% endif %}
+                            {% if res.has_origin_charges %}{% set _ = incl.append('Origin') %}{% endif %}
+                        {% else %}
+                            {% if res.has_origin_charges %}{% set _ = incl.append('Origin') %}{% endif %}
+                            {% if res.has_freight_charges %}{% set _ = incl.append('Freight') %}{% endif %}
+                            {% if res.has_destination_charges %}{% set _ = incl.append('Destination') %}{% endif %}
+                        {% endif %}
                         {{ incl|join(' + ') if incl else 'Freight' }}
                     </td>
                     <td>
@@ -1065,23 +1081,21 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% if res.breakdown %}
+                                        {% if res.breakdown and res.breakdown|length > 0 %}
                                         {% for line in res.breakdown %}
                                         <tr>
-                                            <td class="code-cell">{{ line.articleCode or line.chargeCode or line.id or 'N/A' }}</td>
-                                            <td>{{ line.articleName or line.chargeName or line.description or 'Standard Charge' }}</td>
+                                            <td class="code-cell">{{ line.articleCode or line.chargeCode or line.id or '—' }}</td>
+                                            <td><strong>{{ line.articleName or line.chargeName or line.description or 'Standard Charge' }}</strong></td>
                                             <td><span class="base-cell">{{ 'W/M' if (line.calcCode or line.calcCodeBase or line.unitCode) in ['MTQ', 'KGM'] else ('LUMPSUM' if (line.calcCode or line.calcCodeBase or line.unitCode) == 'ACT' else (line.calcCode or line.calcCodeBase or line.unitCode or 'W/M')) }}</span></td>
                                             <td class="num">{{ line.appliedQty if line.appliedQty is defined and line.appliedQty is not none else (line.quantity|default(1)) }}</td>
                                             <td class="num">{{ line.currency|default('USD') }} {{ "%.2f"|format(line.appliedRate if line.appliedRate is defined and line.appliedRate is not none else line.amount) }}</td>
-                                            <td class="num fx-cell">1 {{ line.currency|default('USD') }} = 1.0000 USD
-                                            </td>
-                                            <td class="num final-cell">USD {{ "%.2f"|format(line.amount) }}</td>
+                                            <td class="num fx-cell">{% if line.exchangeRate and line.exchangeRate != 1 and line.invoiceCurrency %}1 {{ line.currency }} = {{ "%.4f"|format(line.exchangeRate) }} {{ line.invoiceCurrency }}{% else %}—{% endif %}</td>
+                                            <td class="num final-cell"><strong>{% if line.invoiceCurrency and line.invoiceCurrencyAmount %}{{ line.invoiceCurrency }} {{ "%.2f"|format(line.invoiceCurrencyAmount) }}{% else %}{{ line.currency|default('USD') }} {{ "%.2f"|format(line.amount) }}{% endif %}</strong></td>
                                         </tr>
                                         {% endfor %}
                                         {% else %}
                                         <tr>
-                                            <td colspan="7" class="text-center py-4">No breakdown details available.
-                                            </td>
+                                            <td colspan="7" class="text-center py-4">No breakdown details available.</td>
                                         </tr>
                                         {% endif %}
                                     </tbody>

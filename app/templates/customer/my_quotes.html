@@ -327,9 +327,15 @@
                                 ${q.freight_terms ? `<span class="meta-pill direct">💳 ${q.freight_terms}</span>` : ''}
                             </div>
                             <div class="charges-row">
-                                <span class="charge-pill ${q.has_origin_charges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Origin Port Charges</span>
-                                <span class="charge-pill ${q.has_freight_surcharges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Freight &amp; Surcharges</span>
-                                <span class="charge-pill ${q.has_dest_charges ? 'included' : 'excluded'}"><span class="dot"></span>Destination Port Charges</span>
+                                ${q.traffic_type === 'IM' ? `
+                                    <span class="charge-pill ${q.has_dest_charges ? 'included' : 'excluded'}"><span class="dot"></span>Destination Charges</span>
+                                    <span class="charge-pill ${q.has_freight_surcharges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Freight &amp; Surcharges</span>
+                                    ${q.has_origin_charges ? `<span class="charge-pill included"><span class="dot"></span>Origin Charges</span>` : ''}
+                                ` : `
+                                    <span class="charge-pill ${q.has_origin_charges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Origin Charges</span>
+                                    <span class="charge-pill ${q.has_freight_surcharges !== false ? 'included' : 'excluded'}"><span class="dot"></span>Freight &amp; Surcharges</span>
+                                    ${q.has_dest_charges ? `<span class="charge-pill included"><span class="dot"></span>Destination Charges</span>` : ''}
+                                `}
                             </div>
                         </div>
                         

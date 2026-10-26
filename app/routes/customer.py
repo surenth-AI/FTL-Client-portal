@@ -1990,34 +1990,6 @@ def rates():
                     flash("Quotation Unavailable: You requested Customs Clearance, but the ERP tariff database for this lane does not have a configured Customs Clearance charge. Incomplete offers with missing charges cannot be generated.", "danger")
                     return redirect(url_for('customer.rates'))
 
-                # --- Charge Validation Checks (FC & LC) ---
-                # 1. Freight Charge (FC): Represents ocean freight. Must be present.
-                has_fc = any(
-                    (line.get('articleCostGroup') or '').upper() == 'FC'
-                    or 'FREIGHT' in (line.get('articleName') or '').upper()
-                    or 'OCEAN' in (line.get('articleName') or '').upper()
-                    for line in tariff_lines
-                )
-                if not has_fc:
-                    flash("Quotation Unavailable: Missing Freight Charge (FC). A quotation cannot be generated without an ocean freight charge.", "danger")
-                    return redirect(url_for('customer.rates'))
-
-                # 2. Local Charge (LC) Checks based on Traffic Type
-                t_type = (traffic_type or 'EX').upper()
-                has_lc_lines = any(
-                    (line.get('articleCostGroup') or '').upper() in ['LC', 'OLC', 'DC', 'DLC']
-                    or line.get('isLocalCharge') is True
-                    for line in tariff_lines
-                )
-                if not has_lc_lines and tariff_lines:
-                    has_lc_lines = any((line.get('articleCostGroup') or '').upper() not in ['FC', 'AC'] for line in tariff_lines)
-
-                if t_type == 'EX' and not has_lc_lines:
-                    flash("Quotation Unavailable: Missing Origin Port Charges (LC). Export quotations cannot be generated without local origin port charges.", "danger")
-                    return redirect(url_for('customer.rates'))
-                elif t_type == 'IM' and not has_lc_lines:
-                    flash("Quotation Unavailable: Missing Destination Port Charges (LC). Import quotations cannot be generated without local destination port charges.", "danger")
-                    return redirect(url_for('customer.rates'))
 
                 # The new API endpoint wraps the response in a "quotation" object containing "header"
                 if "quotation" in data and "header" in data["quotation"]:
@@ -3006,9 +2978,29 @@ def rate_results():
                 nvocc_name = branch_name
                 
                 # Check dynamic charge cost groups from API tariff lines
-                has_origin_charges = any(l.get('articleCostGroup') == 'LC' for l in lines)
-                has_freight_charges = any(l.get('articleCostGroup') in ['FC', 'AC'] or 'FREIGHT' in (l.get('articleName') or '').upper() for l in lines)
-                has_destination_charges = any(l.get('articleCostGroup') in ['DC', 'DL'] for l in lines)
+                t_type = (query.get('traffic_type') or header.get('trafficType') or 'EX').upper()
+                if t_type == 'IM':
+                    # For Import, European local charges (LC) are Destination Charges
+                    has_origin_charges = any((l.get('articleCostGroup') or '').upper() in ['OLC'] for l in lines)
+                    has_destination_charges = any(
+                        (l.get('articleCostGroup') or '').upper() in ['LC', 'DC', 'DLC', 'DL']
+                        or l.get('isLocalCharge') is True
+                        for l in lines
+                    )
+                else:
+                    # For Export, European local charges (LC) are Origin Charges
+                    has_origin_charges = any(
+                        (l.get('articleCostGroup') or '').upper() in ['LC', 'OLC']
+                        or l.get('isLocalCharge') is True
+                        for l in lines
+                    )
+                    has_destination_charges = any((l.get('articleCostGroup') or '').upper() in ['DC', 'DLC', 'DL'] for l in lines)
+
+                has_freight_charges = any(
+                    (l.get('articleCostGroup') or '').upper() in ['FC', 'AC']
+                    or any(term in (l.get('articleName') or '').upper() for term in ['FREIGHT', 'OCEAN', 'SURCHARGE', 'BAF', 'CAF', 'ETS', 'FUEL'])
+                    for l in lines
+                )
                 
                 # Resolve cargo details for Rate Results display
                 cargo_items = query.get('cargo_items', []) or []

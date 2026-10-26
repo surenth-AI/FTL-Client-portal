@@ -1672,17 +1672,17 @@ html[data-color-scheme='dark'] .rates-view-content {
                                     <label for="includeFreight">Freight & Surcharges</label>
                                     <span class="charge-badge included" id="freightBadge">Included</span>
                                 </div>
-                                <div class="charge-item-inline">
+                                <div class="charge-item-inline" id="originChargeItem">
                                     <input type="checkbox" id="includeOriginCharges" checked
                                         onchange="updateChargeStatus('origin')">
                                     <label for="includeOriginCharges">Origin Port Charges</label>
                                     <span class="charge-badge included" id="originBadge">Included</span>
                                 </div>
-                                <div class="charge-item-inline">
+                                <div class="charge-item-inline" id="destChargeItem">
                                     <input type="checkbox" id="includeDestCharges"
                                         onchange="updateChargeStatus('dest')">
                                     <label for="includeDestCharges">Destination Port Charges</label>
-                                    <span class="charge-badge excluded" id="destBadge">Excluded</span>
+                                    <span class="charge-badge included" id="destBadge">Included</span>
                                 </div>
                             </div>
                         </div>
@@ -2930,32 +2930,14 @@ async function filterLocations(locationType) {
             // Set currentMatchedRule to the first match for freight terms fallback
             currentMatchedRule = matchedRules[0];
             
-            const allowed = Array.from(allowedSet);
-            let currentSelectionValid = false;
-
-            // Show/hide options and check if current selection is still valid
+            // Show all terms returned from API in UI without hiding or filtering
             for (let i = 0; i < options.length; i++) {
-                const opt = options[i];
-                if (opt.value === "") continue; // Always allow the empty/default option
-                
-                if (allowed.includes(opt.value)) {
-                    opt.style.display = '';
-                    if (opt.selected) currentSelectionValid = true;
-                } else {
-                    opt.style.display = 'none';
-                    if (opt.selected) opt.selected = false;
-                }
+                options[i].style.display = '';
             }
 
-            if (!currentSelectionValid) {
-                // Set to default based on rule
-                let def = primaryDef;
-                
-                if (def && allowed.includes(def)) {
-                    incotermSelect.value = def;
-                    // Trigger change event to update freight terms and inclusions
-                    incotermSelect.dispatchEvent(new Event('change'));
-                }
+            if (!incotermSelect.value && primaryDef) {
+                incotermSelect.value = primaryDef;
+                incotermSelect.dispatchEvent(new Event('change'));
             }
         }
 
@@ -3552,55 +3534,25 @@ async function filterLocations(locationType) {
             const freightCheckbox = document.getElementById('includeFreight');
             const originCheckbox = document.getElementById('includeOriginCharges');
             const destCheckbox = document.getElementById('includeDestCharges');
-            const trafficType = document.getElementById('trafficType').value;
+            const originItem = document.getElementById('originChargeItem');
+            const destItem = document.getElementById('destChargeItem');
+            const trafficType = document.getElementById('trafficType')?.value || '';
 
-            // Reset to enabled state (we will disable them at the end)
-            freightCheckbox.disabled = false;
-            originCheckbox.disabled = false;
-            destCheckbox.disabled = false;
-
-            let freightIncluded = true;
-            let originIncluded = true;
-            let destIncluded = false;
-
-            // Set inclusions based on trafficType and incoterm
-            if (trafficType === 'EX') {
-                switch (incoterm) {
-                    case 'CFR':
-                        freightIncluded = true; originIncluded = true; destIncluded = false;
-                        break;
-                    case 'DPU':
-                    case 'DAP':
-                        freightIncluded = true; originIncluded = true; destIncluded = true;
-                        break;
-                    case 'FOB':
-                        freightIncluded = false; originIncluded = true; destIncluded = false;
-                        break;
-                }
-            } else if (trafficType === 'IM') {
-                switch (incoterm) {
-                    case 'FOB':
-                        freightIncluded = true; originIncluded = false; destIncluded = true;
-                        break;
-                    case 'FCA':
-                    case 'EXW':
-                        freightIncluded = true; originIncluded = true; destIncluded = true;
-                        break;
-                    case 'CFR':
-                        freightIncluded = false; originIncluded = false; destIncluded = true;
-                        break;
-                }
+            // Adapt charge display to Traffic Type (Ticket 36: local charges are Destination for Import, Origin for Export)
+            if (trafficType === 'IM') {
+                if (originItem) originItem.style.display = 'none';
+                if (destItem) destItem.style.display = '';
+                if (destCheckbox) destCheckbox.checked = true;
+                if (originCheckbox) originCheckbox.checked = false;
+            } else if (trafficType === 'EX') {
+                if (originItem) originItem.style.display = '';
+                if (destItem) destItem.style.display = 'none';
+                if (originCheckbox) originCheckbox.checked = true;
+                if (destCheckbox) destCheckbox.checked = false;
+            } else {
+                if (originItem) originItem.style.display = '';
+                if (destItem) destItem.style.display = '';
             }
-
-            // Apply the logic to checkboxes
-            freightCheckbox.checked = freightIncluded;
-            originCheckbox.checked = originIncluded;
-            destCheckbox.checked = destIncluded;
-
-            // Disable them so user cannot override
-            freightCheckbox.disabled = true;
-            originCheckbox.disabled = true;
-            destCheckbox.disabled = true;
 
             // Update visual status
             updateChargeStatus('freight');
