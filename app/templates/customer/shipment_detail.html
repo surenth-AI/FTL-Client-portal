@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Booking {{ booking.api_booking_ref or ('BR-2026-' ~ '%05d'|format(booking.id)) }}{% endblock %}
+{% block title %}Booking {{ booking.api_booking_ref or booking.bookingref or booking.id }}{% endblock %}
 
 {% block content %}
 <style>
@@ -639,38 +639,46 @@
     {% set s_raw = (booking.status or '') | lower %}
     {% if 'deliver' in s_raw or 'arrived' in s_raw or booking.ata %}
         {% set stage = 4 %}
-        {% set status_text = 'DELIVERED' %}
+        {% set status_text = booking.status or 'DELIVERED' %}
         {% set status_class = 'delivered' %}
     {% elif 'transit' in s_raw or 'dispatched' in s_raw or (booking.atd and not booking.ata) %}
         {% set stage = 3 %}
-        {% set status_text = 'IN TRANSIT' %}
+        {% set status_text = booking.status or 'IN TRANSIT' %}
         {% set status_class = 'transit' %}
     {% elif 'confirm' in s_raw or 'booked' in s_raw %}
         {% set stage = 2 %}
-        {% set status_text = 'CONFIRMED' %}
+        {% set status_text = booking.status or 'CONFIRMED' %}
         {% set status_class = 'confirmed' %}
-    {% else %}
+    {% elif s_raw %}
         {% set stage = 1 %}
-        {% set status_text = 'SUBMITTED' %}
+        {% set status_text = booking.status | upper %}
         {% set status_class = 'pending' %}
+    {% else %}
+        {% set stage = 0 %}
+        {% set status_text = '' %}
+        {% set status_class = '' %}
     {% endif %}
 
     <!-- HEADER & ACTION TOOLBAR -->
     <div class="vb-header-row">
         <div class="vb-title-block">
             <h1>
-                {{ booking.api_booking_ref or booking.bookingref or '' }}
+                {{ booking.api_booking_ref or booking.bookingref or booking.id }}
+                {% if status_text %}
                 <span class="vb-status-pill {{ status_class }}"><span class="dot"></span>{{ status_text }}</span>
+                {% endif %}
             </h1>
             <div class="vb-meta-line">
-                {{ booking.origin }}{% if booking.origin and booking.destination %} → {% endif %}{{ booking.destination }}{% if booking.created_at %} · Submitted {{ booking.created_at.strftime('%Y-%m-%d') }}{% endif %}{% if booking.ata %} · Delivered {{ booking.ata.strftime('%Y-%m-%d') }}{% elif booking.atd %} · Departed {{ booking.atd.strftime('%Y-%m-%d') }}{% elif booking.etd %} · Expected ETD {{ booking.etd.strftime('%Y-%m-%d') }}{% endif %}
+                {% if booking.origin %}{{ booking.origin }}{% endif %}{% if booking.origin and booking.destination %} → {% endif %}{% if booking.destination %}{{ booking.destination }}{% endif %}{% if booking.created_at %} · Submitted {{ booking.created_at.strftime('%Y-%m-%d') }}{% endif %}{% if booking.ata %} · Delivered {{ booking.ata.strftime('%Y-%m-%d') }}{% elif booking.atd %} · Departed {{ booking.atd.strftime('%Y-%m-%d') }}{% elif booking.etd %} · Expected ETD {{ booking.etd.strftime('%Y-%m-%d') }}{% endif %}
             </div>
         </div>
         <div class="vb-actions">
+            {% if booking.attachments and booking.attachments|length > 0 %}
             <a href="{{ url_for('customer.download_all_docs', booking_id=booking.id) }}" class="vb-btn">
                 <span>↓</span> Download Documents
             </a>
-            {% if stage <= 2 %}
+            {% endif %}
+            {% if booking.status and booking.status in ['Booked', 'Pending Review', 'Confirmed', 'Submitted'] %}
             <button class="vb-btn vb-btn-danger" onclick="if(confirm('Are you sure you want to request cancellation for this booking?')) alert('Cancellation request submitted to Operations team.');">
                 Cancel Request
             </button>
@@ -678,9 +686,10 @@
         </div>
     </div>
 
-    <!-- BOOKING STATUS STEPPER -->
+    <!-- BOOKING STATUS STEPPER (Rendered only when status or milestone dates exist in API) -->
+    {% if stage > 0 %}
     <div class="vb-card">
-        <div class="stepper-heading">Booking Status</div>
+        <div class="stepper-heading">Booking Status: {{ status_text }}</div>
         <div class="stepper-row">
             <div class="stepper-track-bg">
                 <div class="stepper-track-fill" style="width: {{ 100 if stage >= 4 else (66.67 if stage == 3 else (33.33 if stage == 2 else 0)) }}%;"></div>
@@ -697,7 +706,7 @@
             <div class="stepper-step {{ 'completed' if stage > 2 else ('active' if stage == 2 else '') }}">
                 <div class="stepper-circle">{{ '✓' if stage > 2 else ('' if stage == 2 else '2') }}</div>
                 <div class="stepper-label">Confirmed</div>
-                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '' }}</div>
+                <div class="stepper-date">{{ booking.created_at.strftime('%Y-%m-%d') if (stage >= 2 and booking.created_at) else '' }}</div>
             </div>
 
             <!-- STEP 3: In Transit -->
@@ -715,6 +724,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- 2 COLUMN MAIN GRID -->
     <div class="vb-grid">
@@ -722,6 +732,7 @@
         <!-- LEFT COLUMN (PRIMARY CARDS) -->
         <div>
             <!-- ROUTE & SAILING -->
+            {% if booking.origin or booking.destination or booking.vessel_name or booking.voyage_number or booking.etd or booking.eta %}
             <div class="vb-card">
                 <div class="card-title-row">
                     <h2 class="card-title">Route &amp; Sailing</h2>
@@ -732,29 +743,43 @@
                     {% endif %}
                 </div>
 
+                {% if booking.origin or booking.destination %}
                 <div class="route-display">
+                    {% if booking.origin %}
                     <div class="port-block">
                         <span class="port-label">ORIGIN</span>
-                        <span class="port-name">{{ booking.origin or '' }}</span>
-                        <span class="port-sub">{% if booking.origin %}Port{% endif %}</span>
+                        <span class="port-name">{{ booking.origin }}</span>
+                        {% if booking.polLocode %}<span class="port-sub">{{ booking.polLocode }}</span>{% endif %}
                     </div>
+                    {% endif %}
+                    {% if booking.origin and booking.destination %}
                     <div style="font-size: 1.2rem; color: #94a3b8;">→</div>
+                    {% endif %}
+                    {% if booking.destination %}
                     <div class="port-block" style="text-align: right;">
                         <span class="port-label">DESTINATION</span>
-                        <span class="port-name">{{ booking.destination or '' }}</span>
-                        <span class="port-sub">{% if booking.destination %}Port{% endif %}</span>
+                        <span class="port-name">{{ booking.destination }}</span>
+                        {% if booking.podLocode %}<span class="port-sub">{{ booking.podLocode }}</span>{% endif %}
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
 
+                {% if booking.vessel_name or booking.voyage_number or booking.etd or booking.eta %}
                 <div class="vessel-info-box">
+                    {% if booking.vessel_name or booking.voyage_number %}
                     <div>
                         <span style="margin-right: 0.3rem;">🚢</span>
                         <span class="vessel-name">{{ booking.vessel_name or '' }}{% if booking.voyage_number %} · Voyage {{ booking.voyage_number }}{% endif %}</span>
                     </div>
+                    {% endif %}
+                    {% if booking.etd or booking.eta %}
                     <div class="vessel-dates">
                         {% if booking.etd %}ETD {{ booking.etd.strftime('%Y-%m-%d') }}{% endif %}{% if booking.etd and booking.eta %} → {% endif %}{% if booking.eta %}ETA {{ booking.eta.strftime('%Y-%m-%d') }}{% endif %}
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
 
                 {% if booking.via_port %}
                 <div>
@@ -762,13 +787,15 @@
                 </div>
                 {% endif %}
             </div>
+            {% endif %}
 
             <!-- CARGO -->
+            {% if (booking.cargo_items and booking.cargo_items|length > 0) or booking.totalcolli or booking.totalweight or booking.totalVolume %}
             <div class="vb-card">
                 <div class="card-title-row">
                     <h2 class="card-title">Cargo</h2>
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        {% if booking.cargo_items %}
+                        {% if booking.cargo_items and booking.cargo_items|length > 0 %}
                         <span style="font-size: 0.8rem; color: #64748b;">{{ booking.cargo_items|length }} Item(s)</span>
                         {% if booking.cargo_items|length > 1 %}
                         <button class="vb-btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="toggleAllCargo()">Expand all</button>
@@ -781,14 +808,14 @@
                 {% for item in booking.cargo_items %}
                 <div class="cargo-accordion-item">
                     <div class="cargo-header" onclick="toggleCargoItem(this)">
-                        <span>▼ Cargo Item #{{ loop.index }} {% if item.is_imo %}<span class="haz-badge">⚠ Hazardous</span>{% endif %} &nbsp; <span style="font-weight: normal; color: #64748b;">{% if item.quantity %}{{ item.quantity }} {{ item.package_type }}{% endif %}{% if item.weight_kg %} · {{ "%.2f"|format(item.weight_kg) }} kg{% endif %}{% if item.volume_cbm %} · {{ "%.3f"|format(item.volume_cbm) }} m³{% endif %}</span></span>
+                        <span>▼ Cargo Item #{{ loop.index }} {% if item.is_imo %}<span class="haz-badge">⚠ Hazardous</span>{% endif %} &nbsp; <span style="font-weight: normal; color: #64748b;">{% if item.quantity or item.package_type %}{{ item.quantity ~ ' ' if item.quantity else '' }}{{ item.package_type }}{% endif %}{% if item.weight_kg is not none %} · {{ "%.2f"|format(item.weight_kg) }} kg{% endif %}{% if item.volume_cbm is not none %} · {{ "%.3f"|format(item.volume_cbm) }} m³{% endif %}</span></span>
                     </div>
                     <div class="cargo-body">
                         <div class="cargo-grid">
-                            <div><div class="grid-col-label">PIECES</div><div class="grid-col-val">{{ item.quantity }} {{ item.package_type }}</div></div>
+                            {% if item.quantity or item.package_type %}<div><div class="grid-col-label">PIECES</div><div class="grid-col-val">{{ (item.quantity ~ ' ' if item.quantity else '') ~ (item.package_type or '') }}</div></div>{% endif %}
                             <div><div class="grid-col-label">GOODS TYPE</div><div class="grid-col-val">{{ 'Hazardous Materials' if item.is_imo else 'General Cargo' }}</div></div>
-                            <div><div class="grid-col-label">WEIGHT</div><div class="grid-col-val">{% if item.weight_kg %}{{ "%.2f"|format(item.weight_kg) }} kg{% endif %}</div></div>
-                            <div><div class="grid-col-label">VOLUME</div><div class="grid-col-val">{% if item.volume_cbm %}{{ "%.3f"|format(item.volume_cbm) }} m³{% endif %}</div></div>
+                            {% if item.weight_kg is not none %}<div><div class="grid-col-label">WEIGHT</div><div class="grid-col-val">{{ "%.2f"|format(item.weight_kg) }} kg</div></div>{% endif %}
+                            {% if item.volume_cbm is not none %}<div><div class="grid-col-label">VOLUME</div><div class="grid-col-val">{{ "%.3f"|format(item.volume_cbm) }} m³</div></div>{% endif %}
                         </div>
 
                         {% if item.description %}
@@ -797,78 +824,138 @@
                             <div style="font-size: 0.8rem; color: #334155; white-space: pre-line;">{{ item.description }}</div>
                         </div>
                         {% endif %}
+
+                        {% if item.marks_numbers %}
+                        <div style="margin-bottom: 0.5rem;">
+                            <div class="grid-col-label">MARKS &amp; NUMBERS</div>
+                            <div style="font-size: 0.8rem; color: #334155; white-space: pre-line;">{{ item.marks_numbers }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if item.dimensions and item.dimensions|length > 0 %}
+                        <div style="margin-top: 0.5rem;">
+                            <div class="grid-col-label">DIMENSIONS</div>
+                            <table class="dims-table">
+                                <thead>
+                                    <tr>
+                                        <th>AMOUNT</th>
+                                        <th>LENGTH (CM)</th>
+                                        <th>WIDTH (CM)</th>
+                                        <th>HEIGHT (CM)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for d in item.dimensions %}
+                                    <tr>
+                                        <td>{{ d.amount if d.amount else 1 }}</td>
+                                        <td>{{ d.length }}</td>
+                                        <td>{{ d.width }}</td>
+                                        <td>{{ d.height }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
-                {% else %}
-                <div class="py-3 text-muted" style="font-size: 0.85rem;">
-                    No cargo item details recorded.
-                </div>
                 {% endif %}
 
                 <!-- CARGO SUMMARY FOOTER BAR -->
+                {% if booking.totalcolli or booking.totalweight or booking.totalVolume %}
                 <div class="cargo-summary-bar">
+                    {% if booking.totalcolli %}
                     <div>
                         <div class="summary-item-label">TOTAL PIECES</div>
-                        <div class="summary-item-val">{{ booking.totalcolli if booking.totalcolli else '' }}</div>
+                        <div class="summary-item-val">{{ booking.totalcolli }}</div>
                     </div>
+                    {% endif %}
+                    {% if booking.totalweight %}
                     <div>
                         <div class="summary-item-label">TOTAL WEIGHT</div>
-                        <div class="summary-item-val">{{ "%.2f kg"|format(booking.totalweight) if booking.totalweight else '' }}</div>
+                        <div class="summary-item-val">{{ "%.2f kg"|format(booking.totalweight) }}</div>
                     </div>
+                    {% endif %}
+                    {% if booking.totalVolume %}
                     <div>
                         <div class="summary-item-label">TOTAL VOLUME</div>
-                        <div class="summary-item-val">{{ "%.3f m³"|format(booking.totalVolume) if booking.totalVolume else '' }}</div>
+                        <div class="summary-item-val">{{ "%.3f m³"|format(booking.totalVolume) }}</div>
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
+            {% endif %}
 
             <!-- SERVICES & INSTRUCTIONS -->
+            {% if booking.customer_ref or booking.etd or booking.inco_term or booking.payment_method or booking.special_instructions or booking.internal_memo %}
             <div class="vb-card">
                 <h2 class="card-title" style="margin-bottom: 1rem;">Services &amp; Instructions</h2>
                 <div class="cargo-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.75rem;">
+                    {% if booking.customer_ref %}
                     <div>
                         <div class="grid-col-label">CUSTOMER REFERENCE</div>
-                        <div class="grid-col-val">{{ booking.customer_ref or '' }}</div>
+                        <div class="grid-col-val">{{ booking.customer_ref }}</div>
                     </div>
+                    {% endif %}
+                    {% if booking.etd %}
                     <div>
-                        <div class="grid-col-label">CARGO READY DATE</div>
-                        <div class="grid-col-val">{{ booking.etd.strftime('%Y-%m-%d') if booking.etd else '' }}</div>
+                        <div class="grid-col-label">DEPARTURE / READY DATE</div>
+                        <div class="grid-col-val">{{ booking.etd.strftime('%Y-%m-%d') }}</div>
                     </div>
+                    {% endif %}
+                    {% if booking.inco_term %}
+                    <div>
+                        <div class="grid-col-label">INCOTERM</div>
+                        <div class="grid-col-val">{{ booking.inco_term }}{% if booking.inco_location %} ({{ booking.inco_location }}){% endif %}</div>
+                    </div>
+                    {% endif %}
+                    {% if booking.payment_method %}
+                    <div>
+                        <div class="grid-col-label">PAYMENT METHOD</div>
+                        <div class="grid-col-val">{{ booking.payment_method }}</div>
+                    </div>
+                    {% endif %}
                 </div>
 
+                {% if booking.special_instructions or booking.internal_memo %}
                 <div class="instructions-box">
-                    {{ booking.special_instructions or booking.internal_memo or 'No special instructions recorded.' }}
+                    {{ booking.special_instructions or booking.internal_memo }}
                 </div>
+                {% endif %}
             </div>
+            {% endif %}
 
-            <!-- PARTIES & DOCUMENTS -->
+            <!-- PARTIES & DOCUMENTS (Rendered ONLY if at least one party is returned by the API) -->
+            {% if booking.shipper_name or booking.consignee_name or booking.notify_party %}
             <div class="vb-card">
                 <h2 class="card-title" style="margin-bottom: 1rem;">Parties &amp; Documents</h2>
                 <div class="parties-grid">
+                    {% if booking.shipper_name %}
                     <div>
                         <div class="party-title">SHIPPER</div>
-                        <div class="party-name">{{ booking.shipper_name or '' }}</div>
-                        <div class="party-sub">
-                            {{ booking.shipper_contact or '' }}
-                        </div>
+                        <div class="party-name">{{ booking.shipper_name }}</div>
+                        {% if booking.shipper_contact %}<div class="party-sub">{{ booking.shipper_contact }}</div>{% endif %}
                     </div>
+                    {% endif %}
+                    {% if booking.consignee_name %}
                     <div>
                         <div class="party-title">CONSIGNEE</div>
-                        <div class="party-name">{{ booking.consignee_name or '' }}</div>
-                        <div class="party-sub">
-                            {{ booking.consignee_contact or '' }}
-                        </div>
+                        <div class="party-name">{{ booking.consignee_name }}</div>
+                        {% if booking.consignee_contact %}<div class="party-sub">{{ booking.consignee_contact }}</div>{% endif %}
                     </div>
+                    {% endif %}
+                    {% if booking.notify_party %}
                     <div>
                         <div class="party-title">NOTIFY PARTY</div>
-                        <div class="party-name">{{ booking.notify_party or '' }}</div>
-                        <div class="party-sub">
-                            {{ booking.notify_contact or '' }}
-                        </div>
+                        <div class="party-name">{{ booking.notify_party }}</div>
+                        {% if booking.notify_contact %}<div class="party-sub">{{ booking.notify_contact }}</div>{% endif %}
                     </div>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- RIGHT COLUMN (SIDEBAR CARDS) -->
@@ -887,24 +974,53 @@
             {% endif %}
 
             <!-- BOOKING INFO CARD -->
+            {% if booking.file_ref or booking.service_type or booking.customer_name or booking.customer_contact or booking.quotenumber or booking.created_by %}
             <div class="vb-card">
                 <div class="grid-col-label" style="margin-bottom: 1rem;">BOOKING INFO</div>
 
+                {% if booking.file_ref %}
+                <div class="info-list-item">
+                    <div class="info-label">FILE REFERENCE</div>
+                    <div class="info-val">{{ booking.file_ref }}</div>
+                </div>
+                {% endif %}
+
+                {% if booking.service_type %}
                 <div class="info-list-item">
                     <div class="info-label">BOOKING TYPE</div>
-                    <div class="info-val">{{ booking.service_type or '' }}</div>
+                    <div class="info-val">{{ booking.service_type }}</div>
                 </div>
+                {% endif %}
 
+                {% if booking.customer_name %}
                 <div class="info-list-item">
                     <div class="info-label">CUSTOMER ACCOUNT</div>
-                    <div class="info-val">{{ booking.customer_name or '' }}</div>
+                    <div class="info-val">{{ booking.customer_name }}</div>
                 </div>
+                {% endif %}
 
+                {% if booking.customer_contact %}
+                <div class="info-list-item">
+                    <div class="info-label">CUSTOMER CONTACT</div>
+                    <div class="info-val">{{ booking.customer_contact }}</div>
+                </div>
+                {% endif %}
+
+                {% if booking.quotenumber %}
                 <div class="info-list-item">
                     <div class="info-label">LINKED QUOTE</div>
-                    <div class="info-val">{{ booking.quotenumber or '' }}</div>
+                    <div class="info-val">{{ booking.quotenumber }}</div>
                 </div>
+                {% endif %}
+
+                {% if booking.created_by %}
+                <div class="info-list-item">
+                    <div class="info-label">CREATED BY</div>
+                    <div class="info-val">{{ booking.created_by }}</div>
+                </div>
+                {% endif %}
             </div>
+            {% endif %}
         </div>
 
     </div>

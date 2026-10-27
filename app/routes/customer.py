@@ -280,6 +280,46 @@ _DASHBOARD_STATS_CACHE = {
     'data': None
 }
 
+def _resolve_customer_account_id(default=4128):
+    req_acc = request.args.get('accountId') or request.args.get('account_id')
+    if req_acc:
+        try:
+            return int(req_acc)
+        except Exception:
+            pass
+    if hasattr(current_user, 'accounts') and current_user.accounts:
+        for a in current_user.accounts:
+            try:
+                acc_val = int(a.account_id)
+                if acc_val in [4128, 4300]:
+                    return acc_val
+            except Exception:
+                pass
+        try:
+            return int(current_user.accounts[0].account_id)
+        except Exception:
+            pass
+    return default
+
+def _get_candidate_account_ids(primary_default=4128):
+    candidates = []
+    req_acc = request.args.get('accountId') or request.args.get('account_id')
+    if req_acc:
+        try: candidates.append(int(req_acc))
+        except Exception: pass
+    if hasattr(current_user, 'accounts') and current_user.accounts:
+        for a in current_user.accounts:
+            try:
+                val = int(a.account_id)
+                if val not in candidates:
+                    candidates.append(val)
+            except Exception:
+                pass
+    for default_acc in [primary_default, 4128, 4300, 4294]:
+        if default_acc not in candidates:
+            candidates.append(default_acc)
+    return candidates
+
 @customer.route('/api/dashboard-stats')
 @login_required
 def api_dashboard_stats():
@@ -287,7 +327,7 @@ def api_dashboard_stats():
     if _DASHBOARD_STATS_CACHE['data'] is not None and now < _DASHBOARD_STATS_CACHE['expires_at']:
         return jsonify(_DASHBOARD_STATS_CACHE['data'])
 
-    account_id = 4300
+    account_id = _resolve_customer_account_id(4128)
     headers = {'accept': 'application/json', 'x-api-key': '1'}
     items = []
     
@@ -3270,8 +3310,8 @@ class ApiBookingItem:
         self.file_ref = self.raw.get('fileRef') or ''
         self.fileRef = self.file_ref
         
-        # Parse Dates
-        self.created_at = self._parse_date(self.raw.get('createdOn')) or datetime.utcnow()
+        # Parse Dates (strictly no fallback to datetime.utcnow())
+        self.created_at = self._parse_date(self.raw.get('createdOn'))
         self.createdOn = self.raw.get('createdOn') or ''
         self.etd = self._parse_date(self.raw.get('etd'))
         self.atd = self._parse_date(self.raw.get('atd'))
@@ -3287,7 +3327,7 @@ class ApiBookingItem:
         elif raw_status:
             self.status = raw_status.capitalize()
         else:
-            self.status = 'Confirmed'
+            self.status = None
         
         self.product = (self.raw.get('product') or '').strip()
         self.service_type = self.product
@@ -3312,18 +3352,24 @@ class ApiBookingItem:
         self.podLocation = self.raw.get('podLocation') or ''
         self.podlocation = self.podLocation
         self.destination = (self.delLocation.strip() or self.podLocation.strip()) or ''
+
+        # Locodes
+        self.polLocode = self.raw.get('polLocode') or ''
+        self.podLocode = self.raw.get('podLocode') or ''
+        self.porLocode = self.raw.get('porLocode') or ''
+        self.delLocode = self.raw.get('delLocode') or ''
         
-        # Quantities
-        self.totalcolli = self.raw.get('totalColli') or 0
+        # Quantities (None if not provided in API, strictly no fallback)
+        self.totalcolli = self.raw.get('totalColli')
         self.totalColli = self.totalcolli
-        self.totalweight = self.raw.get('totalWeight') or 0.0
+        self.totalweight = self.raw.get('totalWeight')
         self.totalWeight = self.totalweight
-        self.totalVolume = self.raw.get('totalVolume') or 0.0
+        self.totalVolume = self.raw.get('totalVolume')
         self.totalvolume = self.totalVolume
         self.volume = self.totalVolume
         
         # Quote number
-        self.quotenumber = self.raw.get('quoteNumber') or ''
+        self.quotenumber = self.raw.get('quoteNumber') or self.raw.get('quotationRef') or ''
         self.quoteNumber = self.quotenumber
         self.quote_number = self.quotenumber
         
@@ -3340,7 +3386,14 @@ class ApiBookingItem:
         self.special_instructions = self.raw.get('specialInstructions') or ''
         self.internal_memo = self.raw.get('internalMemo') or ''
         self.destination_contact = self.raw.get('cfsDestinationRef') or ''
+        self.inco_term = self.raw.get('incoTerm') or ''
+        self.inco_location = self.raw.get('incoLocation') or ''
+        self.payment_method = self.raw.get('paymentMethod') or ''
+        self.traffic_type = self.raw.get('trafficType') or ''
+        self.created_by = self.raw.get('createdBy') or ''
+        self.tp_lane_id = self.raw.get('tpLaneId')
         self.uuid = self.bookingref
+        self.via_port = ''
         
         PKG_MAP = {
             'BX': 'Box', 'PX': 'Pallet', 'CR': 'Crate', 'DR': 'Drum', 'BG': 'Bag',
@@ -3350,41 +3403,61 @@ class ApiBookingItem:
             'BUNDLES': 'Bundle', 'BUNDLE': 'Bundle', 'BAGS': 'Bag', 'BAG': 'Bag'
         }
         
-        # Attributes for detail page compatibility and cargo badge
+        # Commodities & Cargo items directly from API
         self.cargo_items = []
         pkg_parts = []
-        c_weight = float(self.totalweight or 0.0)
-        c_vol = float(self.totalVolume or 0.0)
+        c_weight = float(self.totalweight) if self.totalweight is not None else 0.0
+        c_vol = float(self.totalVolume) if self.totalVolume is not None else 0.0
         
         raw_commodities = self.raw.get('commodities') or []
         for com in raw_commodities:
-            p_code = str(com.get('packageCode') or com.get('packageTypeDescription') or 'Pallet').upper().strip()
-            p_label = PKG_MAP.get(p_code, p_code.capitalize())
-            n_pkg = com.get('nrPackages') or 1
-            pkg_parts.append(f"{n_pkg} x {p_label} pcs")
-            if not c_weight and com.get('weight'):
-                c_weight += float(com.get('weight'))
-            if not c_vol and com.get('volume'):
-                c_vol += float(com.get('volume'))
+            p_desc = com.get('packageTypeDescription') or ''
+            p_code = com.get('packageCode') or ''
+            p_label = p_desc or PKG_MAP.get(str(p_code).upper().strip(), str(p_code))
+            n_pkg = com.get('nrPackages')
+            if n_pkg is not None and p_label:
+                pkg_parts.append(f"{n_pkg} x {p_label}")
+            elif n_pkg is not None:
+                pkg_parts.append(f"{n_pkg} pcs")
+            elif p_label:
+                pkg_parts.append(p_label)
+                
+            w_val = com.get('weight') if com.get('weight') is not None else com.get('grossWeight')
+            v_val = com.get('volume')
+            if not c_weight and w_val is not None:
+                try: c_weight += float(w_val)
+                except Exception: pass
+            if not c_vol and v_val is not None:
+                try: c_vol += float(v_val)
+                except Exception: pass
                 
             item_mock = type('CargoItemMock', (), {
                 'quantity': n_pkg,
                 'package_type': p_label,
-                'weight_kg': com.get('weight') or com.get('grossWeight') or 0.0,
-                'volume_cbm': com.get('volume') or 0.0,
+                'weight_kg': float(w_val) if w_val is not None else None,
+                'volume_cbm': float(v_val) if v_val is not None else None,
                 'description': com.get('commodityDescription') or com.get('goodsDescription') or '',
+                'marks_numbers': com.get('marksNumbers') or '',
                 'hs_code': com.get('hsCode') or '',
-                'length': 0, 'width': 0, 'height': 0, 'uom': 'cm',
-                'is_imo': com.get('isHazmat', False)
+                'dimensions': com.get('dimensions') or [],
+                'is_imo': bool(com.get('isHazmat', False))
             })()
             self.cargo_items.append(item_mock)
             
-        if not pkg_parts:
-            n_colli = self.totalcolli if self.totalcolli > 0 else 1
-            pkg_parts.append(f"{n_colli} pcs")
+        if not pkg_parts and self.totalcolli:
+            pkg_parts.append(f"{self.totalcolli} pcs")
             
-        pkg_str = ", ".join(pkg_parts)
-        self.cargo_summary = f"{pkg_str} · {c_weight:.2f} kg · {c_vol:.2f} m³"
+        if pkg_parts or c_weight > 0 or c_vol > 0:
+            summary_bits = []
+            if pkg_parts:
+                summary_bits.append(", ".join(pkg_parts))
+            if c_weight > 0:
+                summary_bits.append(f"{c_weight:.2f} kg")
+            if c_vol > 0:
+                summary_bits.append(f"{c_vol:.2f} m³")
+            self.cargo_summary = " · ".join(summary_bits)
+        else:
+            self.cargo_summary = None
             
         self.attachments = []
         self.tracking_events = []
@@ -3415,26 +3488,32 @@ class ApiBookingItem:
             'total_weight': self.totalweight,
             'total_volume': self.totalVolume,
             'cargo_summary': self.cargo_summary,
-            'created_at': self.created_at.strftime('%d %b %Y') if self.created_at else '',
-            'created_at_iso': self.created_at.isoformat() if self.created_at else '',
+            'created_at': self.created_at.strftime('%d %b %Y') if self.created_at else None,
+            'created_at_iso': self.created_at.isoformat() if self.created_at else None,
             'etd': self.etd.strftime('%d %b %Y') if self.etd else None,
             'atd': self.atd.strftime('%d %b %Y') if self.atd else None,
             'eta': self.eta.strftime('%d %b %Y') if self.eta else None,
             'ata': self.ata.strftime('%d %b %Y') if self.ata else None,
-            'ops_manager': self.ops_manager,
-            'customer_name': self.customer_name,
-            'shipper_name': self.shipper_name,
-            'consignee_name': self.consignee_name,
-            'notify_party': self.notify_party,
-            'special_instructions': self.special_instructions,
+            'ops_manager': self.ops_manager or None,
+            'customer_name': self.customer_name or None,
+            'customer_contact': self.customer_contact or None,
+            'shipper_name': self.shipper_name or None,
+            'consignee_name': self.consignee_name or None,
+            'notify_party': self.notify_party or None,
+            'special_instructions': self.special_instructions or None,
+            'inco_term': self.inco_term or None,
+            'inco_location': self.inco_location or None,
+            'payment_method': self.payment_method or None,
             'commodities': [
                 {
-                    'quantity': getattr(item, 'quantity', 1),
-                    'package_type': getattr(item, 'package_type', ''),
-                    'weight_kg': getattr(item, 'weight_kg', 0.0),
-                    'volume_cbm': getattr(item, 'volume_cbm', 0.0),
-                    'description': getattr(item, 'description', ''),
-                    'hs_code': getattr(item, 'hs_code', ''),
+                    'quantity': getattr(item, 'quantity', None),
+                    'package_type': getattr(item, 'package_type', None),
+                    'weight_kg': getattr(item, 'weight_kg', None),
+                    'volume_cbm': getattr(item, 'volume_cbm', None),
+                    'description': getattr(item, 'description', None),
+                    'marks_numbers': getattr(item, 'marks_numbers', None),
+                    'dimensions': getattr(item, 'dimensions', []),
+                    'hs_code': getattr(item, 'hs_code', None),
                     'is_imo': getattr(item, 'is_imo', False)
                 } for item in self.cargo_items
             ]
@@ -3499,7 +3578,7 @@ _SHIPMENTS_CACHE = {} # (account_id, page, per_page): (expires_at, items, total_
 def my_shipments():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    account_id = 4300
+    account_id = _resolve_customer_account_id(4128)
     cache_key = (account_id, page, per_page)
     now = time.time()
     
@@ -3592,7 +3671,7 @@ def export_shipments_excel():
     import pandas as pd
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
     
-    account_id = 4300
+    account_id = _resolve_customer_account_id(4128)
     headers = {'accept': 'application/json', 'x-api-key': '1'}
     items = []
     
@@ -3821,39 +3900,60 @@ def export_quotes_excel():
 @customer.route('/shipment/<booking_id>', endpoint='shipment_detail')
 @login_required
 def shipment_detail(booking_id):
-    account_id = 4300
     headers = {'accept': 'application/json', 'x-api-key': '1'}
+    ref_cand = urllib.parse.unquote(str(booking_id)).strip()
+    candidate_accounts = _get_candidate_account_ids(4128)
     
     booking_obj = None
-    ref_cand = str(booking_id).strip()
-    
-    # 1. Fetch bookings from list to get accurate tracking dates & status (ata, atd, eta, etd, status)
     list_item = None
     detail_data = None
-    try:
-        r_list = requests.get("http://realnexus.comit.cloud:5000/api/Bookings", params={'accountId': account_id, 'pageSize': 100}, headers=headers, timeout=5)
-        if r_list.status_code == 200:
-            for b_raw in r_list.json().get('bookings', []):
-                b_id_str = str(b_raw.get('bookingId') or '')
-                b_ref_str = str(b_raw.get('bookingRef') or '')
-                if ref_cand in [b_id_str, b_ref_str] or ref_cand.replace('/', '') == b_ref_str.replace('/', ''):
-                    list_item = b_raw
+    resolved_account_id = None
+    
+    # 1. If ref_cand contains '/' (PREFIX1/PREFIX2/COUNTER format), query detail API directly
+    if '/' in ref_cand:
+        for acc in candidate_accounts:
+            try:
+                url = f"http://realnexus.comit.cloud:5000/api/Bookings/{urllib.parse.quote(ref_cand, safe='')}"
+                r_d = requests.get(url, params={'accountId': acc}, headers=headers, timeout=5)
+                if r_d.status_code == 200:
+                    detail_data = r_d.json()
+                    resolved_account_id = acc
                     break
-    except Exception as e:
-        current_app.logger.error(f"Error fetching booking list from API: {e}")
-
-    # 2. Determine bookingRef to query detailed API
-    b_ref = (list_item.get('bookingRef') if list_item else ref_cand) or ''
-    if b_ref:
+            except Exception as e:
+                current_app.logger.error(f"Error fetching detail API for acc {acc}: {e}")
+                
+    # 2. Fetch bookings from list to get accurate tracking dates & status (ata, atd, eta, etd, status, fileRef, product)
+    search_accounts = [resolved_account_id] if resolved_account_id else candidate_accounts
+    for acc in search_accounts:
         try:
-            url = f"http://realnexus.comit.cloud:5000/api/Bookings/{urllib.parse.quote(str(b_ref).strip(), safe='')}"
-            r_d = requests.get(url, params={'accountId': account_id}, headers=headers, timeout=5)
-            if r_d.status_code == 200:
-                detail_data = r_d.json()
+            r_list = requests.get("http://realnexus.comit.cloud:5000/api/Bookings", params={'accountId': acc, 'pageSize': 100}, headers=headers, timeout=5)
+            if r_list.status_code == 200:
+                for b_raw in r_list.json().get('bookings', []):
+                    b_id_str = str(b_raw.get('bookingId') or '')
+                    b_ref_str = str(b_raw.get('bookingRef') or '')
+                    if ref_cand in [b_id_str, b_ref_str] or ref_cand.replace('/', '') == b_ref_str.replace('/', ''):
+                        list_item = b_raw
+                        resolved_account_id = acc
+                        break
+            if list_item:
+                break
         except Exception as e:
-            current_app.logger.error(f"Error fetching booking detail API: {e}")
+            current_app.logger.error(f"Error fetching booking list from API for acc {acc}: {e}")
 
-    # 3. Merge data from list and detail
+    # 3. If detail_data not yet retrieved (e.g. numeric ID), fetch using resolved b_ref
+    if not detail_data:
+        b_ref = (list_item.get('bookingRef') if list_item else ref_cand) or ''
+        acc_to_use = resolved_account_id or (candidate_accounts[0] if candidate_accounts else 4128)
+        if b_ref and '/' in b_ref:
+            try:
+                url = f"http://realnexus.comit.cloud:5000/api/Bookings/{urllib.parse.quote(str(b_ref).strip(), safe='')}"
+                r_d = requests.get(url, params={'accountId': acc_to_use}, headers=headers, timeout=5)
+                if r_d.status_code == 200:
+                    detail_data = r_d.json()
+            except Exception as e:
+                current_app.logger.error(f"Error fetching booking detail API: {e}")
+
+    # 4. Merge data from list and detail without adding any artificial fallbacks
     if list_item or detail_data:
         merged = {}
         if list_item:
@@ -3863,7 +3963,7 @@ def shipment_detail(booking_id):
                 if v is not None or k not in merged:
                     merged[k] = v
             # Ensure tracking dates and status from list are preserved
-            for k in ['ata', 'atd', 'eta', 'etd', 'status', 'product']:
+            for k in ['ata', 'atd', 'eta', 'etd', 'status', 'product', 'fileRef']:
                 if list_item and list_item.get(k) is not None:
                     merged[k] = list_item.get(k)
         booking_obj = ApiBookingItem(merged)

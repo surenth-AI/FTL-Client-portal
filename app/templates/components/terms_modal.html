@@ -7,33 +7,135 @@
         </div>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeTermsModal()" title="Close (Esc)"><i class="bi bi-x-lg"></i> Close</button>
     </div>
-    <div style="position:relative; flex:1;">
-        <div id="termsLoading" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; color:#64748b;">
+    <div id="termsFrameContainer" style="position:relative; flex:1; width:100%; height:100%;">
+        <div id="termsLoading" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; color:#64748b; background:#fff; z-index:10;">
             <div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading…
         </div>
-        <iframe id="termsFrame" title="Terms &amp; Conditions" style="width:100%; height:100%; border:0; position:relative;" onload="if (this.getAttribute('src')) document.getElementById('termsLoading').style.display='none';"></iframe>
     </div>
 </div>
 
 <script>
-    // Document is served via /customer/terms-conditions so the source URL stays hidden
-    function openTermsModal() {
+(function() {
+    let isTermsModalOpen = false;
+    let isClosingProgrammatically = false;
+
+    function loadTermsFrame() {
+        let frame = document.getElementById('termsFrame');
+        if (frame) return;
+
+        const container = document.getElementById('termsFrameContainer');
+        if (!container) return;
+        const loading = document.getElementById('termsLoading');
+        if (loading) loading.style.display = 'flex';
+
+        frame = document.createElement('iframe');
+        frame.id = 'termsFrame';
+        frame.title = 'Terms & Conditions';
+        frame.style.width = '100%';
+        frame.style.height = '100%';
+        frame.style.border = '0';
+        frame.style.position = 'relative';
+
+        frame.onload = function() {
+            if (loading) loading.style.display = 'none';
+            try {
+                if (frame.contentWindow) {
+                    frame.contentWindow.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape' && isTermsModalOpen) {
+                            closeTermsModal();
+                        }
+                    });
+                }
+            } catch (err) {}
+        };
+
+        // Setting src before appendChild guarantees no additional joint history entry is created
+        frame.src = '{{ url_for("customer.terms_conditions") }}';
+        container.appendChild(frame);
+    }
+
+    function openTermsModal(fromHistory) {
         const modal = document.getElementById('termsModal');
-        const frame = document.getElementById('termsFrame');
-        if (!frame.getAttribute('src')) {
-            document.getElementById('termsLoading').style.display = 'flex';
-            frame.setAttribute('src', '{{ url_for("customer.terms_conditions") }}');
-        }
+        if (!modal) return;
+
+        isClosingProgrammatically = false;
+        loadTermsFrame();
+
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        isTermsModalOpen = true;
+
+        if (!fromHistory) {
+            if (window.location.hash !== '#terms-view') {
+                try {
+                    history.pushState({ termsModal: true }, '', '#terms-view');
+                } catch (e) {
+                    window.location.hash = '#terms-view';
+                }
+            }
+        }
     }
 
-    function closeTermsModal() {
-        document.getElementById('termsModal').style.display = 'none';
+    function closeTermsModal(fromHistory) {
+        const modal = document.getElementById('termsModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
         document.body.style.overflow = '';
+
+        if (!isTermsModalOpen) return;
+        isTermsModalOpen = false;
+
+        if (!fromHistory) {
+            if (window.location.hash === '#terms-view') {
+                isClosingProgrammatically = true;
+                try {
+                    history.back();
+                } catch (e) {
+                    isClosingProgrammatically = false;
+                    if (window.location.hash === '#terms-view') {
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                    }
+                }
+            }
+        }
     }
+
+    function handleModalHistoryChange() {
+        if (isClosingProgrammatically) {
+            isClosingProgrammatically = false;
+            return;
+        }
+
+        if (window.location.hash === '#terms-view') {
+            if (!isTermsModalOpen) {
+                openTermsModal(true);
+            }
+        } else {
+            if (isTermsModalOpen) {
+                closeTermsModal(true);
+            }
+        }
+    }
+
+    window.addEventListener('popstate', handleModalHistoryChange);
+    window.addEventListener('hashchange', handleModalHistoryChange);
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeTermsModal();
+        if (e.key === 'Escape' && isTermsModalOpen) {
+            closeTermsModal();
+        }
     });
+
+    // Clean up any lingering hash from previous page refreshes
+    if (window.location.hash === '#terms-view') {
+        try {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        } catch (e) {}
+    }
+
+    // Expose functions globally for inline onclick triggers
+    window.openTermsModal = openTermsModal;
+    window.closeTermsModal = closeTermsModal;
+})();
 </script>

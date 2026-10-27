@@ -67,35 +67,40 @@
     <!-- SHIPMENT CARDS LIST (EXACT CLIENT MOCKUP LAYOUT) -->
     <div class="offers-list" id="shipmentsContainer">
         {% for shipment in shipments %}
-            {% set s_status = shipment.status | lower %}
+            {% set s_status = (shipment.status or '') | lower %}
             {% if 'pending' in s_status %}
                 {% set status_cat = 'pending' %}
                 {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>PENDING REVIEW</span>' %}
-                {% set status_sub = 'Created on ' ~ shipment.created_at.strftime('%Y-%m-%d') %}
+                {% set status_sub = ('Created on ' ~ shipment.created_at.strftime('%Y-%m-%d')) if shipment.created_at else '' %}
                 {% set status_note = 'Awaiting office confirmation' %}
             {% elif 'confirm' in s_status or 'booked' in s_status %}
                 {% set status_cat = 'confirmed' %}
                 {% set status_badge = '<span class="status-pill confirmed"><span class="dot"></span>CONFIRMED</span>' %}
-                {% set status_sub = 'Confirmed ' ~ (shipment.created_at.strftime('%Y-%m-%d') if shipment.created_at else '') %}
+                {% set status_sub = ('Confirmed ' ~ shipment.created_at.strftime('%Y-%m-%d')) if shipment.created_at else '' %}
                 {% set status_note = 'Booking confirmed' %}
-            {% elif 'transit' in s_status or 'dispatched' in s_status %}
+            {% elif 'transit' in s_status or 'dispatched' in s_status or shipment.atd %}
                 {% set status_cat = 'transit' %}
                 {% set status_badge = '<span class="status-pill transit"><span class="dot"></span>IN TRANSIT</span>' %}
-                {% set status_sub = 'Departed ' ~ (shipment.atd.strftime('%Y-%m-%d') if shipment.atd else (shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '')) %}
+                {% set status_sub = ('Departed ' ~ shipment.atd.strftime('%Y-%m-%d')) if shipment.atd else (('ETD ' ~ shipment.etd.strftime('%Y-%m-%d')) if shipment.etd else '') %}
                 {% set status_note = 'Vessel in transit' %}
-            {% elif 'deliver' in s_status or 'arrived' in s_status %}
+            {% elif 'deliver' in s_status or 'arrived' in s_status or shipment.ata %}
                 {% set status_cat = 'delivered' %}
                 {% set status_badge = '<span class="status-pill delivered"><span class="dot"></span>DELIVERED</span>' %}
-                {% set status_sub = 'Delivered ' ~ (shipment.ata.strftime('%Y-%m-%d') if shipment.ata else (shipment.eta.strftime('%Y-%m-%d') if shipment.eta else '')) %}
+                {% set status_sub = ('Delivered ' ~ shipment.ata.strftime('%Y-%m-%d')) if shipment.ata else (('ETA ' ~ shipment.eta.strftime('%Y-%m-%d')) if shipment.eta else '') %}
                 {% set status_note = 'Delivered to destination' %}
-            {% else %}
+            {% elif s_status %}
                 {% set status_cat = 'pending' %}
                 {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ (shipment.status | upper) ~ '</span>' %}
-                {% set status_sub = 'Created on ' ~ (shipment.created_at.strftime('%Y-%m-%d') if shipment.created_at else '') %}
+                {% set status_sub = ('Created on ' ~ shipment.created_at.strftime('%Y-%m-%d')) if shipment.created_at else '' %}
                 {% set status_note = 'Status updated' %}
+            {% else %}
+                {% set status_cat = 'all' %}
+                {% set status_badge = '' %}
+                {% set status_sub = ('Created on ' ~ shipment.created_at.strftime('%Y-%m-%d')) if shipment.created_at else '' %}
+                {% set status_note = '' %}
             {% endif %}
 
-            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else '-' %}
+            {% set ref_code = shipment.api_booking_ref if shipment.api_booking_ref else (shipment.bookingref or '') %}
             {% set parent_quote = shipment.customer_ref %}
             <div class="offer-card shipment-card-item"
                  data-status="{{ status_cat }}"
@@ -103,16 +108,18 @@
                  data-parent-quote="{{ (parent_quote or '') | lower }}"
                  data-route="{{ (shipment.origin ~ ' ' ~ shipment.destination) | lower }}"
                  data-carrier="{{ (shipment.selected_nvocc or '') | lower }}"
-                 data-created="{{ shipment.created_at.timestamp() }}"
+                 data-created="{{ shipment.created_at.timestamp() if shipment.created_at else 0 }}"
                  data-etd="{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '' }}"
                  data-eta="{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '' }}"
-                 data-closing="{{ shipment.created_at.strftime('%Y-%m-%d') }}">
+                 data-closing="{{ shipment.created_at.strftime('%Y-%m-%d') if shipment.created_at else '' }}">
 
                 <div class="offer-badge-row">
                     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        {% if ref_code %}
                         <div class="info-pill clickable" onclick="navigator.clipboard.writeText('{{ ref_code }}'); this.classList.add('copied'); setTimeout(()=>this.classList.remove('copied'), 2000);">
                             📌 Ref: <span class="ref-code">{{ ref_code }}</span> <span class="copy-icon">⧉</span>
                         </div>
+                        {% endif %}
                         
                         {% if shipment.cargo_summary %}
                         <div class="info-pill">
@@ -134,8 +141,8 @@
                     </div>
 
                     <div class="status-right-col">
-                        {{ status_badge | safe }}
-                        <div class="status-subtext">{{ status_sub }}</div>
+                        {% if status_badge %}{{ status_badge | safe }}{% endif %}
+                        {% if status_sub %}<div class="status-subtext">{{ status_sub }}</div>{% endif %}
                     </div>
                 </div>
 
@@ -143,56 +150,66 @@
                 <div class="offer-main-booking">
                     <div class="offer-details">
                         <!-- Route Title -->
+                        {% if shipment.origin or shipment.destination %}
                         <div class="carrier-row">
                             <div class="carrier-text">
                                 <div class="carrier-name route-line" style="font-size: 1.05rem; font-weight:700;">
-                                    <span class="route-stop">{{ shipment.origin }}</span>
-                                    <span class="route-arrow" style="margin: 0 0.2rem;">→</span>
-                                    <span class="route-stop">{{ shipment.destination }}</span>
+                                    {% if shipment.origin %}<span class="route-stop">{{ shipment.origin }}</span>{% endif %}
+                                    {% if shipment.origin and shipment.destination %}<span class="route-arrow" style="margin: 0 0.2rem;">→</span>{% endif %}
+                                    {% if shipment.destination %}<span class="route-stop">{{ shipment.destination }}</span>{% endif %}
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
 
                         <!-- Routing Meta Badges -->
+                        {% if shipment.service_type or shipment.vessel_name or shipment.voyage_number %}
                         <div class="routing-meta" style="margin-top: 0.4rem;">
                             {% if shipment.service_type %}
                             <span class="meta-pill time">📦 {{ shipment.service_type }}</span>
                             {% endif %}
                             {% if shipment.vessel_name or shipment.voyage_number %}
-                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name if shipment.vessel_name else '-' }} {{ ('· Voy ' ~ shipment.voyage_number) if shipment.voyage_number else '' }}</span>
+                            <span class="meta-pill vessel">🚢 {{ shipment.vessel_name if shipment.vessel_name else '' }} {{ ('· Voy ' ~ shipment.voyage_number) if shipment.voyage_number else '' }}</span>
                             {% endif %}
                         </div>
+                        {% endif %}
 
-                        <!-- Logistics Timeline Dates Row: ETD, ETA, Cargo ready, PO -->
+                        <!-- Logistics Timeline Dates Row: ETD, ETA, PO -->
+                        {% if shipment.etd or shipment.eta_pod or shipment.customer_ref %}
                         <div class="timeline-row">
+                            {% if shipment.etd %}
                             <div class="timeline-item">
-                                ETD <strong>{{ shipment.etd.strftime('%Y-%m-%d') if shipment.etd else '-' }}</strong>
+                                ETD <strong>{{ shipment.etd.strftime('%Y-%m-%d') }}</strong>
                             </div>
+                            {% endif %}
+                            {% if shipment.eta_pod %}
                             <div class="timeline-item">
-                                ETA <strong>{{ shipment.eta_pod.strftime('%Y-%m-%d') if shipment.eta_pod else '-' }}</strong>
+                                ETA <strong>{{ shipment.eta_pod.strftime('%Y-%m-%d') }}</strong>
                             </div>
+                            {% endif %}
+                            {% if shipment.customer_ref %}
                             <div class="timeline-item">
-                                Cargo ready <strong>-</strong>
+                                Ref <strong>{{ shipment.customer_ref }}</strong>
                             </div>
-
-                            <div class="timeline-item">
-                                Ref <strong>{{ shipment.customer_ref if shipment.customer_ref else '-' }}</strong>
-                            </div>
+                            {% endif %}
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- Right Action Button -->
                     <div class="offer-actions">
-                        <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}" class="mq-btn-mockup-outline">View Booking →</a>
+                        <a href="{{ url_for('customer.shipment_detail', booking_id=shipment.bookingref or shipment.id) }}" class="mq-btn-mockup-outline">View Booking →</a>
                     </div>
                 </div>
 
                 <!-- Footer Divider Line & Status Note (EXACT CLIENT MOCKUP) -->
+                {% if status_note %}
                 <div class="mockup-card-footer-line">
                     <div class="status-subtext" style="font-size: 0.78rem; color: var(--mq-text-muted);">
                         {{ status_note }}
                     </div>
                 </div>
+                {% endif %}
             </div>
         {% endfor %}
     </div>
@@ -222,37 +239,40 @@
                     </thead>
                     <tbody id="shipmentsTableBody">
                     {% for shipment in shipments %}
-                        {% set s_status = shipment.status | lower %}
+                        {% set s_status = (shipment.status or '') | lower %}
                         {% if 'pending' in s_status %}
                             {% set status_cat = 'pending' %}
                             {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>PENDING</span>' %}
                         {% elif 'confirm' in s_status or 'booked' in s_status %}
                             {% set status_cat = 'confirmed' %}
                             {% set status_badge = '<span class="status-pill confirmed"><span class="dot"></span>CONFIRMED</span>' %}
-                        {% elif 'transit' in s_status or 'dispatched' in s_status %}
+                        {% elif 'transit' in s_status or 'dispatched' in s_status or shipment.atd %}
                             {% set status_cat = 'transit' %}
                             {% set status_badge = '<span class="status-pill transit"><span class="dot"></span>IN TRANSIT</span>' %}
-                        {% elif 'deliver' in s_status or 'arrived' in s_status %}
+                        {% elif 'deliver' in s_status or 'arrived' in s_status or shipment.ata %}
                             {% set status_cat = 'delivered' %}
                             {% set status_badge = '<span class="status-pill delivered"><span class="dot"></span>DELIVERED</span>' %}
-                        {% else %}
+                        {% elif s_status %}
                             {% set status_cat = 'pending' %}
                             {% set status_badge = '<span class="status-pill pending"><span class="dot"></span>' ~ (shipment.status | upper) ~ '</span>' %}
+                        {% else %}
+                            {% set status_cat = 'all' %}
+                            {% set status_badge = '' %}
                         {% endif %}
 
                         {# 2. Booking number: "bookingref" #}
-                        {% set b_ref = shipment.bookingref if shipment.bookingref is defined and shipment.bookingref else (shipment.bookingRef if shipment.bookingRef is defined and shipment.bookingRef else (shipment.api_booking_ref if shipment.api_booking_ref else ('BK-' ~ "%06d"|format(shipment.id) if shipment.id else '—'))) %}
+                        {% set b_ref = shipment.bookingref if shipment.bookingref is defined and shipment.bookingref else (shipment.bookingRef if shipment.bookingRef is defined and shipment.bookingRef else (shipment.api_booking_ref if shipment.api_booking_ref else (shipment.id if shipment.id else ''))) %}
 
                         {# 3. YourReference: "customerReference" #}
-                        {% set c_ref = shipment.customerReference if shipment.customerReference is defined and shipment.customerReference else (shipment.customerRef if shipment.customerRef is defined and shipment.customerRef else (shipment.customer_ref if shipment.customer_ref else '—')) %}
+                        {% set c_ref = shipment.customerReference if shipment.customerReference is defined and shipment.customerReference else (shipment.customerRef if shipment.customerRef is defined and shipment.customerRef else (shipment.customer_ref if shipment.customer_ref else '')) %}
 
-                        {# 4. Origin: ISNULL("porlocation","pollocation") #}
-                        {% set loc_origin = shipment.porlocation if shipment.porlocation is defined and shipment.porlocation else (shipment.porLocation if shipment.porLocation is defined and shipment.porLocation else (shipment.place_of_receipt if shipment.place_of_receipt else (shipment.pollocation if shipment.pollocation is defined and shipment.pollocation else (shipment.polLocation if shipment.polLocation is defined and shipment.polLocation else (shipment.origin if shipment.origin else '—'))))) %}
+                        {# 4. Origin #}
+                        {% set loc_origin = shipment.origin if shipment.origin else '' %}
 
-                        {# 5. Destination: ISNULL("dellocation","podlocation") #}
-                        {% set loc_dest = shipment.dellocation if shipment.dellocation is defined and shipment.dellocation else (shipment.delLocation if shipment.delLocation is defined and shipment.delLocation else (shipment.place_of_delivery if shipment.place_of_delivery else (shipment.podlocation if shipment.podlocation is defined and shipment.podlocation else (shipment.podLocation if shipment.podLocation is defined and shipment.podLocation else (shipment.destination if shipment.destination else '—'))))) %}
+                        {# 5. Destination #}
+                        {% set loc_dest = shipment.destination if shipment.destination else '' %}
 
-                        {# Cargo item fallbacks #}
+                        {# Cargo items #}
                         {% set ns = namespace(pkgs=0, kgs=0.0, cbm=0.0) %}
                         {% if shipment.cargo_items %}
                             {% for item in shipment.cargo_items %}
@@ -263,35 +283,35 @@
                         {% endif %}
 
                         {# 6. #pkgs: "totalcolli" #}
-                        {% set val_pkgs = shipment.totalcolli if (shipment.totalcolli is defined and shipment.totalcolli is not none and shipment.totalcolli != '') else (shipment.totalColli if (shipment.totalColli is defined and shipment.totalColli is not none and shipment.totalColli != '') else (ns.pkgs if ns.pkgs > 0 else '—')) %}
+                        {% set val_pkgs = shipment.totalcolli if (shipment.totalcolli is defined and shipment.totalcolli is not none and shipment.totalcolli != '') else (shipment.totalColli if (shipment.totalColli is defined and shipment.totalColli is not none and shipment.totalColli != '') else (ns.pkgs if ns.pkgs > 0 else '')) %}
 
                         {# 7. Weight: "totalweight" #}
                         {% set val_weight_num = shipment.totalweight if (shipment.totalweight is defined and shipment.totalweight is not none and shipment.totalweight != '') else (shipment.totalWeight if (shipment.totalWeight is defined and shipment.totalWeight is not none and shipment.totalWeight != '') else (ns.kgs if ns.kgs > 0 else 0)) %}
-                        {% set val_weight_display = (("%.2f kg"|format(val_weight_num)) if val_weight_num is number and val_weight_num > 0 else (val_weight_num ~ ' kg' if val_weight_num != 0 and val_weight_num != '0' else '—')) %}
+                        {% set val_weight_display = (("%.2f kg"|format(val_weight_num)) if val_weight_num is number and val_weight_num > 0 else '') %}
 
                         {# 8. Volume: "totalVolume" #}
                         {% set val_volume_num = shipment.totalVolume if (shipment.totalVolume is defined and shipment.totalVolume is not none and shipment.totalVolume != '') else (shipment.totalvolume if (shipment.totalvolume is defined and shipment.totalvolume is not none and shipment.totalvolume != '') else (ns.cbm if ns.cbm > 0 else (shipment.volume if shipment.volume else 0))) %}
-                        {% set val_volume_display = (("%.2f m³"|format(val_volume_num)) if val_volume_num is number and val_volume_num > 0 else (val_volume_num ~ ' m³' if val_volume_num != 0 and val_volume_num != '0' else '—')) %}
+                        {% set val_volume_display = (("%.2f m³"|format(val_volume_num)) if val_volume_num is number and val_volume_num > 0 else '') %}
 
-                        {# 9. Vessel: concat("vessel"," (","voyage",")") #}
+                        {# 9. Vessel #}
                         {% set v_vessel = shipment.vessel if (shipment.vessel is defined and shipment.vessel) else (shipment.vessel_name if shipment.vessel_name else '') %}
                         {% set v_voyage = shipment.voyage if (shipment.voyage is defined and shipment.voyage) else (shipment.voyage_number if shipment.voyage_number else '') %}
-                        {% set val_vessel = (v_vessel ~ ' (' ~ v_voyage ~ ')') if (v_vessel and v_voyage) else (v_vessel if v_vessel else '—') %}
+                        {% set val_vessel = (v_vessel ~ ' (' ~ v_voyage ~ ')') if (v_vessel and v_voyage) else (v_vessel if v_vessel else '') %}
 
-                        {# 10. ETD/ATD: ISNULL("ATD","ETD") #}
-                        {% set val_etd = shipment.atd if (shipment.atd is defined and shipment.atd) else (shipment.ATD if (shipment.ATD is defined and shipment.ATD) else (shipment.etd.strftime('%Y-%m-%d') if (shipment.etd and shipment.etd.strftime is defined) else (shipment.etd if (shipment.etd is defined and shipment.etd) else '—'))) %}
+                        {# 10. ETD/ATD #}
+                        {% set val_etd = shipment.atd.strftime('%Y-%m-%d') if (shipment.atd and shipment.atd.strftime is defined) else (shipment.etd.strftime('%Y-%m-%d') if (shipment.etd and shipment.etd.strftime is defined) else '') %}
 
-                        {# 11. ETA/ATA: ISNULL("ATA","ETA") #}
-                        {% set val_eta = shipment.ata if (shipment.ata is defined and shipment.ata) else (shipment.ATA if (shipment.ATA is defined and shipment.ATA) else (shipment.eta_pod.strftime('%Y-%m-%d') if (shipment.eta_pod and shipment.eta_pod.strftime is defined) else (shipment.eta.strftime('%Y-%m-%d') if (shipment.eta is defined and shipment.eta and shipment.eta.strftime is defined) else (shipment.eta_pod if (shipment.eta_pod is defined and shipment.eta_pod) else (shipment.eta if (shipment.eta is defined and shipment.eta) else '—'))))) %}
+                        {# 11. ETA/ATA #}
+                        {% set val_eta = shipment.ata.strftime('%Y-%m-%d') if (shipment.ata and shipment.ata.strftime is defined) else (shipment.eta.strftime('%Y-%m-%d') if (shipment.eta and shipment.eta.strftime is defined) else (shipment.eta_pod.strftime('%Y-%m-%d') if (shipment.eta_pod and shipment.eta_pod.strftime is defined) else '')) %}
 
-                        {# 12. Quote: "quotenumber" #}
-                        {% set val_quote = shipment.quotenumber if (shipment.quotenumber is defined and shipment.quotenumber) else (shipment.quoteNumber if (shipment.quoteNumber is defined and shipment.quoteNumber) else (shipment.quote_number if (shipment.quote_number is defined and shipment.quote_number) else (shipment.customer_ref if (shipment.customer_ref and ('QUO' in shipment.customer_ref or 'Q-' in shipment.customer_ref)) else '—'))) %}
+                        {# 12. Quote: "quotenumber" (strictly no guessing from customer_ref) #}
+                        {% set val_quote = shipment.quotenumber if (shipment.quotenumber is defined and shipment.quotenumber) else (shipment.quoteNumber if (shipment.quoteNumber is defined and shipment.quoteNumber) else '') %}
 
                         {# 13. product: "product" #}
                         {% set val_product = shipment.product if (shipment.product is defined and shipment.product) else (shipment.service_type if shipment.service_type else '') %}
 
                         <tr class="shipment-table-row"
-                            onclick="window.location.href='{{ url_for('customer.shipment_detail', booking_id=shipment.id) }}'"
+                            onclick="window.location.href='{{ url_for('customer.shipment_detail', booking_id=shipment.bookingref or shipment.id) }}'"
                             data-status="{{ status_cat }}"
                             data-bookingref="{{ b_ref | lower }}"
                             data-customerref="{{ c_ref | lower }}"
