@@ -1010,6 +1010,20 @@ def save_quote():
     db.session.add(booking)
     db.session.commit()
     
+    # Automatically send transaction email to customer + configured branch office(s) in background
+    try:
+        from app.utils import bg_executor, run_in_app_context
+        from app.services.email_service import SystemMailer
+        bg_executor.submit(
+            run_in_app_context, 
+            current_app._get_current_object(), 
+            SystemMailer.send_online_quote_notification, 
+            quote_number, 
+            current_user.id
+        )
+    except Exception as e:
+        current_app.logger.error(f"Failed to submit background quote email notification: {e}")
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
         return jsonify({'status': 'success', 'quote_number': quote_number})
         
@@ -2575,7 +2589,9 @@ def api_get_schedules():
         try: branch_id = int(current_user.branches[0].branch_id)
         except: pass
     if not branch_id:
-        branch_id = 23
+        from app.models.models import Branch
+        _fb = Branch.query.first()
+        branch_id = int(_fb.id) if _fb else 23
         
     url = f"http://realnexus.comit.cloud:5000/api/Schedules"
     params = {
@@ -2901,10 +2917,14 @@ def rate_results():
                 
                 if pol_locode and pod_locode:
                     try:
-                        branch_id = 23
+                        branch_id = None
                         if current_user.branches:
                             try: branch_id = int(current_user.branches[0].branch_id)
                             except: pass
+                        if not branch_id:
+                            from app.models.models import Branch
+                            _fb = Branch.query.first()
+                            branch_id = int(_fb.id) if _fb else 23
                         c_date = None
                         if query.get('cargo_ready_date'):
                             c_date = str(query.get('cargo_ready_date'))[:10]
@@ -3204,6 +3224,14 @@ def confirm_booking():
     except Exception as e:
         current_app.logger.error(f"Failed to submit background API post: {e}")
     
+    # Fire off automatic transaction confirmation email to customer + branch office(s) in background
+    try:
+        from app.utils import bg_executor, run_in_app_context
+        from app.services.email_service import SystemMailer
+        bg_executor.submit(run_in_app_context, current_app._get_current_object(), SystemMailer.send_online_booking_notification, booking.id, current_user.id)
+    except Exception as e:
+        current_app.logger.error(f"Failed to submit background booking email notification: {e}")
+    
     if request.is_json:
         return jsonify({'success': True, 'booking_id': booking.id, 'message': 'Booking confirmed!'})
     flash('Booking confirmed! You can track your shipment now.', 'success')
@@ -3285,6 +3313,14 @@ def booking_request():
         bg_executor.submit(run_in_app_context, current_app._get_current_object(), post_booking_to_api, booking.id)
     except Exception as e:
         current_app.logger.error(f"Failed to submit background API post: {e}")
+    
+    # Fire off automatic transaction confirmation email to customer + branch office(s) in background
+    try:
+        from app.utils import bg_executor, run_in_app_context
+        from app.services.email_service import SystemMailer
+        bg_executor.submit(run_in_app_context, current_app._get_current_object(), SystemMailer.send_online_booking_notification, booking.id, current_user.id)
+    except Exception as e:
+        current_app.logger.error(f"Failed to submit background booking email notification: {e}")
     
     if request.is_json:
         return jsonify({'success': True, 'booking_id': booking.id, 'message': 'Booking request submitted!'})
@@ -4242,12 +4278,16 @@ def api_schedules_search():
     pod = request.args.get('pod', '').strip()
     c_date = request.args.get('closingDate', '').strip()
     
-    branch_id = 23
+    branch_id = None
     if current_user.branches:
         try:
             branch_id = int(current_user.branches[0].branch_id)
         except Exception:
             pass
+    if not branch_id:
+        from app.models.models import Branch
+        _fb = Branch.query.first()
+        branch_id = int(_fb.id) if _fb else 23
 
     headers = {'accept': 'application/json', 'x-api-key': '1'}
     

@@ -193,13 +193,20 @@ def create_app(config_class=Config):
                 ('smtp_password', 'VARCHAR(255) NULL'),
                 ('receiver_email', 'VARCHAR(255) NULL'),
                 ('typography', "VARCHAR(100) DEFAULT 'Inter'"),
-                ('incoterm_rules', 'TEXT NULL')
+                ('incoterm_rules', 'TEXT NULL'),
+                ('branch_notifications', 'TEXT NULL')
             ]:
                 try:
                     db.session.execute(db.text(f"ALTER TABLE system_setting ADD {col} {col_type};"))
                     db.session.commit()
                 except Exception:
                     db.session.rollback()
+
+            try:
+                db.session.execute(db.text("ALTER TABLE customer_setting ADD branch_notifications TEXT NULL;"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
 
             # Safe self-healing for user columns
             for col, col_type in [
@@ -388,10 +395,7 @@ def seed_admin():
         demo_customer.erp_contact_id = 11612
         db.session.commit()
 
-    from app.models.models import UserBranchMapping, UserAccountMapping
-    # Ensure branch 23 is mapped
-    if not UserBranchMapping.query.filter_by(user_id=demo_customer.id, branch_id='23').first():
-        db.session.add(UserBranchMapping(user_id=demo_customer.id, branch_id='23'))
+    from app.models.models import UserAccountMapping
     # Ensure account 4294 is mapped
     if not UserAccountMapping.query.filter_by(user_id=demo_customer.id, account_id='4294').first():
         db.session.add(UserAccountMapping(user_id=demo_customer.id, account_id='4294'))
@@ -399,6 +403,15 @@ def seed_admin():
     if not UserAccountMapping.query.filter_by(user_id=admin_user.id, account_id='4294').first():
         db.session.add(UserAccountMapping(user_id=admin_user.id, account_id='4294'))
     db.session.commit()
+
+    # Sync branches from ERP into database and dynamically discover customer branches
+    try:
+        from app.services.branch_service import sync_branches_from_erp, discover_and_map_user_branches
+        sync_branches_from_erp()
+        discover_and_map_user_branches(demo_customer)
+    except Exception as e:
+        print("[seed] Error syncing branches from ERP:", e)
+
     print("Demo customer mappings seeded/verified.")
 
 

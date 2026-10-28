@@ -66,6 +66,24 @@
                     <div class="form-text text-muted" style="font-size: 0.7rem;">Customer admins see users and bookings that share one of these IDs. Comma-separated, e.g. 4294, 4300. Atlas ERP sync may overwrite this.</div>
                 </div>
 
+                {% if available_branches %}
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase d-block">Assigned Branches</label>
+                    <div class="d-flex flex-wrap gap-2 pt-1">
+                        {% for b in available_branches %}
+                        <div class="form-check form-check-inline bg-white-5 border border-white-10 rounded px-3 py-2 m-0">
+                            <input class="form-check-input" type="checkbox" name="branch_ids" id="br_{{ b.id }}" value="{{ b.id }}"
+                                   {% if b.id in user_branch_ids %}checked{% endif %}>
+                            <label class="form-check-label text-white small ms-1" for="br_{{ b.id }}">
+                                <strong>#{{ b.id }}</strong> {{ b.name }} {% if b.call_name %}<span class="text-muted">({{ b.call_name }})</span>{% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-text text-muted" style="font-size: 0.7rem;">Branches assigned to this customer. Automatically resolved when Customer IDs are entered, or can be adjusted manually.</div>
+                </div>
+                {% endif %}
+
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted text-uppercase">Registration ID <span class="text-muted fw-normal">(read-only)</span></label>
                     <input type="text" class="form-control bg-white-5 border-white-10 text-muted" value="{{ user.registration_id or '—' }}" disabled style="font-family: monospace; font-size: 0.8rem;">

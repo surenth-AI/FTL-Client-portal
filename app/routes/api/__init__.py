@@ -354,10 +354,12 @@ def api_sync():
         for acc_id in data['account_ids']:
             db.session.add(UserAccountMapping(user_id=user.id, account_id=acc_id))
 
-    if 'branch_ids' in data:
-        UserBranchMapping.query.filter_by(user_id=user.id).delete()
-        for br_id in data['branch_ids']:
-            db.session.add(UserBranchMapping(user_id=user.id, branch_id=br_id))
+    if 'branch_ids' in data and data['branch_ids']:
+        from app.services.branch_service import discover_and_map_user_branches
+        discover_and_map_user_branches(user, explicit_branch_ids=data['branch_ids'])
+    elif 'account_ids' in data and data['account_ids']:
+        from app.services.branch_service import discover_and_map_user_branches
+        discover_and_map_user_branches(user, account_ids=data['account_ids'])
 
     db.session.commit()
 

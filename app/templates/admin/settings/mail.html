@@ -91,8 +91,8 @@
 <section class="settings-card">
     <div class="settings-card-header">
         <div>
-            <h6 class="settings-card-title">Notifications</h6>
-            <p class="settings-card-desc">Where system alerts are sent inside your organisation.</p>
+            <h6 class="settings-card-title">Registration Notifications</h6>
+            <p class="settings-card-desc">Where administrative alerts are sent inside your organisation.</p>
         </div>
     </div>
     <div class="settings-row">
@@ -109,6 +109,73 @@
     </div>
 </section>
 
+<!-- Branch Office Notifications -->
+<section class="settings-card">
+    <div class="settings-card-header">
+        <div>
+            <h6 class="settings-card-title"><i class="bi bi-buildings text-primary me-2"></i>Branch Office Transaction Notifications</h6>
+            <p class="settings-card-desc">
+                Configure which office inboxes receive automatic copies of customer online transactions (quotes and bookings). 
+                When a customer quotes or books online, the transaction is emailed to the customer and CC'd to the branch inboxes configured below.
+            </p>
+        </div>
+    </div>
+
+    {% set notifs = settings.branch_notifications if settings.branch_notifications is mapping else {} %}
+
+    {% if available_branches %}
+        {% for branch in available_branches %}
+        {% set b_id = branch.id|string %}
+        {% set b_conf = notifs.get(b_id, {}) %}
+        <div class="settings-row" style="align-items: flex-start; padding-top: 1rem; padding-bottom: 1rem;">
+            <div style="min-width: 220px;">
+                <div class="settings-row-label d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.72rem; font-weight: 600;">Branch #{{ branch.id }}</span>
+                    {% if branch.name and branch.name != ('Branch ' ~ branch.id) %}
+                    <span>{{ branch.name }}</span>
+                    {% endif %}
+                </div>
+                <p class="settings-row-help mb-0">{% if branch.call_name %}Code: {{ branch.call_name }}{% else %}Office branch{% endif %}</p>
+            </div>
+            <div class="flex-grow-1">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label mb-1" style="font-size: 0.8rem; font-weight: 600; color: var(--st-text-1, #1e293b);">
+                            <i class="bi bi-file-earmark-text text-primary me-1"></i> Quote Notifications
+                        </label>
+                        <div class="email-capsules-field">
+                            <div class="capsules-box">
+                                <span class="capsules-icon"><i class="bi bi-envelope"></i></span>
+                                <div class="capsules-list"></div>
+                                <input type="text" class="capsule-input-text" autocomplete="off">
+                            </div>
+                            <input type="hidden" name="branch_quote_email_{{ branch.id }}" class="capsule-hidden-input"
+                                   value="{{ b_conf.get('quote_emails', '') }}">
+                        </div>
+                        <div class="form-text" style="font-size: 0.72rem;">Type an email and press comma (<code>,</code>) to add. Click <i class="bi bi-x"></i> to remove.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1" style="font-size: 0.8rem; font-weight: 600; color: var(--st-text-1, #1e293b);">
+                            <i class="bi bi-box-seam text-success me-1"></i> Booking Notifications
+                        </label>
+                        <div class="email-capsules-field">
+                            <div class="capsules-box">
+                                <span class="capsules-icon"><i class="bi bi-envelope-check"></i></span>
+                                <div class="capsules-list"></div>
+                                <input type="text" class="capsule-input-text" autocomplete="off">
+                            </div>
+                            <input type="hidden" name="branch_booking_email_{{ branch.id }}" class="capsule-hidden-input"
+                                   value="{{ b_conf.get('booking_emails', '') }}">
+                        </div>
+                        <div class="form-text" style="font-size: 0.72rem;">Type an email and press comma (<code>,</code>) to add. Click <i class="bi bi-x"></i> to remove.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</section>
+
 <style>
 .port-presets { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .72rem; color: var(--st-muted); }
 .port-presets button {
@@ -117,20 +184,123 @@
     transition: border-color .15s, color .15s;
 }
 .port-presets button:hover, .port-presets button.active { border-color: var(--primary-color); color: var(--primary-color); }
+
+/* Email Capsule / Chip Styles (Gmail-style) */
+.email-capsules-field {
+    position: relative;
+    width: 100%;
+}
+.capsules-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 5px 10px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    cursor: text;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.capsules-box.is-focused {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.capsules-icon {
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.95rem;
+    margin-right: 2px;
+}
+.capsules-list {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.email-capsule {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    border-radius: 9999px;
+    padding: 2px 8px 2px 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.4;
+    user-select: none;
+    animation: capsuleFadeIn .15s ease;
+}
+.email-capsule.is-invalid {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+.capsule-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #3b82f6;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    transition: background-color .1s, color .1s;
+}
+.capsule-remove:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.email-capsule.is-invalid .capsule-remove {
+    color: #ef4444;
+}
+.email-capsule.is-invalid .capsule-remove:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.capsule-input-text {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    flex: 1;
+    min-width: 140px;
+    font-size: 0.84rem;
+    padding: 3px 4px;
+    color: #1e293b;
+}
+@keyframes capsuleFadeIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
 </style>
 {% endblock %}
 
 {% block settings_scripts %}
 <script>
 (function () {
+    // Password toggle
     var pw = document.getElementById('smtpPassword');
     var toggle = document.getElementById('smtpPwToggle');
-    toggle.addEventListener('click', function () {
-        var show = pw.type === 'password';
-        pw.type = show ? 'text' : 'password';
-        toggle.innerHTML = '<i class="bi ' + (show ? 'bi-eye-slash' : 'bi-eye') + '"></i>';
-    });
+    if (pw && toggle) {
+        toggle.addEventListener('click', function () {
+            var show = pw.type === 'password';
+            pw.type = show ? 'text' : 'password';
+            toggle.innerHTML = '<i class="bi ' + (show ? 'bi-eye-slash' : 'bi-eye') + '"></i>';
+        });
+    }
 
+    // SMTP Port Presets
     var port = document.getElementById('smtpPort');
     var presets = document.querySelectorAll('.port-presets button');
     function syncPresets() {
@@ -142,8 +312,143 @@
             port.dispatchEvent(new Event('input', { bubbles: true }));
         });
     });
-    port.addEventListener('input', syncPresets);
-    syncPresets();
+    if (port) {
+        port.addEventListener('input', syncPresets);
+        syncPresets();
+    }
+
+    // Gmail-style Email Capsule Input Component
+    function initEmailCapsules() {
+        var fields = document.querySelectorAll('.email-capsules-field');
+        fields.forEach(function(field) {
+            if (field.dataset.capsulesInitialized) return;
+            field.dataset.capsulesInitialized = 'true';
+
+            var box = field.querySelector('.capsules-box');
+            var list = field.querySelector('.capsules-list');
+            var input = field.querySelector('.capsule-input-text');
+            var hidden = field.querySelector('.capsule-hidden-input');
+
+            var emails = [];
+
+            function isValidEmail(email) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            }
+
+            function updateHidden() {
+                hidden.value = emails.join(', ');
+                hidden.dispatchEvent(new Event('input', { bubbles: true }));
+                hidden.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            function renderCapsule(email) {
+                var capsule = document.createElement('span');
+                capsule.className = 'email-capsule' + (isValidEmail(email) ? '' : ' is-invalid');
+                capsule.dataset.email = email;
+
+                var text = document.createElement('span');
+                text.textContent = email;
+                capsule.appendChild(text);
+
+                var removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'capsule-remove';
+                removeBtn.setAttribute('aria-label', 'Remove ' + email);
+                removeBtn.innerHTML = '&times;';
+
+                removeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var idx = emails.indexOf(email);
+                    if (idx > -1) {
+                        emails.splice(idx, 1);
+                    }
+                    capsule.remove();
+                    updateHidden();
+                    input.focus();
+                });
+
+                capsule.appendChild(removeBtn);
+                list.appendChild(capsule);
+            }
+
+            function addEmail(raw) {
+                var cleaned = (raw || '').trim().replace(/[,;]+$/, '').trim();
+                if (!cleaned) return;
+                if (emails.indexOf(cleaned) === -1) {
+                    emails.push(cleaned);
+                    renderCapsule(cleaned);
+                    updateHidden();
+                }
+            }
+
+            function addMultiple(rawStr) {
+                if (!rawStr) return;
+                var parts = rawStr.split(/[,;]+/);
+                parts.forEach(function(p) {
+                    addEmail(p);
+                });
+            }
+
+            // Populate initial capsules from hidden input
+            if (hidden && hidden.value) {
+                addMultiple(hidden.value);
+            }
+
+            // Click box to focus input
+            box.addEventListener('click', function() {
+                input.focus();
+            });
+
+            // Focus & blur styling
+            input.addEventListener('focus', function() {
+                box.classList.add('is-focused');
+            });
+            input.addEventListener('blur', function() {
+                box.classList.remove('is-focused');
+                if (input.value.trim()) {
+                    addMultiple(input.value);
+                    input.value = '';
+                }
+            });
+
+            // Keydown triggers (comma, semicolon, enter, backspace)
+            input.addEventListener('keydown', function(e) {
+                if (e.key === ',' || e.key === ';' || e.key === 'Enter') {
+                    e.preventDefault();
+                    if (input.value.trim()) {
+                        addMultiple(input.value);
+                        input.value = '';
+                    }
+                } else if (e.key === 'Backspace' && input.value === '' && emails.length > 0) {
+                    var lastEmail = emails.pop();
+                    if (list.lastElementChild) {
+                        list.lastElementChild.remove();
+                    }
+                    updateHidden();
+                }
+            });
+
+            // Input event for comma/semicolon on virtual/mobile keyboards
+            input.addEventListener('input', function() {
+                if (input.value.indexOf(',') > -1 || input.value.indexOf(';') > -1) {
+                    addMultiple(input.value);
+                    input.value = '';
+                }
+            });
+
+            // Paste event support (comma or semicolon separated list)
+            input.addEventListener('paste', function(e) {
+                var pasteData = (e.clipboardData || window.clipboardData).getData('text');
+                if (pasteData && (pasteData.indexOf(',') > -1 || pasteData.indexOf(';') > -1 || pasteData.indexOf('@') > -1)) {
+                    e.preventDefault();
+                    addMultiple(pasteData);
+                    input.value = '';
+                }
+            });
+        });
+    }
+
+    initEmailCapsules();
 })();
 </script>
 {% endblock %}

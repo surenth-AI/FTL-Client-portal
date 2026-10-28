@@ -67,5 +67,7 @@ def effective_settings(user):
             merged['smtp_port'] = row.smtp_port or 587
         if row.receiver_email:
             merged['receiver_email'] = row.receiver_email
+        if getattr(row, 'branch_notifications', None):
+            merged['branch_notifications'] = row.branch_notifications
     merged['customer_group_id'] = row.group_id if row is not None else None
     return SimpleNamespace(**merged)

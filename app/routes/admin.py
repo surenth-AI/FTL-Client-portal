@@ -185,12 +185,15 @@ def manage_users():
 @admin_required
 @super_admin_required
 def edit_user(user_id):
+    from app.services.branch_service import get_all_branches
     user = User.query.get_or_404(user_id)
+    all_branches = get_all_branches()
     if request.method == 'POST':
         role = request.form.get('role')
         if role not in ALL_ROLES:
             flash('Invalid role.', 'danger')
-            return render_template('admin/edit_user.html', user=user)
+            return render_template('admin/edit_user.html', user=user, available_branches=all_branches,
+                                   user_branch_ids=[m.branch_id for m in user.branches])
         user.name = request.form.get('name')
         user.role = role
         user.mobile = request.form.get('mobile') or None
@@ -199,10 +202,13 @@ def edit_user(user_id):
         if erp_code:
             user.erp_customer_code = erp_code
         _set_customer_ids(user, request.form.get('customer_ids'))
+        if 'branch_ids' in request.form:
+            _set_branch_ids(user, request.form.getlist('branch_ids'))
         db.session.commit()
         flash(f'User {user.name} updated successfully.', 'success')
         return redirect(url_for('admin.manage_users'))
-    return render_template('admin/edit_user.html', user=user)
+    return render_template('admin/edit_user.html', user=user, available_branches=all_branches,
+                           user_branch_ids=[m.branch_id for m in user.branches])
 
 
 
@@ -210,6 +216,8 @@ def edit_user(user_id):
 @admin_required
 @super_admin_required
 def create_user():
+    from app.services.branch_service import get_all_branches
+    all_branches = get_all_branches()
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
@@ -217,12 +225,12 @@ def create_user():
         role = request.form.get('role')
         if role not in ALL_ROLES:
             flash('Invalid role.', 'danger')
-            return render_template('admin/create_user.html')
+            return render_template('admin/create_user.html', available_branches=all_branches)
 
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash('Email address already registered.', 'danger')
-            return render_template('admin/create_user.html')
+            return render_template('admin/create_user.html', available_branches=all_branches)
 
         hashed_password = generate_password_hash(password)
         new_user = User(
@@ -235,21 +243,35 @@ def create_user():
         db.session.add(new_user)
         db.session.flush()
         _set_customer_ids(new_user, request.form.get('customer_ids'))
+        if request.form.getlist('branch_ids'):
+            _set_branch_ids(new_user, request.form.getlist('branch_ids'))
         db.session.commit()
         flash(f'User {name} created successfully.', 'success')
         return redirect(url_for('admin.manage_users'))
-    return render_template('admin/create_user.html')
+    return render_template('admin/create_user.html', available_branches=all_branches)
 
 
 def _set_customer_ids(user, raw):
-    """Replace the user's ERP customer IDs with a comma-separated list."""
+    """Replace the user's ERP customer IDs with a comma-separated list and dynamically discover branches."""
     from app.models.models import UserAccountMapping
+    from app.services.branch_service import discover_and_map_user_branches
     if raw is None:
         return
     ids = list(dict.fromkeys(part.strip() for part in raw.split(',') if part.strip()))
     UserAccountMapping.query.filter_by(user_id=user.id).delete()
     for account_id in ids:
         db.session.add(UserAccountMapping(user_id=user.id, account_id=account_id))
+    db.session.flush()
+
+    # Automatically discover and map branches for the customer from ERP
+    discover_and_map_user_branches(user, account_ids=ids)
+
+
+def _set_branch_ids(user, branch_ids):
+    """Explicitly assign branches to user."""
+    from app.services.branch_service import discover_and_map_user_branches
+    if branch_ids is not None:
+        discover_and_map_user_branches(user, explicit_branch_ids=branch_ids)
 
 
 
@@ -459,6 +481,34 @@ def _save_mail(target, system):
 
     target.receiver_email = request.form.get('receiver_email', '').strip() or None
 
+    # Branch notification emails (per branch, per quote/booking transaction type)
+    branch_notifs = {}
+    for key, val in request.form.items():
+        v = val.strip()
+        if key.startswith('branch_quote_email_'):
+            b_id = key.replace('branch_quote_email_', '').strip()
+            if b_id:
+                if b_id not in branch_notifs:
+                    branch_notifs[b_id] = {}
+                branch_notifs[b_id]['quote_emails'] = v
+        elif key.startswith('branch_booking_email_'):
+            b_id = key.replace('branch_booking_email_', '').strip()
+            if b_id:
+                if b_id not in branch_notifs:
+                    branch_notifs[b_id] = {}
+                branch_notifs[b_id]['booking_emails'] = v
+
+    clean_notifs = {}
+    for b_id, conf in branch_notifs.items():
+        q_emails = conf.get('quote_emails', '').strip()
+        b_emails = conf.get('booking_emails', '').strip()
+        if q_emails or b_emails:
+            clean_notifs[b_id] = {
+                'quote_emails': q_emails,
+                'booking_emails': b_emails
+            }
+    target.branch_notifications = clean_notifs if clean_notifs else None
+
 
 @admin.route('/settings', defaults={'section': None}, methods=['GET', 'POST'])
 @admin.route('/settings/<section>', methods=['GET', 'POST'])
@@ -499,11 +549,27 @@ def settings(section):
         # A customer admin sees only its own mail server, never the system credentials
         from app.services.customer_settings import customer_setting_for
         shown = customer_setting_for(current_user) or SimpleNamespace(
-            smtp_server=None, smtp_port=None, smtp_user=None, smtp_sender_name=None, smtp_password=None, receiver_email=None)
+            smtp_server=None, smtp_port=None, smtp_user=None, smtp_sender_name=None, smtp_password=None, receiver_email=None, branch_notifications=None)
     else:
         shown = effective_settings(current_user)
+
+    extra_context = {}
+    if section == 'mail':
+        from app.services.branch_service import get_all_branches
+        branches = get_all_branches()
+        extra_context['available_branches'] = [b.to_dict() for b in branches]
+
+        if hasattr(shown, 'branch_notifications') and isinstance(shown.branch_notifications, str):
+            try:
+                import json
+                shown.branch_notifications = json.loads(shown.branch_notifications)
+            except Exception:
+                shown.branch_notifications = {}
+        elif not getattr(shown, 'branch_notifications', None):
+            shown.branch_notifications = {}
+
     return render_template(SETTINGS_SECTIONS[section], settings=shown, section=section, is_admin=is_admin,
-                           customer_scope=customer_scope)
+                           customer_scope=customer_scope, **extra_context)
 
 
 def _customer_scope_id():

@@ -30,12 +30,35 @@ class UserAccountMapping(db.Model):
     account_id = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Branch(db.Model):
+    __tablename__ = 'branch'
+    id = db.Column(db.String(50), primary_key=True)  # branchID from ERP (e.g. '23', '24', '1023')
+    name = db.Column(db.String(150), nullable=False) # e.g. 'FTL ANTWERP'
+    call_name = db.Column(db.String(50), nullable=True) # e.g. 'FTL ANR'
+    uuid = db.Column(db.String(50), nullable=True)
+    currency = db.Column(db.String(10), nullable=True)
+    country_code = db.Column(db.String(10), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'call_name': self.call_name or '',
+            'uuid': self.uuid or '',
+            'currency': self.currency or '',
+            'country_code': self.country_code or ''
+        }
+
 class UserBranchMapping(db.Model):
     __tablename__ = 'user_branch_mapping'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     branch_id = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    branch = db.relationship('Branch', foreign_keys=[branch_id], primaryjoin='UserBranchMapping.branch_id == Branch.id', lazy='joined')
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -418,6 +441,7 @@ class SystemSetting(db.Model):
     smtp_sender_name = db.Column(db.String(255), nullable=True)
     smtp_password = db.Column(db.String(255), nullable=True)
     receiver_email = db.Column(db.String(255), nullable=True)
+    branch_notifications = db.Column(db.JSON, nullable=True)
 
 class CustomerSetting(db.Model):
     """Per-customer overrides of SystemSetting, keyed by ERP customer ID. NULL = use the system value."""
@@ -440,6 +464,7 @@ class CustomerSetting(db.Model):
     smtp_sender_name = db.Column(db.String(255))
     smtp_password = db.Column(db.String(255))
     receiver_email = db.Column(db.String(255))
+    branch_notifications = db.Column(db.JSON, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Registration(db.Model):

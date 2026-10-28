@@ -53,6 +53,23 @@
                     <div class="form-text text-muted smaller">Customer admins see users and bookings that share one of these IDs. Comma-separated, e.g. 4294, 4300.</div>
                 </div>
 
+                {% if available_branches %}
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider d-block">Branch Offices</label>
+                    <div class="d-flex flex-wrap gap-2 pt-1">
+                        {% for b in available_branches %}
+                        <div class="form-check form-check-inline bg-white-5 border border-white-10 rounded px-3 py-2 m-0">
+                            <input class="form-check-input" type="checkbox" name="branch_ids" id="new_br_{{ b.id }}" value="{{ b.id }}">
+                            <label class="form-check-label text-white small ms-1" for="new_br_{{ b.id }}">
+                                <strong>#{{ b.id }}</strong> {{ b.name }} {% if b.call_name %}<span class="text-muted">({{ b.call_name }})</span>{% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-text text-muted smaller">Select branch offices or leave empty to auto-discover from ERP Customer IDs.</div>
+                </div>
+                {% endif %}
+
                 <div class="d-grid gap-3">
                     <button type="submit" class="btn btn-premium py-3 rounded-pill fw-bold text-uppercase tracking-widest shadow-accent">
                         CONFIRM ONBOARDING <i class="bi bi-check2-circle ms-2"></i>
