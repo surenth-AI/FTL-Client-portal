@@ -2093,7 +2093,7 @@ def rates():
 
                 return redirect(url_for('customer.rate_results'))
             else:
-                print("Constructed Payload:", json.dumps(payload, indent=2))
+                import json as _json; print("Constructed Payload:", _json.dumps(payload, indent=2))
                 print("API ERROR:", api_resp.status_code, api_resp.text)
                 
                 # Parse the error message from API
