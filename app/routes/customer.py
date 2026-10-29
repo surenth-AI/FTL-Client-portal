@@ -2096,18 +2096,23 @@ def rates():
                 print("Constructed Payload:", json.dumps(payload, indent=2))
                 print("API ERROR:", api_resp.status_code, api_resp.text)
                 
-                # Parse the error message if possible
+                # Parse the error message from API
                 error_msg = api_resp.text
                 try:
                     err_json = api_resp.json()
                     error_msg = err_json.get('message', err_json.get('error', api_resp.text))
                 except Exception:
                     pass
-                
-                if request.is_json:
-                    return jsonify({'success': False, 'message': f"Failed to create quotation: {error_msg}"}), 400
 
-                flash(f"Failed to create quotation: {error_msg}", "danger")
+                # Translate known API validation messages into user-friendly UI messages
+                ui_msg = error_msg
+                if error_msg and 'validOn must be today or later' in error_msg:
+                    ui_msg = "The cargo ready date cannot be in the past. Please select today's date or a future date."
+
+                if request.is_json:
+                    return jsonify({'success': False, 'message': ui_msg}), 400
+
+                flash(ui_msg, "danger")
                 return redirect(url_for('customer.rates'))
         except Exception as e:
             flash(f"API Error: {str(e)}", "danger")
