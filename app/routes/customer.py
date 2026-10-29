@@ -1837,12 +1837,18 @@ def rates():
         goods_types = [g.strip().upper() for g in request.form.getlist('goods_type[]')]
         
         # Extract IDs from User Profile mappings
-        branch_id = 1
+        if not current_user.branches:
+            flash('No branch ID is mapped with your user account. Please contact an administrator.', 'danger')
+            return redirect(url_for('customer.rates'))
+
+        try:
+            branch_id = int(current_user.branches[0].branch_id)
+        except Exception:
+            flash('Invalid branch ID mapped with your user account. Please contact an administrator.', 'danger')
+            return redirect(url_for('customer.rates'))
+
         customer_id = 1
         account_contact_id = current_user.erp_contact_id or current_user.id
-        if current_user.branches:
-            try: branch_id = int(current_user.branches[0].branch_id)
-            except: pass
         if current_user.accounts:
             try: customer_id = int(current_user.accounts[0].account_id)
             except: pass
@@ -3027,15 +3033,21 @@ def rate_results():
                 validity_end = header.get('validUntil', 'N/A')
                 is_lcl = query.get('service_type', '') in ['Less than a container load', 'LCL']
                 
-                # Dynamically resolve branch/carrier name from API response or branch lookup
+                # Dynamically resolve branch/carrier name from API response or database
+                from app.models.models import Branch
                 branch_name = header.get('branchName') or header.get('nvoccName') or header.get('carrierName')
+                target_branch_id = str(header.get('branchId') or (current_user.branches[0].branch_id if current_user.branches else ''))
+                if not branch_name and target_branch_id:
+                    branch_rec = Branch.query.filter_by(id=target_branch_id).first()
+                    if branch_rec and branch_rec.name:
+                        branch_name = branch_rec.name
                 if not branch_name and current_user.branches:
                     for b in current_user.branches:
-                        if str(getattr(b, 'branch_id', '')) == str(header.get('branchId')):
-                            branch_name = getattr(b, 'branch_name', None) or f"Branch #{b.branch_id}"
+                        if b.branch and b.branch.name:
+                            branch_name = b.branch.name
                             break
                 if not branch_name:
-                    branch_name = f"Branch #{header.get('branchId')}" if header.get('branchId') else '—'
+                    branch_name = '—'
                 
                 carrier_name = 'LCL Direct Consolidation' if is_lcl else 'FCL Ocean Service'
                 if schedules and len(schedules) > 0 and schedules[0].get('vessel'):

@@ -3714,6 +3714,13 @@ async function filterLocations(locationType) {
         }
 
         function getQuotes() {
+            // Check if user has an assigned branch
+            const userHasBranch = {{ 'true' if (current_user.is_authenticated and current_user.branches) else 'false' }};
+            if (!userHasBranch) {
+                showAlert('No branch ID is mapped with your user account. Please contact an administrator to map your branch.');
+                return;
+            }
+
             const route = document.getElementById('routeSection').classList.contains('completed');
             const cargo = document.getElementById('cargoSection').classList.contains('completed');
             const incoterm = document.getElementById('incoterm').value;
